@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function UploadArea() {
+  const router = useRouter();
   const [dragOver, setDragOver] = useState(false);
   const [uploads, setUploads] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -20,10 +22,11 @@ export default function UploadArea() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Upload failed');
       setUploads(prev => [...data.files, ...prev]);
+      router.refresh();
     } catch (err: any) {
       setError(err.message || String(err));
     }
-  }, []);
+  }, [router]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -45,10 +48,10 @@ export default function UploadArea() {
         onDrop={onDrop}
         className={`w-full border-2 rounded p-4 mb-4 transition ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300'}`}
       >
-        <p className="text-sm text-gray-600">拖拽文件到此处或点击选择文件上传（本地保存）</p>
+        <p className="text-sm text-gray-600">Drag files here or click to upload (saved locally)</p>
         <div className="mt-2">
           <label className="inline-block px-3 py-1 bg-gray-100 rounded cursor-pointer text-sm border">
-            选择文件
+            Choose Files
             <input onChange={onFileChange} type="file" multiple className="hidden" />
           </label>
         </div>
@@ -57,9 +60,9 @@ export default function UploadArea() {
       {error && <div className="text-sm text-red-600 mb-2">{error}</div>}
 
       <div>
-        <div className="text-xs text-gray-500 mb-1">已上传（最近）</div>
+        <div className="text-xs text-gray-500 mb-1">Recently Uploaded</div>
         <ul className="list-disc pl-5 text-sm text-gray-700">
-          {uploads.length === 0 ? <li className="text-gray-400">暂无上传</li> : uploads.map((f, i) => (
+          {uploads.length === 0 ? <li className="text-gray-400">No uploads yet</li> : uploads.map((f, i) => (
             <li key={i}>{f}</li>
           ))}
         </ul>

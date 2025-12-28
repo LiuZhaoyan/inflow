@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { addBook } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -18,21 +17,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
 
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    await fs.promises.mkdir(uploadsDir, { recursive: true });
-
-    const saved: string[] = [];
+    const savedBooks = [];
     for (const file of files) {
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = path.join(uploadsDir, safeName);
-      await fs.promises.writeFile(filePath, buffer);
-      saved.push(safeName);
+      // Read file content as text
+      const text = await file.text();
+      
+      // Simple parsing: split by newlines or periods followed by space?
+      // For now, let's split by non-empty lines to preserve some structure
+      const content = text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      const title = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+      
+      const newBook = await addBook({
+        title,
+        level: 'Imported', // Default level for uploads
+        content
+      });
+      
+      savedBooks.push(newBook);
     }
 
-    return NextResponse.json({ ok: true, files: saved });
+    return NextResponse.json({ ok: true, files: savedBooks.map(b => b.title), books: savedBooks });
   } catch (err) {
+    console.error("Upload error:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

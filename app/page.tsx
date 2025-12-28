@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { BookOpen, Sparkles, Brain, ArrowRight, BarChart } from 'lucide-react';
-import { mockBooks } from '@/lib/mockData'; // 假设你之前的 mockData 在这里
+import { getBooks } from '@/lib/db';
 import UploadArea from '@/components/UploadArea';
 
-export default function Home() {
+export default async function Home() {
+  const books = await getBooks();
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100">
       
@@ -52,7 +54,7 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockBooks.map((book) => (
+            {books.map((book) => (
               <Link 
                 key={book.id} 
                 href={`/read/${book.id}`}
@@ -64,6 +66,7 @@ export default function Home() {
                   ${book.level === 'Beginner' ? 'bg-green-100 text-green-700' : ''}
                   ${book.level === 'Intermediate' ? 'bg-yellow-100 text-yellow-700' : ''}
                   ${book.level === 'Advanced' ? 'bg-red-100 text-red-700' : ''}
+                  ${!['Beginner', 'Intermediate', 'Advanced'].includes(book.level) ? 'bg-gray-100 text-gray-700' : ''}
                 `}>
                   {book.level}
                 </span>

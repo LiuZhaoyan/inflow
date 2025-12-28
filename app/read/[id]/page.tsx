@@ -1,4 +1,4 @@
-import { mockBooks } from '@/lib/mockData';
+import { getBookById } from '@/lib/db';
 import ReaderInterface from '@/components/ReaderInterface';
 
 // 注意 1: 将 params 的类型定义为 Promise
@@ -12,7 +12,7 @@ export default async function ReadPage({ params }: PageProps) {
   const { id } = await params;
 
   // 现在使用解析出来的 id
-  const book = mockBooks.find(b => b.id === id);
+  const book = await getBookById(id);
 
   if (!book) return (
     <div className="flex h-screen items-center justify-center text-gray-500">
