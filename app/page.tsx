@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Sparkles, Brain, ArrowRight, BarChart } from 'lucide-react';
+import { BookOpen, Sparkles, Brain, ArrowRight, BarChart, Info } from 'lucide-react';
 import { getBooks } from '@/lib/db';
 import UploadArea from '@/components/UploadArea';
 
@@ -41,6 +41,14 @@ export default async function Home() {
             Immerse yourself in stories slightly above your level. 
             Click to translate contextually. Master vocabulary naturally.
           </p>
+          <Link 
+            href="/docs"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
+            <Info size={18} />
+            Learn about our philosophy
+            <ArrowRight size={18} />
+          </Link>
         </section>
 
         {/* 3. Library Grid: 核心功能区 */}

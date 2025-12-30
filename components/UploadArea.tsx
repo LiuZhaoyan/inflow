@@ -48,11 +48,17 @@ export default function UploadArea() {
         onDrop={onDrop}
         className={`w-full border-2 rounded p-4 mb-4 transition ${dragOver ? 'border-blue-400 bg-blue-50' : 'border-dashed border-gray-300'}`}
       >
-        <p className="text-sm text-gray-600">Drag files here or click to upload (saved locally)</p>
+        <p className="text-sm text-gray-600">Drag files (PDF, EPUB, TXT) here or click to upload</p>
         <div className="mt-2">
           <label className="inline-block px-3 py-1 bg-gray-100 rounded cursor-pointer text-sm border">
             Choose Files
-            <input onChange={onFileChange} type="file" multiple className="hidden" />
+            <input 
+              onChange={onFileChange} 
+              type="file" 
+              multiple 
+              accept=".txt,.pdf,.epub"
+              className="hidden" 
+            />
           </label>
         </div>
       </div>
