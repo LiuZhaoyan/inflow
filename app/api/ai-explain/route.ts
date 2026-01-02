@@ -1,45 +1,55 @@
-// app/api/ai-explain/route.ts
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
 
-// 初始化 OpenAI 客户端，指向 PPInfra 的兼容接口
 const client = new OpenAI({
     baseURL: process.env.BASE_URL,
     apiKey: process.env.API_KEY, 
 });
 
-// 定义请求体结构
 interface RequestBody {
   text: string;
   context: string; // 上下文（前几句话），这对AI理解语境至关重要
   difficulty: "beginner" | "intermediate" | "advanced";
+  // Optional: force output language (debug / deterministic behavior)
+  targetLanguage?: LanguageCode | string;
+  // Optional: include extra debug info in response (dev-only recommended)
+  debug?: boolean;
 }
 
 export async function POST(request: Request) {
   try {
-    const { text, context, difficulty } = await request.json() as RequestBody;
+    const { text, context, difficulty, targetLanguage, debug } = await request.json() as RequestBody;
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
+    const forced = normalizeLanguageCode(targetLanguage);
+    const detected = detectLanguageHint(text);
+    const language = forced !== 'auto' ? forced : detected.code;
+
     // --- Prompt 工程核心 ---
     // 根据难度调整系统指令 (Comprehensible Input: i+1)
     let systemInstruction = `# Role:You are an expert Language teacher applying Stephen Krashen's Comprehensible Input theory. 
     
-    CRITICAL INSTRUCTION: Your explanation MUST be in the SAME LANGUAGE as the target text. 
-    - If the text is Korean, explain in Korean.
-    - If the text is Japanese, explain in Japanese.
-    - If the text is French, explain in French.
-    - Do NOT use English unless the target text itself is English.
-
-    Your goal: Explain the selected text to the student using the text's original language.
+    Your goal: Explain the selected text to the student using the desired output language.
     Rules:
-    1. Detect the language of the target text.
-    2. Provide the explanation entirely in that detected language.
+    1. Use the provided language requirement; do not "guess" a different language.
+    2. Provide the explanation entirely in the required language.
     3. Use vocabulary that is slightly simpler than the selected text (i+1 concept).
     4. Focus on the meaning in the specific context provided.
     5. Keep the explanation concise (under 50 words).`;
+
+    if (language && language !== 'auto') {
+      systemInstruction += `
+
+      CRITICAL OUTPUT LANGUAGE: Write the explanation ONLY in "${language}".`;
+    } else {
+      systemInstruction += `
+
+      CRITICAL OUTPUT LANGUAGE: If no language is provided, detect the target text language and reply in that same language.`;
+    }
 
     if (difficulty === 'beginner') {
       systemInstruction += `
@@ -56,18 +66,30 @@ export async function POST(request: Request) {
       - Treat the user as a near-native speaker of that language.`;
     }
 
-    // 构造用户消息，包含上下文以提高准确度
     const userPrompt = `
-    Context (previous sentences): "...${context}..."
-    Target Sentence to explain: "${text}"
+    Context (for understanding only, ignore its language): "...${context}..."
     
-    Please explain the Target Sentence based on the context. 
-    IMPORTANT: Write the explanation in the same language as the Target Sentence.
+    Target Text to explain: "${text}"
+    
+    TASK: Explain the Target Text based on the context.
+    ${language && language !== 'auto'
+      ? `CRITICAL: Write the explanation ONLY in "${language}".`
+      : `CRITICAL: Detect the language of the Target Text and write your explanation ONLY in that language.`}
     `;
 
-    // 调用 API
+    // High-signal logging for debugging language mismatches.
+    // (Avoid logging huge text; keep it short.)
+    console.log('[ai-explain] input', {
+      difficulty,
+      forcedLanguage: forced,
+      heuristicLanguage: detected.code,
+      heuristicReason: detected.reason,
+      textPreview: String(text).slice(0, 160),
+      contextPreview: String(context || '').slice(0, 160),
+    });
+
     const completion = await client.chat.completions.create({
-      model: "deepseek/deepseek-v3.2", // 或者您平台支持的其他模型名称，如 "gpt-3.5-turbo"
+      model: "deepseek/deepseek-v3.2",
       messages: [
         { role: "system", content: systemInstruction },
         { role: "user", content: userPrompt },
@@ -77,8 +99,24 @@ export async function POST(request: Request) {
     });
 
     const explanation = completion.choices[0]?.message?.content || "Could not generate explanation.";
+    console.log('[ai-explain] outputPreview', String(explanation).slice(0, 200));
 
-    return NextResponse.json({ explanation });
+    const payload: any = { explanation };
+    if (debug) {
+      payload.debug = {
+        forcedLanguage: forced,
+        heuristicLanguage: detected.code,
+        heuristicReason: detected.reason,
+        appliedLanguage: language,
+      };
+    }
+
+    return NextResponse.json(payload, {
+      headers: {
+        // Make any caching hypotheses falsifiable.
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+      },
+    });
 
   } catch (error: any) {
     console.error('AI API Error:', error);

@@ -19,9 +19,23 @@ export default function UploadArea() {
         method: 'POST',
         body: form,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Upload failed');
-      setUploads(prev => [...data.files, ...prev]);
+
+      // Don't assume JSON: on server crash Next can return an HTML error page,
+      // which would cause `Unexpected token '<'` if we call `res.json()` blindly.
+      const contentType = res.headers.get('content-type') || '';
+      const raw = await res.text();
+      let data: any = null;
+      if (contentType.includes('application/json')) {
+        try { data = JSON.parse(raw); } catch { /* ignore */ }
+      }
+
+      if (!res.ok) {
+        throw new Error(data?.error || raw || `Upload failed (${res.status})`);
+      }
+
+      // API returns `files` (filenames) and `books` (created records).
+      const uploaded = Array.isArray(data?.files) ? data.files : [];
+      setUploads(prev => [...uploaded, ...prev]);
       router.refresh();
     } catch (err: any) {
       setError(err.message || String(err));

@@ -85,13 +85,13 @@ export default async function Home() {
                 
                 {/* 预览文本 (取前两句) */}
                 <p className="text-gray-500 text-sm line-clamp-3 mb-6 leading-relaxed">
-                  {book.content.slice(0, 2).join(' ')}...
+                  {book.preview?.join(' ') || book.chapters?.[0]?.content.slice(0, 2).join(' ') || "No preview available"}...
                 </p>
 
                 <div className="mt-auto w-full flex items-center justify-between border-t border-gray-50 pt-4">
                   <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                     <BarChart size={12} />
-                    {book.content.length} Sentences
+                    {book.metadata?.sentenceCount || book.chapters?.reduce((acc, c) => acc + c.content.length, 0) || 0} Sentences
                   </span>
                   <span className="text-blue-600 font-semibold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                     Read Now <ArrowRight size={16} />
