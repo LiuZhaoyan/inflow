@@ -63,13 +63,27 @@ function analyzeDifficulty(sentences: string[]): number {
 
 async function parsePdf(buffer: Buffer): Promise<string> {
   try {
-    // Lazy-load pdf parsing deps so EPUB/TXT uploads don't crash at module load time.
-    // `pdf-parse` (and its pdfjs/canvas deps) can throw during import in some runtimes.
+    // Lazy-load PDF parsing deps so EPUB/TXT uploads don't crash at module load time.
+    // Note: `pdf-parse@v2` no longer exposes the old `pdf(buffer)` function API.
     const mod: any = await import('pdf-parse');
-    const pdfParse: any = mod?.default ?? mod;
+    const PDFParse = mod?.PDFParse ?? mod?.default?.PDFParse ?? mod?.default;
 
-    const data = await pdfParse(buffer);
-    return data.text;
+    if (typeof PDFParse !== 'function') {
+      throw new TypeError(
+        `pdf-parse export mismatch: expected PDFParse class, got keys=${Object.keys(mod || {}).join(',')}`
+      );
+    }
+
+    // In Next.js dev (and some server bundlers), pdf.js may fail to resolve its worker script
+    // and throw "Setting up fake worker failed". Disable workers for server-side parsing.
+    const parser = new PDFParse({ data: buffer, disableWorker: true });
+    try {
+      const result = await parser.getText();
+      return result.text;
+    } finally {
+      // Always free resources; pdfjs can retain a lot of memory otherwise.
+      await parser.destroy();
+    }
   } catch (error) {
     console.error('PDF Parse Error:', error);
     // Keep this message user-friendly; the raw error still logs server-side.
