@@ -1,60 +1,18 @@
 [
   {
-    "id": "1",
-    "title": "The Little Prince (Excerpt)",
-    "level": "Intermediate",
-    "metadata": {
-      "wordCount": 67,
-      "format": "text",
-      "sentenceCount": 4
-    },
-    "contentPath": "1.json",
-    "preview": [
-      "Once when I was six years old I saw a magnificent picture in a book, called True Stories from Nature, about the primeval forest.",
-      "It was a picture of a boa constrictor in the act of swallowing an animal."
-    ]
-  },
-  {
-    "id": "2",
-    "title": "Don Quixote (Excerpt)",
-    "level": "Advanced",
-    "metadata": {
-      "wordCount": 85,
-      "format": "text",
-      "sentenceCount": 3
-    },
-    "contentPath": "2.json",
-    "preview": [
-      "In a village of La Mancha, the name of which I have no desire to call to mind, there lived not long since one of those gentlemen that keep a lance in the lance-rack, an old buckler, a lean hack, and a greyhound for coursing.",
-      "An olla of rather more beef than mutton, a salad on most nights, some lean chorizo, and a pigeon or so constituted his whole diet."
-    ]
-  },
-  {
-    "id": "1766903402082",
-    "title": "hangul",
-    "level": "Imported",
-    "metadata": {
-      "wordCount": 180,
-      "format": "text",
-      "sentenceCount": 11
-    },
-    "contentPath": "1766903402082.json",
-    "preview": [
-      "어느 맑은 날이에요. 숲속에 아기 토끼가 살아요. 아기 토끼는 배가 너무 고파요. \"꼬르륵, 꼬르륵.\" 토끼가 말해요. \"아, 배고파! 달콤한 딸기가 먹고 싶어.\"",
-      "토끼는 딸기를 찾아 떠나요. 깡충깡충, 토끼가 숲을 걸어요."
-    ]
-  },
-  {
-    "id": "1767118573476",
+    "id": "1767343893001",
     "title": "Little Prince",
     "level": "Beginner",
+    "language": "en",
     "metadata": {
       "wordCount": 18730,
       "format": "epub",
       "originalFilename": "Little Prince (Antoine De Saint Exupéry) .epub",
+      "language": "en",
+      "languageReason": "contains_latin",
       "sentenceCount": 1835
     },
-    "contentPath": "1767118573476.json",
+    "contentPath": "1767343893001.json",
     "preview": [
       "The Little Prince",
       "[Illustrated Edition]"

@@ -4,7 +4,7 @@ import EPub from 'epub2';
 export interface ProcessedBook {
   title: string;
   author?: string;
-  chapters: { title: string; content: string[] }[];
+  chapters: { title: string; paragraphs: string[][] }[];
   metadata: {
     wordCount: number;
     sentenceCount: number;
@@ -26,6 +26,25 @@ function splitIntoSentences(text: string): string[] {
     // Fallback regex for environments without Intl.Segmenter
     return cleanText.match(/[^.!?]+[.!?]+(?=\s|$)/g)?.map(s => s.trim()) || [cleanText];
   }
+}
+
+function normalizeWhitespace(text: string): string {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .trim();
+}
+
+function splitTextIntoParagraphs(text: string): string[] {
+  const normalized = normalizeWhitespace(text);
+  if (!normalized) return [];
+  // Split on blank lines (one or more empty-ish lines)
+  return normalized
+    .split(/\n\s*\n+/g)
+    .map(p => p.replace(/\s*\n\s*/g, ' ').trim())
+    .filter(Boolean);
 }
 
 // Helper: Basic difficulty analysis (Average Word Length + Sentence Length)
@@ -58,7 +77,7 @@ async function parsePdf(buffer: Buffer): Promise<string> {
   }
 }
 
-async function parseEpub(filePath: string): Promise<{ title: string; chapters: { title: string; content: string[] }[] }> {
+async function parseEpub(filePath: string): Promise<{ title: string; chapters: { title: string; paragraphs: string[][] }[] }> {
   // @ts-ignore - EPub types are sometimes tricky
   const epub = await EPub.createAsync(filePath);
   const chapters = [];
@@ -97,11 +116,32 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
 
     if (!html) continue;
     const $ = cheerio.load(html);
-    const text = $('body').text().trim();
-    if (text) {
+    const body = $('body');
+
+    const paragraphTexts: string[] = [];
+    // Prefer true paragraph-ish elements so we preserve paragraph boundaries.
+    // Note: intentionally avoid `div` because it often wraps huge sections.
+    const paragraphLike = body.find('p, li, blockquote, h1, h2, h3, h4, h5, h6');
+    paragraphLike.each((_idx, el) => {
+      const t = normalizeWhitespace($(el).text());
+      if (t) paragraphTexts.push(t);
+    });
+
+    // Fallback if EPUB has no semantic paragraph tags.
+    if (paragraphTexts.length === 0) {
+      const fallback = normalizeWhitespace(body.text());
+      if (fallback) paragraphTexts.push(fallback);
+    }
+
+    const paragraphs = paragraphTexts
+      .map(p => splitIntoSentences(p))
+      .map(sents => sents.map(s => s.trim()).filter(Boolean))
+      .filter(sents => sents.length > 0);
+
+    if (paragraphs.length > 0) {
       chapters.push({
         title: chapter.title || chapter.id,
-        content: splitIntoSentences(text)
+        paragraphs,
       });
     }
   }
@@ -134,7 +174,7 @@ export async function processDocument(
   filePath?: string // Needed for EPUB
 ): Promise<ProcessedBook> {
   let rawText = '';
-  let chapters: { title: string; content: string[] }[] = [];
+  let chapters: { title: string; paragraphs: string[][] }[] = [];
   let title = fileName.replace(/\.[^/.]+$/, "");
   let format = 'text';
 
@@ -143,8 +183,10 @@ export async function processDocument(
   if (ext === 'pdf') {
     format = 'pdf';
     rawText = await parsePdf(fileBuffer);
-    // Naive chapter detection for PDF (can be improved)
-    chapters = [{ title: 'Full Text', content: splitIntoSentences(rawText) }];
+    const paragraphs = splitTextIntoParagraphs(rawText)
+      .map(p => splitIntoSentences(p))
+      .filter(s => s.length > 0);
+    chapters = [{ title: 'Full Text', paragraphs: paragraphs.length ? paragraphs : [splitIntoSentences(rawText)] }];
   } 
   else if (ext === 'epub' && filePath) {
     format = 'epub';
@@ -156,12 +198,15 @@ export async function processDocument(
     format = 'subtitle';
     const content = fileBuffer.toString('utf-8');
     const sentences = parseSRT(content);
-    chapters = [{ title: 'Subtitles', content: sentences }];
+    chapters = [{ title: 'Subtitles', paragraphs: [sentences] }];
   }
   else {
     // Default Text
     rawText = fileBuffer.toString('utf-8');
-    chapters = [{ title: 'Content', content: splitIntoSentences(rawText) }];
+    const paragraphs = splitTextIntoParagraphs(rawText)
+      .map(p => splitIntoSentences(p))
+      .filter(s => s.length > 0);
+    chapters = [{ title: 'Content', paragraphs: paragraphs.length ? paragraphs : [splitIntoSentences(rawText)] }];
   }
 
   // Aggregate stats
@@ -169,12 +214,13 @@ export async function processDocument(
   let totalWords = 0;
   
   chapters.forEach(c => {
-    totalSentences += c.content.length;
-    totalWords += c.content.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
+    const sentences = c.paragraphs.flatMap(p => p);
+    totalSentences += sentences.length;
+    totalWords += sentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
   });
 
   // Calculate generic difficulty if not set
-  const difficultyScore = analyzeDifficulty(chapters.flatMap(c => c.content));
+  const difficultyScore = analyzeDifficulty(chapters.flatMap(c => c.paragraphs.flatMap(p => p)));
 
   return {
     title,

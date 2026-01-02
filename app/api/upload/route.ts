@@ -36,7 +36,9 @@ export async function POST(req: Request) {
 
       // Process content
       const processed = await processDocument(buffer, file.name, file.type, filePath);
-      const sampleSentences = processed.chapters.flatMap(c => c.content).slice(0, 120);
+      const sampleSentences = processed.chapters
+        .flatMap(c => c.paragraphs.flatMap(p => p))
+        .slice(0, 120);
       const languageGuess = detectLanguageFromSentences(sampleSentences);
       const normalizedLanguage = normalizeLanguageCode(languageGuess.code);
 

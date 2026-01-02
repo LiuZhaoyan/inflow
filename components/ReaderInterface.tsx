@@ -7,7 +7,7 @@ import { LANGUAGE_OPTIONS, LanguageCode, normalizeLanguageCode, resolveLanguageL
 
 interface ReaderProps {
   bookId: string;
-  chapters: { title: string; content: string[] }[];
+  chapters: { title: string; paragraphs?: string[][]; content?: string[] }[];
   initialLanguage?: string | null;
 }
 
@@ -16,26 +16,49 @@ const LANGUAGE_SELECT_OPTIONS: { value: LanguageCode; label: string }[] = [
   ...LANGUAGE_OPTIONS,
 ];
 
-function sanitizeSentences(sentences: string[], chapterTitle?: string): string[] {
+function sanitizeParagraphs(paragraphs: string[][], chapterTitle?: string): string[][] {
   const titleLower = (chapterTitle || '').trim().toLowerCase();
-  const cleaned = sentences
-    .map(s => (s ?? '').trim())
-    .filter(Boolean)
-    // common separators / markers from some EPUBs
-    .filter(s => s !== '***' && s !== '* END *' && s !== 'END' && s !== '*** * END * ***');
+  const cleaned = (paragraphs || [])
+    .map(p =>
+      (p || [])
+        .map(s => (s ?? '').trim())
+        .filter(Boolean)
+        // common separators / markers from some EPUBs
+        .filter(s => s !== '***' && s !== '* END *' && s !== 'END' && s !== '*** * END * ***')
+    )
+    .filter(p => p.length > 0);
 
-  // If the chapter repeats its title as the first line, drop it to reduce noise.
-  if (cleaned.length > 0 && titleLower && cleaned[0].toLowerCase() === titleLower) {
-    return cleaned.slice(1);
+  // If the chapter repeats its title as the first sentence, drop it to reduce noise.
+  if (cleaned.length > 0 && cleaned[0].length > 0 && titleLower && cleaned[0][0].toLowerCase() === titleLower) {
+    cleaned[0] = cleaned[0].slice(1);
+    if (cleaned[0].length === 0) return cleaned.slice(1);
   }
 
   return cleaned;
 }
 
-function pickBodyChapters(chapters: { title: string; content: string[] }[]) {
+function normalizeChapters(chapters: { title: string; paragraphs?: string[][]; content?: string[] }[]) {
+  return (chapters || []).map(c => {
+    const title = c.title?.trim() || 'Untitled';
+    const paragraphs =
+      Array.isArray(c.paragraphs) && c.paragraphs.length > 0
+        ? c.paragraphs
+        : [Array.isArray(c.content) ? c.content : []];
+    return {
+      title,
+      paragraphs: sanitizeParagraphs(paragraphs, title),
+    };
+  });
+}
+
+function flattenChapterSentences(chapter: { title: string; paragraphs: string[][] }): string[] {
+  return (chapter.paragraphs || []).flatMap(p => (Array.isArray(p) ? p : [])).filter(Boolean);
+}
+
+function pickBodyChapters(chapters: { title: string; paragraphs: string[][] }[]) {
   const normalized = chapters.map(c => ({
     title: c.title?.trim() || 'Untitled',
-    content: sanitizeSentences(c.content || [], c.title),
+    paragraphs: sanitizeParagraphs(c.paragraphs || [], c.title),
   }));
 
   // Heuristic 1 (strong): If the book has explicit "Chapter N" chapters, treat only those as正文.
@@ -46,31 +69,69 @@ function pickBodyChapters(chapters: { title: string; content: string[] }[]) {
   // Heuristic 2 (fallback): filter out common front-matter/metadata sections
   const noiseTitleRe = /(contents|table of contents|copyright|isbn|publisher|preface|foreword|about|introduction|title page)/i;
   return normalized.filter(c => {
-    if (!c.content?.length) return false;
+    const sentenceCount = flattenChapterSentences(c).length;
+    if (sentenceCount === 0) return false;
     if (noiseTitleRe.test(c.title)) return false;
     // very short sections are usually not body
-    if (c.content.length < 10) return false;
+    if (sentenceCount < 10) return false;
     return true;
   });
 }
 
-function flatIndexToPosition(flatIndex: number, chapters: { title: string; content: string[] }[]) {
+function flatIndexToPosition(
+  flatIndex: number,
+  chapters: { title: string; paragraphs: string[][] }[]
+) {
   let idx = Math.max(0, flatIndex);
   for (let c = 0; c < chapters.length; c++) {
-    const len = chapters[c].content.length;
-    if (idx < len) return { chapterIndex: c, sentenceIndex: idx };
-    idx -= len;
+    const paragraphs = chapters[c].paragraphs || [];
+    for (let p = 0; p < paragraphs.length; p++) {
+      const len = paragraphs[p]?.length || 0;
+      if (idx < len) return { chapterIndex: c, paragraphIndex: p, sentenceIndex: idx };
+      idx -= len;
+    }
   }
   // fallback to last sentence of last chapter
   const lastChapterIndex = Math.max(0, chapters.length - 1);
-  const lastSentenceIndex = Math.max(0, (chapters[lastChapterIndex]?.content.length || 1) - 1);
-  return { chapterIndex: lastChapterIndex, sentenceIndex: lastSentenceIndex };
+  const lastParagraphIndex = Math.max(0, (chapters[lastChapterIndex]?.paragraphs?.length || 1) - 1);
+  const lastSentenceIndex = Math.max(0, (chapters[lastChapterIndex]?.paragraphs?.[lastParagraphIndex]?.length || 1) - 1);
+  return { chapterIndex: lastChapterIndex, paragraphIndex: lastParagraphIndex, sentenceIndex: lastSentenceIndex };
+}
+
+function paragraphSentenceToFlatIndex(
+  chapter: { paragraphs: string[][] },
+  paragraphIndex: number,
+  sentenceIndex: number
+) {
+  let flat = 0;
+  for (let p = 0; p < (chapter.paragraphs || []).length; p++) {
+    if (p === paragraphIndex) return flat + sentenceIndex;
+    flat += chapter.paragraphs[p]?.length || 0;
+  }
+  return Math.max(0, flat - 1);
+}
+
+function flatIndexToParagraphSentence(
+  flatIndex: number,
+  paragraphs: string[][]
+): { paragraphIndex: number; sentenceIndex: number } {
+  let idx = Math.max(0, flatIndex);
+  for (let p = 0; p < (paragraphs || []).length; p++) {
+    const len = paragraphs[p]?.length || 0;
+    if (idx < len) return { paragraphIndex: p, sentenceIndex: idx };
+    idx -= len;
+  }
+  const lastParagraphIndex = Math.max(0, (paragraphs?.length || 1) - 1);
+  const lastSentenceIndex = Math.max(0, (paragraphs?.[lastParagraphIndex]?.length || 1) - 1);
+  return { paragraphIndex: lastParagraphIndex, sentenceIndex: lastSentenceIndex };
 }
 
 export default function ReaderInterface({ bookId, chapters, initialLanguage }: ReaderProps) {
-  const bodyChapters = useMemo(() => pickBodyChapters(chapters), [chapters]);
+  const normalizedChapters = useMemo(() => normalizeChapters(chapters), [chapters]);
+  const bodyChapters = useMemo(() => pickBodyChapters(normalizedChapters), [normalizedChapters]);
 
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
+  const [selectedParagraphIndex, setSelectedParagraphIndex] = useState<number | null>(null);
   const [selectedSentenceIndex, setSelectedSentenceIndex] = useState<number | null>(null);
   const [isChapterNavCollapsed, setIsChapterNavCollapsed] = useState(false);
   const [difficulty, setDifficulty] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
@@ -145,6 +206,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
       const flat = parseInt(saved, 10);
       const pos = flatIndexToPosition(flat, bodyChapters);
       setSelectedChapterIndex(pos.chapterIndex);
+      setSelectedParagraphIndex(pos.paragraphIndex);
       setSelectedSentenceIndex(pos.sentenceIndex);
       return;
     }
@@ -152,9 +214,32 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     try {
       const parsed = JSON.parse(saved);
       const c = typeof parsed?.chapterIndex === 'number' ? parsed.chapterIndex : 0;
-      const s = typeof parsed?.sentenceIndex === 'number' ? parsed.sentenceIndex : null;
-      setSelectedChapterIndex(Math.min(Math.max(0, c), Math.max(0, bodyChapters.length - 1)));
-      setSelectedSentenceIndex(s);
+      const clampedChapter = Math.min(Math.max(0, c), Math.max(0, bodyChapters.length - 1));
+      setSelectedChapterIndex(clampedChapter);
+
+      // New format: paragraph+sentence
+      if (typeof parsed?.paragraphIndex === 'number' && typeof parsed?.sentenceIndex === 'number') {
+        const chapter = bodyChapters[clampedChapter];
+        const maxP = Math.max(0, (chapter?.paragraphs?.length || 1) - 1);
+        const p = Math.min(Math.max(0, parsed.paragraphIndex), maxP);
+        const maxS = Math.max(0, (chapter?.paragraphs?.[p]?.length || 1) - 1);
+        const s = Math.min(Math.max(0, parsed.sentenceIndex), maxS);
+        setSelectedParagraphIndex(p);
+        setSelectedSentenceIndex(s);
+        return;
+      }
+
+      // Back-compat (v1): stored {chapterIndex, sentenceIndex} where sentenceIndex was within the chapter's flat sentence list.
+      if (typeof parsed?.sentenceIndex === 'number') {
+        const chapter = bodyChapters[clampedChapter];
+        const pos = flatIndexToParagraphSentence(parsed.sentenceIndex, chapter?.paragraphs || []);
+        setSelectedParagraphIndex(pos.paragraphIndex);
+        setSelectedSentenceIndex(pos.sentenceIndex);
+        return;
+      }
+
+      setSelectedParagraphIndex(null);
+      setSelectedSentenceIndex(null);
     } catch {
       // ignore
     }
@@ -172,12 +257,16 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
   }, [bookId, isChapterNavCollapsed]);
 
   useEffect(() => {
-    if (selectedSentenceIndex === null) return;
+    if (selectedParagraphIndex === null || selectedSentenceIndex === null) return;
     localStorage.setItem(
       `progress-${bookId}`,
-      JSON.stringify({ chapterIndex: selectedChapterIndex, sentenceIndex: selectedSentenceIndex })
+      JSON.stringify({
+        chapterIndex: selectedChapterIndex,
+        paragraphIndex: selectedParagraphIndex,
+        sentenceIndex: selectedSentenceIndex,
+      })
     );
-  }, [selectedSentenceIndex, selectedChapterIndex, bookId]);
+  }, [selectedSentenceIndex, selectedParagraphIndex, selectedChapterIndex, bookId]);
 
   const abortAIExplain = () => {
     if (aiAbortRef.current) {
@@ -192,13 +281,14 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
 
   const fetchAIExplanation = async (
     chapterIndex: number,
+    paragraphIndex: number,
     sentenceIndex: number,
     languageOverride?: LanguageCode
   ) => {
     if (isLoadingImage) return; // don't compete with image generation
 
     const currentChapter = bodyChapters[chapterIndex];
-    const currentSentence = currentChapter?.content[sentenceIndex] || '';
+    const currentSentence = currentChapter?.paragraphs?.[paragraphIndex]?.[sentenceIndex] || '';
     if (!currentSentence) return;
 
     // cancel previous request and start a new one
@@ -212,17 +302,17 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     setGeneratedImage(null); // keep output area single-mode
 
     try {
-      const prevContext = (currentChapter?.content || [])
-        .slice(Math.max(0, sentenceIndex - 2), sentenceIndex)
-        .join(" ");
+      const flatSentenceIndex = paragraphSentenceToFlatIndex(currentChapter, paragraphIndex, sentenceIndex);
+      const flat = flattenChapterSentences(currentChapter);
+      const prevContext = flat.slice(Math.max(0, flatSentenceIndex - 2), flatSentenceIndex).join(" ");
       const languageForRequest = languageOverride ?? selectedLanguage;
 
       // Debug aid: verify what we actually send to the API.
-      // (This is the fastest way to disprove "cached previous book content".)
       console.debug('[ai-explain] request', {
         bookId,
         chapterIndex,
         chapterTitle: currentChapter?.title,
+        paragraphIndex,
         sentenceIndex,
         textPreview: currentSentence.slice(0, 160),
         contextPreview: prevContext.slice(0, 160),
@@ -251,6 +341,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
       // Only apply if this is still the latest request and selection still matches.
       if (reqId !== aiRequestSeqRef.current) return;
       if (selectedChapterIndex !== chapterIndex) return;
+      if (selectedParagraphIndex !== paragraphIndex) return;
       if (selectedSentenceIndex !== sentenceIndex) return;
 
       setAiExplanation(data.explanation);
@@ -260,6 +351,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
       // Only apply error if still latest and selection still matches.
       if (reqId !== aiRequestSeqRef.current) return;
       if (selectedChapterIndex !== chapterIndex) return;
+      if (selectedParagraphIndex !== paragraphIndex) return;
       if (selectedSentenceIndex !== sentenceIndex) return;
       setAiExplanation(error.message || "Sorry, I couldn't reach the AI teacher right now.");
     } finally {
@@ -268,33 +360,26 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
   };
 
   // Handle Selection Change
-  const handleSentenceClick = (index: number) => {
-    const shouldAutoRefreshExplain = isLoadingAI || aiExplanation !== null;
-
+  const handleSentenceClick = (pIndex: number, sIndex: number) => {
     // switching sentence invalidates any in-flight explain request
     abortAIExplain();
     setIsLoadingAI(false);
 
-    setSelectedSentenceIndex(index);
+    setSelectedParagraphIndex(pIndex);
+    setSelectedSentenceIndex(sIndex);
     setGeneratedImage(null);
-    setAiExplanation(null);
-
-    // If the user was already using "Explain", refresh for the new sentence automatically.
-    if (shouldAutoRefreshExplain) {
-      // Use explicit indices to avoid races with state updates.
-      void fetchAIExplanation(selectedChapterIndex, index, selectedLanguage);
-    }
+    // Keep existing explanation visible until the user explicitly requests a new one
   };
 
   // 3. AI Explain Function 
   const askAI = async () => {
-    if (isAnyLoading || selectedSentenceIndex === null) return;
-    await fetchAIExplanation(selectedChapterIndex, selectedSentenceIndex, selectedLanguage);
+    if (isAnyLoading || selectedParagraphIndex === null || selectedSentenceIndex === null) return;
+    await fetchAIExplanation(selectedChapterIndex, selectedParagraphIndex, selectedSentenceIndex, selectedLanguage);
   };
 
   // 4. AI Depict Function 
   const depictAI = async () => {
-    if (isAnyLoading || selectedSentenceIndex === null) return;
+    if (isAnyLoading || selectedParagraphIndex === null || selectedSentenceIndex === null) return;
 
     // Depict is a different mode; cancel any in-flight explain request.
     abortAIExplain();
@@ -304,7 +389,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     
     try {
       const currentChapter = bodyChapters[selectedChapterIndex];
-      const currentSentence = currentChapter?.content[selectedSentenceIndex] || '';
+      const currentSentence = currentChapter?.paragraphs?.[selectedParagraphIndex]?.[selectedSentenceIndex] || '';
       const res = await fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -330,9 +415,9 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
 
   const currentChapterTitle = bodyChapters[selectedChapterIndex]?.title || 'Chapter';
   const selectedSentenceText =
-    selectedSentenceIndex === null
+    selectedParagraphIndex === null || selectedSentenceIndex === null
       ? null
-      : (bodyChapters[selectedChapterIndex]?.content?.[selectedSentenceIndex] || null);
+      : (bodyChapters[selectedChapterIndex]?.paragraphs?.[selectedParagraphIndex]?.[selectedSentenceIndex] || null);
   const chapterNavWidthClass = isChapterNavCollapsed ? 'w-12' : 'w-52'; // 48px vs 208px
   const detectedLanguageLabel = resolveLanguageLabel(normalizedInitialLanguage);
 
@@ -354,8 +439,8 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     setIsLoadingAI(false);
     setAiExplanation(null);
     setGeneratedImage(null);
-    if (selectedSentenceIndex !== null) {
-      void fetchAIExplanation(selectedChapterIndex, selectedSentenceIndex, normalized);
+    if (selectedParagraphIndex !== null && selectedSentenceIndex !== null) {
+      void fetchAIExplanation(selectedChapterIndex, selectedParagraphIndex, selectedSentenceIndex, normalized);
     }
   };
 
@@ -419,37 +504,35 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
       <main className="flex-grow w-full py-8 pr-4 lg:pr-6 pl-4 flex flex-col lg:flex-row gap-6">
 
         {/* Desktop Chapters Sidebar (scrolls with page) */}
-        <nav
-          className={`hidden lg:flex bg-white border border-gray-100 shadow-sm overflow-hidden flex-col ${chapterNavWidthClass} rounded-2xl`}
-          aria-label="Chapters"
-        >
-          <div className={`border-b border-gray-100 bg-gray-50 flex items-center gap-2 ${isChapterNavCollapsed ? 'px-2 py-2' : 'px-3 py-3'}`}>
+        {isChapterNavCollapsed ? (
+          <div className="hidden lg:flex shrink-0">
             <button
-              onClick={() => setIsChapterNavCollapsed(v => !v)}
-              className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600"
-              title={isChapterNavCollapsed ? 'Expand chapters' : 'Collapse chapters'}
-              aria-label={isChapterNavCollapsed ? 'Expand chapters' : 'Collapse chapters'}
+              onClick={() => setIsChapterNavCollapsed(false)}
+              className="h-10 w-10 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-600 hover:bg-gray-50"
+              title="Expand chapters"
+              aria-label="Expand chapters"
             >
-              {isChapterNavCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+              <PanelLeftOpen size={16} />
             </button>
-
-            {!isChapterNavCollapsed && (
-              <div className="text-sm font-semibold text-gray-600">Chapters</div>
-            )}
-
-            {/* When collapsed, show current chapter next to the toggle without consuming layout width */}
-            {isChapterNavCollapsed && (
-              <div className="relative">
-                <div className="absolute left-10 top-1/2 -translate-y-1/2">
-                  <div className="max-w-56 bg-white/95 backdrop-blur px-2 py-1 rounded-full border border-gray-200 shadow-sm text-xs font-semibold text-gray-700 truncate">
-                    {currentChapterTitle}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
+        ) : (
+          <nav
+            className={`hidden lg:flex bg-white border border-gray-100 shadow-sm overflow-hidden flex-col ${chapterNavWidthClass} rounded-2xl`}
+            aria-label="Chapters"
+          >
+            <div className="border-b border-gray-100 bg-gray-50 flex items-center gap-2 px-3 py-3">
+              <button
+                onClick={() => setIsChapterNavCollapsed(true)}
+                className="p-1.5 rounded-md hover:bg-gray-100 text-gray-600"
+                title="Collapse chapters"
+                aria-label="Collapse chapters"
+              >
+                <PanelLeftClose size={16} />
+              </button>
 
-          {!isChapterNavCollapsed && (
+              <div className="text-sm font-semibold text-gray-600">Chapters</div>
+            </div>
+
             <div className="p-2">
               {bodyChapters.length === 0 ? (
                 <div className="text-sm text-gray-500 px-2 py-2">No chapters</div>
@@ -464,6 +547,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                           abortAIExplain();
                           setIsLoadingAI(false);
                           setSelectedChapterIndex(idx);
+                          setSelectedParagraphIndex(null);
                           setSelectedSentenceIndex(null);
                           setAiExplanation(null);
                           setGeneratedImage(null);
@@ -486,8 +570,8 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                 </div>
               )}
             </div>
-          )}
-        </nav>
+          </nav>
+        )}
 
         {/* LEFT: Reader (mobile includes an inline chapter list) */}
         <div className="flex-1 min-w-0">
@@ -510,6 +594,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                           abortAIExplain();
                           setIsLoadingAI(false);
                           setSelectedChapterIndex(idx);
+                          setSelectedParagraphIndex(null);
                           setSelectedSentenceIndex(null);
                           setAiExplanation(null);
                           setGeneratedImage(null);
@@ -544,21 +629,25 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                   <h2 className="text-2xl font-bold mb-6 mt-0">
                     {currentChapterTitle}
                   </h2>
-                  {(bodyChapters[selectedChapterIndex]?.content || []).map((sentence, index) => (
-                    <React.Fragment key={index}>
-                      <span
-                        onClick={() => handleSentenceClick(index)}
-                        className={`
-                          cursor-pointer transition-colors duration-200 py-1 px-0.5 rounded select-none
-                          ${selectedSentenceIndex === index 
-                            ? 'bg-blue-100 text-blue-900 font-semibold border-b-2 border-blue-400' 
-                            : 'hover:bg-slate-100 hover:text-gray-900'}
-                        `}
-                      >
-                        {sentence}
-                      </span>
-                      {" "}
-                    </React.Fragment>
+                  {(bodyChapters[selectedChapterIndex]?.paragraphs || []).map((paragraph, pIndex) => (
+                    <p key={pIndex} className="mb-4 last:mb-0">
+                      {(paragraph || []).map((sentence, sIndex) => (
+                        <React.Fragment key={`${pIndex}-${sIndex}`}>
+                          <span
+                            onClick={() => handleSentenceClick(pIndex, sIndex)}
+                            className={`
+                              cursor-pointer transition-colors duration-200 py-1 px-0.5 rounded select-none
+                              ${selectedParagraphIndex === pIndex && selectedSentenceIndex === sIndex
+                                ? 'bg-blue-100 text-blue-900 font-semibold border-b-2 border-blue-400'
+                                : 'hover:bg-slate-100 hover:text-gray-900'}
+                            `}
+                          >
+                            {sentence}
+                          </span>
+                          {" "}
+                        </React.Fragment>
+                      ))}
+                    </p>
                   ))}
                 </div>
               )}
@@ -663,10 +752,10 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                   {/* Explain Button */}
                   <button
                     onClick={askAI}
-                    disabled={selectedSentenceIndex === null || isAnyLoading}
+                    disabled={selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading}
                     className={`
                       flex-1 py-3 px-2 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm
-                      ${selectedSentenceIndex === null || isAnyLoading
+                      ${selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                         : 'bg-blue-600 text-white hover:bg-blue-700 shadow hover:shadow-md active:scale-95'}
                     `}
@@ -682,10 +771,10 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                   {/* Depict Button */}
                   <button
                     onClick={depictAI}
-                    disabled={selectedSentenceIndex === null || isAnyLoading}
+                    disabled={selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading}
                     className={`
                       flex-1 py-3 px-2 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm
-                      ${selectedSentenceIndex === null || isAnyLoading
+                      ${selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
                         : 'bg-purple-600 text-white hover:bg-purple-700 shadow hover:shadow-md active:scale-95'}
                     `}

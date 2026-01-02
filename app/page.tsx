@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { BookOpen, Sparkles, Brain, ArrowRight, BarChart, Info } from 'lucide-react';
 import { getBooks } from '@/lib/db';
-import UploadArea from '@/components/UploadArea';
+import BooksManager from '@/components/BooksManager';
 
 export default async function Home() {
   const books = await getBooks();
@@ -53,7 +53,6 @@ export default async function Home() {
 
         {/* 3. Library Grid: 核心功能区 */}
         <section>
-          <UploadArea />
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <Brain className="text-gray-400" size={24} />
@@ -85,13 +84,13 @@ export default async function Home() {
                 
                 {/* 预览文本 (取前两句) */}
                 <p className="text-gray-500 text-sm line-clamp-3 mb-6 leading-relaxed">
-                  {book.preview?.join(' ') || book.chapters?.[0]?.content.slice(0, 2).join(' ') || "No preview available"}...
+                  {book.preview?.join(' ') || "No preview available"}...
                 </p>
 
                 <div className="mt-auto w-full flex items-center justify-between border-t border-gray-50 pt-4">
                   <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                     <BarChart size={12} />
-                    {book.metadata?.sentenceCount || book.chapters?.reduce((acc, c) => acc + c.content.length, 0) || 0} Sentences
+                    {book.metadata?.sentenceCount ?? 0} Sentences
                   </span>
                   <span className="text-blue-600 font-semibold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
                     Read Now <ArrowRight size={16} />
@@ -105,6 +104,8 @@ export default async function Home() {
               <span className="text-sm font-medium">More books coming soon</span>
             </div>
           </div>
+
+          <BooksManager books={books} />
         </section>
 
       </main>
