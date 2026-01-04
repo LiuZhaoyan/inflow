@@ -226,6 +226,73 @@ export default function DocsHome() {
       ),
     },
     {
+      id: 'guide-for-beginner',
+      title: 'Guide For Beginner',
+      icon: <Brain className="text-blue-600" size={20} />,
+      description: '如何从零开始？一份基于可理解输入的实操指南。',
+      content: (
+        <div className="space-y-6">
+          <p className="text-gray-600">
+            基于 Comprehensible Input (CI) 理论，我们为你整理了一份快速上手新语言的行动指南。
+          </p>
+          
+          <div className="space-y-8">
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
+                寻找“可理解”材料 (The Input)
+              </h3>
+              <p className="text-gray-600 mb-3">
+                这是最关键的一步。你需要找到你能理解 <strong>80% 以上</strong> 的内容。
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
+                <li><strong>零基础/入门：</strong> 寻找专为学习者设计的 Graded Readers (分级读物)，或者儿童绘本。</li>
+                <li><strong>初级：</strong> 简单的播客 (Slow Podcast)、YouTube 教学视频（带字幕）。</li>
+                <li><strong>中级：</strong> 青少年小说、感兴趣的非虚构类文章。</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
+                建立“声音-含义”连接 (Mapping)
+              </h3>
+              <p className="text-gray-600 mb-3">
+                语言首先是声音。在阅读的同时，尽量多听。
+              </p>
+              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <p className="text-sm text-blue-900">
+                  <strong>Inflow 技巧：</strong> 即使你在阅读，也可以尝试在脑海中“播放”声音，或者寻找有声书配合阅读。
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">3</span>
+                不要背单词，要“遇见”单词 (Acquisition)
+              </h3>
+              <p className="text-gray-600">
+                机械记忆的单词是“死”的。只有在不同语境下反复遇见同一个词，你才能真正掌握它。
+                <br/>
+                当你在 Inflow 中点击一个词查看解释后，<strong>不要试图立刻记住它</strong>。继续读下去，下次再见到它时，你可能会再次点击，直到某一次你突然发现：“噢，我不需要点了，我知道它是什意思。” 这就是习得发生的时刻。
+              </p>
+            </div>
+            
+             <div>
+              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">4</span>
+                保持轻松 (Low Affective Filter)
+              </h3>
+              <p className="text-gray-600">
+                焦虑是语言习得的敌人。如果你读得头疼、查词太累，说明材料太难了。<strong>换一本更简单的书，或者休息一下。</strong> 保持愉悦的心情，大脑才更愿意吸收新语言。
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
       id: 'roadmap',
       title: 'Roadmap',
       icon: <Rocket className="text-blue-600" size={20} />,
