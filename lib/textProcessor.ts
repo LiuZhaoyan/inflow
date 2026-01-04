@@ -1,10 +1,12 @@
 import * as cheerio from 'cheerio';
 import EPub from 'epub2';
+import path from 'path';
 
 export interface ProcessedBook {
   title: string;
   author?: string;
   chapters: { title: string; paragraphs: string[][] }[];
+  images?: Record<string, Buffer>;
   metadata: {
     wordCount: number;
     sentenceCount: number;
@@ -91,10 +93,22 @@ async function parsePdf(buffer: Buffer): Promise<string> {
   }
 }
 
-async function parseEpub(filePath: string): Promise<{ title: string; chapters: { title: string; paragraphs: string[][] }[] }> {
+async function parseEpub(filePath: string): Promise<{ title: string; chapters: { title: string; paragraphs: string[][] }[]; images: Record<string, Buffer> }> {
   // @ts-ignore - EPub types are sometimes tricky
   const epub = await EPub.createAsync(filePath);
   const chapters = [];
+  const images: Record<string, Buffer> = {};
+
+  // Build a map of href -> id for image resolution
+  const hrefToId: Record<string, string> = {};
+  // @ts-ignore
+  if (epub.manifest) {
+    // @ts-ignore
+    for (const [id, data] of Object.entries(epub.manifest)) {
+      // @ts-ignore
+      if (data.href) hrefToId[data.href] = id;
+    }
+  }
 
   const isHtmlLike = (mime?: string) => {
     const m = (mime || '').toLowerCase().trim();
@@ -132,6 +146,45 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
     const $ = cheerio.load(html);
     const body = $('body');
 
+    // Process images
+    const imagePromises: Promise<void>[] = [];
+    
+    body.find('img').each((_, img) => {
+      const src = $(img).attr('src');
+      if (!src) return;
+
+      // Resolve path relative to the chapter file
+      // @ts-ignore
+      const chapterHref = epub.manifest[chapter.id]?.href || '';
+      const chapterDir = path.posix.dirname(chapterHref);
+      const absoluteHref = path.posix.join(chapterDir, src);
+      
+      const imageId = hrefToId[absoluteHref];
+      if (imageId) {
+        // Use a unique key for the image map (e.g., the absolute href)
+        // Relaxed sanitization: filter out file system reserved characters
+        const imageKey = absoluteHref.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
+        
+        // Replace img tag with marker
+        $(img).replaceWith(` <<<IMAGE:${imageKey}>>>. `);
+
+        // Fetch image data if not already fetched
+        if (!images[imageKey]) {
+          imagePromises.push((async () => {
+            try {
+              // @ts-ignore
+              const [buffer] = await epub.getFileAsync(imageId);
+              if (buffer) images[imageKey] = buffer;
+            } catch (e) {
+              console.warn(`Failed to load image ${absoluteHref}:`, e);
+            }
+          })());
+        }
+      }
+    });
+
+    await Promise.all(imagePromises);
+
     const paragraphTexts: string[] = [];
     // Prefer true paragraph-ish elements so we preserve paragraph boundaries.
     // Note: intentionally avoid `div` because it often wraps huge sections.
@@ -162,7 +215,8 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
   
   return {
     title: epub.metadata.title || 'Untitled EPUB',
-    chapters
+    chapters,
+    images
   };
 }
 
@@ -191,6 +245,7 @@ export async function processDocument(
   let chapters: { title: string; paragraphs: string[][] }[] = [];
   let title = fileName.replace(/\.[^/.]+$/, "");
   let format = 'text';
+  let images: Record<string, Buffer> | undefined;
 
   const ext = fileName.split('.').pop()?.toLowerCase();
 
@@ -207,6 +262,7 @@ export async function processDocument(
     const epubData = await parseEpub(filePath);
     title = epubData.title || title;
     chapters = epubData.chapters;
+    images = epubData.images;
   } 
   else if (ext === 'srt' || ext === 'vtt') {
     format = 'subtitle';
@@ -239,6 +295,7 @@ export async function processDocument(
   return {
     title,
     chapters,
+    images,
     metadata: {
       wordCount: totalWords,
       sentenceCount: totalSentences,

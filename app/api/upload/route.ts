@@ -28,7 +28,8 @@ export async function POST(req: Request) {
     for (const file of files) {
       uploadedFilenames.push(file.name);
       const buffer = Buffer.from(await file.arrayBuffer());
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      // Windows reserved: < > : " / \ | ? * and control characters
+      const safeName = file.name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
       const filePath = path.join(uploadsDir, safeName);
       
       // Save file physically (useful for EPUBs or caching)
@@ -61,6 +62,15 @@ export async function POST(req: Request) {
           languageReason: languageGuess.reason,
         }
       });
+
+      // Save extracted images
+      if (processed.images) {
+        const imagesDir = path.join(process.cwd(), 'public', 'uploads', 'images', newBook.id);
+        await fs.promises.mkdir(imagesDir, { recursive: true });
+        for (const [key, imgBuffer] of Object.entries(processed.images)) {
+          await fs.promises.writeFile(path.join(imagesDir, key), imgBuffer);
+        }
+      }
       
       savedBooks.push(newBook);
     }

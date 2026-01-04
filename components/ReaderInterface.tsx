@@ -5,6 +5,11 @@ import { BookOpen, Sparkles, MessageSquare, Search, Image as ImageIcon, Loader2,
 import { motion, AnimatePresence } from 'framer-motion';
 import { LANGUAGE_OPTIONS, LanguageCode, normalizeLanguageCode, resolveLanguageLabel } from '@/lib/language';
 
+function getImageKey(text: string): string | null {
+  const match = text.match(/<<<IMAGE:([^>]+)>>>/);
+  return match ? match[1] : null;
+}
+
 interface ReaderProps {
   bookId: string;
   chapters: { title: string; paragraphs?: string[][]; content?: string[] }[];
@@ -631,7 +636,21 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                   </h2>
                   {(bodyChapters[selectedChapterIndex]?.paragraphs || []).map((paragraph, pIndex) => (
                     <p key={pIndex} className="mb-4 last:mb-0">
-                      {(paragraph || []).map((sentence, sIndex) => (
+                      {(paragraph || []).map((sentence, sIndex) => {
+                        const imageKey = getImageKey(sentence);
+                        if (imageKey) {
+                          return (
+                            <span key={`${pIndex}-${sIndex}`} className="block my-4 text-center">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img 
+                                src={`/uploads/images/${bookId}/${imageKey}`} 
+                                alt="Book illustration" 
+                                className="max-w-full h-auto rounded-lg shadow-sm max-h-[500px] mx-auto"
+                              />
+                            </span>
+                          );
+                        }
+                        return (
                         <React.Fragment key={`${pIndex}-${sIndex}`}>
                           <span
                             onClick={() => handleSentenceClick(pIndex, sIndex)}
@@ -646,7 +665,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                           </span>
                           {" "}
                         </React.Fragment>
-                      ))}
+                      )})}
                     </p>
                   ))}
                 </div>
