@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Inflow
 
-## Getting Started
+**Acquire language, don't memorize it.**
 
-First, run the development server:
+Inflow is an immersive language learning application built with Next.js. It leverages the philosophy of **Comprehensible Input** to help users master new languages naturally by reading stories slightly above their current level.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 📖 Philosophy
+
+Inflow is designed around the idea that language acquisition happens when we understand messages (input) that contain aspects of the language we are ready to acquire. Instead of rote memorization of vocabulary lists, Inflow provides:
+
+- **Contextual Learning**: Learn words within the flow of a story.
+- **AI-Powered Assistance**: Instant explanations and visual depictions to bridge the gap between your current level and the text.
+- **Distraction-Free Reading**: A clean interface focused on the content.
+
+## ✨ Features
+
+- **📚 EPUB Reader**: Upload and read your favorite EPUB books directly in the browser.
+- **🤖 AI Explanations**: Click on any sentence to get an instant, context-aware explanation tailored to your proficiency level (Beginner, Intermediate, Advanced).
+- **🎨 AI Depiction**: Visualize the scene with AI-generated images based on the text context to aid memory and understanding.
+- **🌍 Multi-language Support**: Auto-detection and support for multiple languages including English, Chinese, Japanese, Spanish, French, German, and Russian.
+- **📂 Library Management**: Easily upload, manage, and organize your reading collection.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Language**: TypeScript
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **UI Components**: [Lucide React](https://lucide.dev/), [Framer Motion](https://www.framer.com/motion/)
+- **AI Integration**: 
+  - OpenAI API (Text Explanation)
+  - PPInfra / Seedream (Image Generation)
+- **File Processing**: `epub2`, `cheerio`
+- **Data Storage**: Local JSON-based database
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ 
+- npm, pnpm, or yarn
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/inflow.git
+   cd inflow
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   pnpm install
+   ```
+
+3. **Configure Environment Variables**
+   Create a `.env.local` file in the root directory and add your API keys:
+
+   ```env
+   # OpenAI Configuration (for AI Explanations)
+   API_KEY=your_openai_api_key
+   BASE_URL=https://api.openai.com/v1 # or your custom endpoint
+
+   # Image Generation Configuration (if different from above)
+   # Ensure your backend logic in app/api/ai-depict/route.ts matches your provider
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open the application**
+   Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 📂 Project Structure
+
+```
+inflow/
+├── app/                 # Next.js App Router pages and API routes
+│   ├── api/             # Backend API endpoints (ai-explain, ai-depict, upload, etc.)
+│   ├── about/           # About page
+│   ├── docs/            # Documentation page
+│   ├── read/            # Reader interface
+│   └── user/            # User library page
+├── components/          # React components (BooksManager, ReaderInterface, etc.)
+├── data/                # Local JSON database and book metadata
+├── lib/                 # Utility functions (db, language, textProcessor)
+├── public/              # Static assets and uploads
+└── uploads/             # Raw uploaded EPUB files
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📚 Contributing Materials
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+We are actively looking for high-quality, **Public Domain** language learning resources to expand our default library.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+If you have EPUB books that are suitable for language learners (e.g., graded readers, classic literature in various languages):
 
-## Learn More
+1. **Verify Copyright**: Ensure the content is in the Public Domain or has a compatible open license (e.g., CC BY).
+2. **Submit via Issue**: Open a [GitHub Issue](https://github.com/yourusername/inflow/issues) with the label `content` and attach the file or a download link.
+3. **Submit via Pull Request**: Add your EPUB files to the `materials/` directory and submit a PR.
 
-To learn more about Next.js, take a look at the following resources:
+## 🤝 Contributing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📄 License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is open source and available under the [MIT License](LICENSE).
