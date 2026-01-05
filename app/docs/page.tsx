@@ -81,22 +81,22 @@ export default function DocsHome() {
       id: 'getting-started',
       title: 'Getting Started',
       icon: <Sparkles className="text-blue-600" size={20} />,
-      description: '只需简单的三步，开启你的习得之旅。',
+      description: 'Just three simple steps to start your acquisition journey.',
       content: (
         <div className="mt-4">
           <p className="mb-6 text-gray-600">
-            Inflow 的目标是让你通过<strong>可理解输入</strong>（Comprehensible Input）进行语言习得。
-            你不需要背诵单词表，只需要阅读、理解、并继续阅读。
+            Inflow's goal is to let you acquire language through <strong>Comprehensible Input</strong>.
+            You don't need to memorize vocabulary lists, just read, understand, and keep reading.
           </p>
           <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <StepItem number={1} title="上传内容">
-              支持 PDF, EPUB, TXT 格式。建议从你感兴趣且难度适中的材料开始。
+            <StepItem number={1} title="Upload Content">
+              Supports PDF, EPUB, TXT formats. It is recommended to start with materials that interest you and are of moderate difficulty.
             </StepItem>
-            <StepItem number={2} title="沉浸阅读">
-              打开阅读页，系统会自动将文本按句子切分。专注阅读内容本身。
+            <StepItem number={2} title="Immersive Reading">
+              Open the reading page, and the system will automatically segment the text by sentences. Focus on the content itself.
             </StepItem>
-            <StepItem number={3} title="按需解惑">
-              遇到不懂的地方？点击它。AI 会根据<strong>当前上下文</strong>给出解释，而不是生硬的词典定义。
+            <StepItem number={3} title="Explain on Demand">
+              Encounter something you don't understand? Click it. AI will provide an explanation based on the <strong>current context</strong>, rather than a rigid dictionary definition.
             </StepItem>
           </div>
         </div>
@@ -106,20 +106,20 @@ export default function DocsHome() {
       id: 'reading-and-explanations',
       title: 'Reading & Explanations',
       icon: <MousePointerClick className="text-blue-600" size={20} />,
-      description: '点击解释是“保持可理解”的关键机制。',
+      description: 'Clicking for explanation is the key mechanism to "keep it comprehensible".',
       content: (
         <div className="space-y-4">
           <p>
-            Inflow 鼓励你优先理解<strong>含义</strong>而不是死记硬背。当你点击某个词或短语时，我们会结合上下文给出简短解释。
+            Inflow encourages you to prioritize understanding <strong>meaning</strong> over rote memorization. When you click on a word or phrase, we provide a short explanation combined with the context.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
             <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">上下文优先</h4>
-              <p className="text-sm text-gray-600">同一个词在不同句子里意思可能完全不同。我们只解释“当下的含义”。</p>
+              <h4 className="font-semibold text-gray-900 mb-2">Context First</h4>
+              <p className="text-sm text-gray-600">The same word can mean completely different things in different sentences. We only explain the "current meaning".</p>
             </div>
             <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">极简解释</h4>
-              <p className="text-sm text-gray-600">解释越长越像“上课”，容易让你脱离阅读状态。我们力求简短、直击要害。</p>
+              <h4 className="font-semibold text-gray-900 mb-2">Minimalist Explanation</h4>
+              <p className="text-sm text-gray-600">Long explanations feel like "class", which can easily take you out of the reading state. We strive to be short and to the point.</p>
             </div>
           </div>
         </div>
@@ -129,17 +129,17 @@ export default function DocsHome() {
       id: 'difficulty-and-i-plus-one',
       title: 'Difficulty & i+1',
       icon: <Layers className="text-blue-600" size={20} />,
-      description: '理解 Stephen Krashen 的核心理论。',
+      description: 'Understand Stephen Krashen\'s core theory.',
       content: (
         <div className="space-y-4">
           <p>
-            当输入略高于你现有水平时（i+1），你最容易在真实语境中吸收新的词汇与结构。
+            When the input is slightly above your current level (i+1), you are most likely to absorb new vocabulary and structures in a real context.
           </p>
-          <Callout type="info" title="快速自测：这篇内容是否适合？">
+          <Callout type="info" title="Quick Self-Test: Is this content suitable?">
             <ul className="list-disc list-inside space-y-1">
-              <li>你能理解 <strong>70%~90%</strong> 的意思（即使不认识所有词）。</li>
-              <li>你会偶尔停下来点击解释，而不是每一句都要查。</li>
-              <li>你能“继续读下去”，而不是频繁失去耐心。</li>
+              <li>You can understand <strong>70%~90%</strong> of the meaning (even if you don't know every word).</li>
+              <li>You stop occasionally to click for explanations, rather than looking up every sentence.</li>
+              <li>You can "keep reading" without frequently losing patience.</li>
             </ul>
           </Callout>
         </div>
@@ -161,7 +161,7 @@ export default function DocsHome() {
             </p>
           </div>
           <p>
-            我们把“习得”放在第一位：你通过<strong>大量可理解输入</strong>，在真实语境中反复遇到同样的表达，逐渐形成直觉。
+            We put "acquisition" first: you gradually form intuition by encountering the same expressions repeatedly in real contexts through <strong>massive comprehensible input</strong>.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/50 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -170,7 +170,7 @@ export default function DocsHome() {
                 Keep Immersion
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                点击解释尽量用目标语言表达，减少“翻译腔”，让你保持在目标语言环境中思考。
+                Explanations should try to use the target language to reduce "translationese", allowing you to keep thinking in the target language environment.
               </p>
             </div>
             <div className="rounded-2xl border border-purple-100 bg-gradient-to-br from-white to-purple-50/50 p-5 shadow-sm hover:shadow-md transition-shadow">
@@ -179,7 +179,7 @@ export default function DocsHome() {
                 Meaning over Rules
               </div>
               <p className="text-sm text-gray-700 leading-relaxed">
-                优先解释“这句话在这里什么意思”，而不是抽象语法讲解；理解稳定后，语法会自然内化。
+                Prioritize explaining "what this sentence means here" rather than abstract grammar lectures; once understanding is stable, grammar will naturally internalize.
               </p>
             </div>
           </div>
@@ -190,35 +190,35 @@ export default function DocsHome() {
       id: 'advice-for-beginners',
       title: 'Advice For Beginner',
       icon: <GraduationCap className="text-blue-600" size={20} />,
-      description: '为语言学习入门者提供基于 Comprehensible Input Theory 的入门建议。',
+      description: 'Introductory advice for language learners based on Comprehensible Input Theory.',
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            如果这是你第一次尝试通过“习得”而非“学习”来掌握一门语言，以下建议可以帮助你少走弯路：
+            If this is your first time trying to master a language through "acquisition" rather than "learning", the following advice can help you avoid detours:
           </p>
           <div className="space-y-4">
             <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-              <h4 className="font-semibold text-blue-900 mb-2">1. 忍受模糊 (Tolerate Ambiguity)</h4>
+              <h4 className="font-semibold text-blue-900 mb-2">1. Tolerate Ambiguity</h4>
               <p className="text-sm text-gray-700 leading-relaxed">
-                不要试图搞懂每一个单词。遇到不认识的词，如果它不影响你理解整句话的大意，<strong>请直接跳过</strong>。只有当你觉得它反复出现且阻碍理解时，再点击查看解释。
+                Don't try to understand every single word. If a word you don't know doesn't affect your understanding of the general idea, <strong>skip it</strong>. Only click for an explanation when you feel it appears repeatedly and hinders understanding.
               </p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">2. 从简单的开始</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">2. Start Simple</h4>
               <p className="text-sm text-gray-600 leading-relaxed">
-                不要一开始就挑战名著。童书、分级读物、或者你已经读过中文版的书是最好的起步材料。你需要的是 <strong>i+1</strong>（略高于当前水平），而不是 i+10。
+                Don't start with classics. Children's books, graded readers, or books you have already read in your native language are the best starting materials. You need <strong>i+1</strong> (slightly above current level), not i+10.
               </p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">3. 数量 {'>'} 精度</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">3. Quantity {'>'} Precision</h4>
               <p className="text-sm text-gray-600 leading-relaxed">
-                读懂 10 本简单的书，比精读 1 本难懂的书更有用。你需要的是大量的“见过”这个词在不同场景下的样子，而不是深挖它的 10 种用法。
+                Reading 10 simple books is more useful than intensive reading of 1 difficult book. You need to "see" the word in different scenarios extensively, rather than digging into its 10 usages.
               </p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">4. 保持一致性</h4>
+              <h4 className="font-semibold text-gray-900 mb-2">4. Consistency</h4>
               <p className="text-sm text-gray-600 leading-relaxed">
-                每天 15 分钟比周末突击 2 小时更有用。大脑需要睡眠来整理和内化输入的语言模式。
+                15 minutes a day is more useful than 2 hours of cramming on weekends. The brain needs sleep to organize and internalize language patterns.
               </p>
             </div>
           </div>
@@ -229,40 +229,40 @@ export default function DocsHome() {
       id: 'guide-for-beginner',
       title: 'Guide For Beginner',
       icon: <Brain className="text-blue-600" size={20} />,
-      description: '如何从零开始？一份基于可理解输入的实操指南。',
+      description: 'How to start from scratch? A practical guide based on comprehensible input.',
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
-            基于 Comprehensible Input (CI) 理论，我们为你整理了一份快速上手新语言的行动指南。
+            Based on Comprehensible Input (CI) theory, we have compiled an action guide for you to quickly get started with a new language.
           </p>
           
           <div className="space-y-8">
             <div>
               <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
-                寻找“可理解”材料 (The Input)
+                Find "Comprehensible" Materials (The Input)
               </h3>
               <p className="text-gray-600 mb-3">
-                这是最关键的一步。你需要找到你能理解 <strong>80% 以上</strong> 的内容。
+                This is the most critical step. You need to find content where you can understand <strong>more than 80%</strong>.
               </p>
               <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
-                <li><strong>零基础/入门：</strong> 寻找专为学习者设计的 Graded Readers (分级读物)，或者儿童绘本。</li>
-                <li><strong>初级：</strong> 简单的播客 (Slow Podcast)、YouTube 教学视频（带字幕）。</li>
-                <li><strong>中级：</strong> 青少年小说、感兴趣的非虚构类文章。</li>
+                <li><strong>Zero/Beginner:</strong> Look for Graded Readers designed for learners, or children's picture books.</li>
+                <li><strong>Elementary:</strong> Simple podcasts (Slow Podcast), YouTube tutorial videos (with subtitles).</li>
+                <li><strong>Intermediate:</strong> Young adult novels, non-fiction articles of interest.</li>
               </ul>
             </div>
 
             <div>
               <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
-                建立“声音-含义”连接 (Mapping)
+                Build "Sound-Meaning" Connection (Mapping)
               </h3>
               <p className="text-gray-600 mb-3">
-                语言首先是声音。在阅读的同时，尽量多听。
+                Language is primarily sound. While reading, try to listen as much as possible.
               </p>
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                 <p className="text-sm text-blue-900">
-                  <strong>Inflow 技巧：</strong> 即使你在阅读，也可以尝试在脑海中“播放”声音，或者寻找有声书配合阅读。
+                  <strong>Inflow Tip:</strong> Even when reading, try to "play" the sound in your mind, or find audiobooks to accompany your reading.
                 </p>
               </div>
             </div>
@@ -270,22 +270,22 @@ export default function DocsHome() {
             <div>
               <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">3</span>
-                不要背单词，要“遇见”单词 (Acquisition)
+                Don't Memorize, "Encounter" Words (Acquisition)
               </h3>
               <p className="text-gray-600">
-                机械记忆的单词是“死”的。只有在不同语境下反复遇见同一个词，你才能真正掌握它。
+                Mechanically memorized words are "dead". Only by repeatedly encountering the same word in different contexts can you truly master it.
                 <br/>
-                当你在 Inflow 中点击一个词查看解释后，<strong>不要试图立刻记住它</strong>。继续读下去，下次再见到它时，你可能会再次点击，直到某一次你突然发现：“噢，我不需要点了，我知道它是什意思。” 这就是习得发生的时刻。
+                When you click a word in Inflow to see the explanation, <strong>don't try to remember it immediately</strong>. Keep reading. The next time you see it, you might click it again, until one day you suddenly realize: "Oh, I don't need to click, I know what it means." That is the moment acquisition happens.
               </p>
             </div>
             
              <div>
               <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">4</span>
-                保持轻松 (Low Affective Filter)
+                Keep it Low Stress (Low Affective Filter)
               </h3>
               <p className="text-gray-600">
-                焦虑是语言习得的敌人。如果你读得头疼、查词太累，说明材料太难了。<strong>换一本更简单的书，或者休息一下。</strong> 保持愉悦的心情，大脑才更愿意吸收新语言。
+                Anxiety is the enemy of language acquisition. If reading gives you a headache or looking up words is too tiring, it means the material is too hard. <strong>Switch to a simpler book, or take a break.</strong> The brain is more willing to absorb new language when you are in a good mood.
               </p>
             </div>
           </div>
@@ -293,39 +293,19 @@ export default function DocsHome() {
       ),
     },
     {
-      id: 'roadmap',
-      title: 'Roadmap',
-      icon: <Rocket className="text-blue-600" size={20} />,
-      description: '未来的开发计划。',
-      content: (
-        <ul className="space-y-3">
-          {[
-            '更完整的 Docs 信息架构（多页面：/docs/...）。',
-            '更强的阅读标注与生词管理（不打断阅读）。',
-            '更细粒度的“难度控制”：按段落/句子自动调节解释风格。'
-          ].map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-gray-700">
-              <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0" />
-              <span>{item}</span>
-            </li>
-          ))}
-        </ul>
-      ),
-    },
-    {
       id: 'privacy',
       title: 'Privacy & Data',
       icon: <Shield className="text-blue-600" size={20} />,
-      description: '你上传的内容如何被处理？',
+      description: 'How is your uploaded content handled?',
       content: (
         <div className="space-y-3">
           <p>
-            目前项目处于早期阶段，功能会快速迭代。这是一个“透明说明”的开始：
+            The project is currently in an early stage, and features will iterate quickly. This is the start of a "transparency statement":
           </p>
           <Callout type="warning">
             <ul className="list-disc list-inside space-y-1">
-              <li>上传的文本会被解析与分句，用于在浏览器端和服务器端处理阅读体验。</li>
-              <li>当你请求解释/描写时，相关句子会被发送到 AI 接口（如 OpenAI/Claude 等）以生成解释。</li>
+              <li>Uploaded text will be parsed and segmented for reading experience processing on the browser and server side.</li>
+              <li>When you request an explanation/depiction, the relevant sentence will be sent to AI interfaces (such as OpenAI/Claude, etc.) to generate the explanation.</li>
             </ul>
           </Callout>
         </div>
