@@ -165,8 +165,8 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
         // Relaxed sanitization: filter out file system reserved characters
         const imageKey = absoluteHref.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
         
-        // Replace img tag with marker
-        $(img).replaceWith(` <<<IMAGE:${imageKey}>>>. `);
+        // Replace img tag with marker (escape brackets so cheerio treats them as text, not tags)
+        $(img).replaceWith(` &lt;&lt;&lt;IMAGE:${imageKey}&gt;&gt;&gt;. `);
 
         // Fetch image data if not already fetched
         if (!images[imageKey]) {

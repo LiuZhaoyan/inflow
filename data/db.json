@@ -1,21 +1,20 @@
 [
   {
-    "id": "1767343893001",
+    "id": "1767602240436",
     "title": "Little Prince",
     "level": "Beginner",
     "language": "en",
     "metadata": {
-      "wordCount": 18730,
+      "wordCount": 18783,
       "format": "epub",
       "originalFilename": "Little Prince (Antoine De Saint Exupéry) .epub",
       "language": "en",
       "languageReason": "contains_latin",
-      "sentenceCount": 1835
+      "sentenceCount": 1887
     },
-    "contentPath": "1767343893001.json",
+    "contentPath": "1767602240436.json",
     "preview": [
-      "The Little Prince",
-      "[Illustrated Edition]"
+      "<<<IMAGE:fhox7y4shqw.png>>>."
     ]
   }
 ]
