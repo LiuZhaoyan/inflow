@@ -3,14 +3,23 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json();
+    // Check if AI-depict feature is enabled
+    const isEnabled = process.env.ENABLE_AI_DEPICT === 'true';
+    if (!isEnabled) {
+      return NextResponse.json(
+        { error: 'AI-depict feature is not enabled' },
+        { status: 503 }
+      );
+    }
+  
+      const { prompt } = await request.json();
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
     const apiKey = process.env.API_KEY;
-    const apiUrl = 'https://api.ppinfra.com/v3/seedream-4.5';
+    const apiUrl = process.env.AI_DEPICT_API_URL || 'https://api.openai.com/v1/images/generations';
 
     const response = await fetch(apiUrl, {
       method: 'POST',

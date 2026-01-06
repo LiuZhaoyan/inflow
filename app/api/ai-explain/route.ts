@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     const detected = detectLanguageHint(text);
     const language = forced !== 'auto' ? forced : detected.code;
 
-    // --- Prompt 工程核心 ---
+    // --- Prompt ---
     // 根据难度调整系统指令 (Comprehensible Input: i+1)
     let systemInstruction = `# Role:You are an expert Language teacher applying Stephen Krashen's Comprehensible Input theory. 
     

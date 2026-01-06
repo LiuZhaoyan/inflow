@@ -132,6 +132,14 @@ function flatIndexToParagraphSentence(
 }
 
 export default function ReaderInterface({ bookId, chapters, initialLanguage }: ReaderProps) {
+  // 检查 AI-depict 功能开关
+  const [isAIDepictAvailable, setIsAIDepictAvailable] = useState(true);
+  useEffect(() => {
+    fetch('/api/ai-depict/status')
+      .then(res => res.json())
+      .then(data => setIsAIDepictAvailable(!!data.enabled))
+      .catch(() => setIsAIDepictAvailable(false));
+  }, []);
   const normalizedChapters = useMemo(() => normalizeChapters(chapters), [chapters]);
   const bodyChapters = useMemo(() => pickBodyChapters(normalizedChapters), [normalizedChapters]);
 
@@ -309,7 +317,9 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     try {
       const flatSentenceIndex = paragraphSentenceToFlatIndex(currentChapter, paragraphIndex, sentenceIndex);
       const flat = flattenChapterSentences(currentChapter);
-      const prevContext = flat.slice(Math.max(0, flatSentenceIndex - 2), flatSentenceIndex).join(" ");
+      // 跳过 imageKey 句子，保留真实文本
+      const contextSentences = flat.filter(s => !/^<<<IMAGE:[^>]+>>>.$/.test(s)).slice(Math.max(0, flatSentenceIndex - 2), flatSentenceIndex);
+      const prevContext = contextSentences.join(" ");
       const languageForRequest = languageOverride ?? selectedLanguage;
 
       // Debug aid: verify what we actually send to the API.
@@ -387,22 +397,22 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     if (isAnyLoading || selectedParagraphIndex === null || selectedSentenceIndex === null) return;
 
     // Depict is a different mode; cancel any in-flight explain request.
+    if (!isAIDepictAvailable) {
+      setAiExplanation("AI-depict feature is not available.");
+      return;
+    }
     abortAIExplain();
     setIsLoadingImage(true);
     setGeneratedImage(null);
     setAiExplanation(null); // Clear previous explanation if any
-    
     try {
       const currentChapter = bodyChapters[selectedChapterIndex];
       const currentSentence = currentChapter?.paragraphs?.[selectedParagraphIndex]?.[selectedSentenceIndex] || '';
       const res = await fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt: currentSentence,
-        }),
+        body: JSON.stringify({ prompt: currentSentence }),
       });
-
       if (!res.ok) throw new Error('Image API request failed');
       const data = await res.json();
       if (data.imageUrl) {
@@ -788,23 +798,25 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
                   </button>
 
                   {/* Depict Button */}
-                  <button
-                    onClick={depictAI}
-                    disabled={selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading}
-                    className={`
-                      flex-1 py-3 px-2 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm
-                      ${selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-purple-600 text-white hover:bg-purple-700 shadow hover:shadow-md active:scale-95'}
-                    `}
-                  >
-                    {isLoadingImage ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <ImageIcon size={16} />
-                    )}
-                    Depict
-                  </button>
+                  {isAIDepictAvailable && (
+                    <button
+                      onClick={depictAI}
+                      disabled={selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading}
+                      className={`
+                        flex-1 py-3 px-2 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm
+                        ${selectedParagraphIndex === null || selectedSentenceIndex === null || isAnyLoading
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'bg-purple-600 text-white hover:bg-purple-700 shadow hover:shadow-md active:scale-95'}
+                      `}
+                    >
+                      {isLoadingImage ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <ImageIcon size={16} />
+                      )}
+                      Depict
+                    </button>
+                  )}
                 </div>
 
                 {/* Output Area  */}
