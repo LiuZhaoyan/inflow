@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
-
-const client = new OpenAI({
-    baseURL: process.env.BASE_URL,
-    apiKey: process.env.API_KEY, 
-});
 
 interface RequestBody {
   text: string;
@@ -88,17 +83,17 @@ export async function POST(request: Request) {
       contextPreview: String(context || '').slice(0, 160),
     });
 
-    const completion = await client.chat.completions.create({
-      model: "deepseek/deepseek-v3.2",
-      messages: [
-        { role: "system", content: systemInstruction },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7, // 稍微有点创造性，但不要太发散
-      max_tokens: 150,  // 限制回复长度，保持精简
-    });
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemInstruction },
+      { role: 'user', content: userPrompt },
+    ];
 
-    const explanation = completion.choices[0]?.message?.content || "Could not generate explanation.";
+    const explanation = await chatCompletion(messages, {
+      model: 'deepseek/deepseek-v3.2',
+      temperature: 0.7,
+      maxTokens: 150,
+    }) || 'Could not generate explanation.';
+
     console.log('[ai-explain] outputPreview', String(explanation).slice(0, 200));
 
     const payload: any = { explanation };

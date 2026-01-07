@@ -1,5 +1,12 @@
 // app/api/ai-depict/route.ts
 import { NextResponse } from 'next/server';
+import {
+  generateImage,
+  createTask,
+  getTask,
+  executeImageGenerationTask,
+  type TaskInfo,
+} from '@/lib/aiClient';
 
 export async function POST(request: Request) {
   try {
@@ -11,48 +18,81 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
-  
-      const { prompt } = await request.json();
+
+    const body = await request.json();
+    const { prompt, async: isAsync = false } = body;
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.API_KEY;
-    const apiUrl = process.env.AI_DEPICT_API_URL || 'https://api.openai.com/v1/images/generations';
+    if (isAsync) {
+      const task = createTask<{ imageUrl: string }>();
+      
+      executeImageGenerationTask(task.id, prompt).catch((err) => {
+        console.error('Background image generation failed:', err);
+      });
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Image Generation API Error:', response.status, errorText);
-      throw new Error(`Image API request failed with status ${response.status}`);
+      return NextResponse.json({
+        taskId: task.id,
+        status: task.status,
+        message: 'Image generation started. Poll GET /api/ai-depict?taskId=<id> for status.',
+      });
     }
 
-    const data = await response.json();
-    const imageUrl = data.images?.[0];
-
-    if (!imageUrl) {
-      console.error('Unexpected API response structure:', data);
-      throw new Error('No image URL found in response');
-    }
-
+    const imageUrl = await generateImage(prompt);
     return NextResponse.json({ imageUrl });
 
   } catch (error) {
     console.error('AI Depict Route Error:', error);
     return NextResponse.json(
-      { error: (error as any).message || 'Failed to generate image' }, 
+      { error: (error as any).message || 'Failed to generate image' },
       { status: 500 }
     );
   }
+}
+
+// ============================================
+// GET: 查询异步任务状态
+// 参数: taskId - 任务 ID
+// ============================================
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const taskId = searchParams.get('taskId');
+
+  if (!taskId) {
+    return NextResponse.json(
+      { error: 'taskId query parameter is required' },
+      { status: 400 }
+    );
+  }
+
+  const task = getTask<{ imageUrl: string }>(taskId);
+
+  if (!task) {
+    return NextResponse.json(
+      { error: 'Task not found or expired' },
+      { status: 404 }
+    );
+  }
+
+  const response: {
+    taskId: string;
+    status: string;
+    imageUrl?: string;
+    error?: string;
+  } = {
+    taskId: task.id,
+    status: task.status,
+  };
+
+  if (task.status === 'completed' && task.result) {
+    response.imageUrl = task.result.imageUrl;
+  }
+
+  if (task.status === 'failed' && task.error) {
+    response.error = task.error;
+  }
+
+  return NextResponse.json(response);
 }

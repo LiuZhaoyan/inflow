@@ -5,19 +5,11 @@ import { useState, type ReactNode } from 'react';
 import {
   BookOpen,
   ArrowLeft,
-  Sparkles,
-  Brain,
-  Lightbulb,
   Target,
-  Upload,
-  MousePointerClick,
-  Layers,
-  Rocket,
-  Shield,
+  Sparkles,
   Info,
   CheckCircle2,
   AlertCircle,
-  GraduationCap,
 } from 'lucide-react';
 
 
@@ -70,7 +62,6 @@ const StepItem = ({ number, title, children }: { number: number; title: string; 
 type DocSection = {
   id: string;
   title: string;
-  icon: ReactNode;
   description?: string;
   content: ReactNode;
 };
@@ -80,7 +71,6 @@ export default function DocsHome() {
     {
       id: 'getting-started',
       title: 'Getting Started',
-      icon: <Sparkles className="text-blue-600" size={20} />,
       description: 'Just three simple steps to start your acquisition journey.',
       content: (
         <div className="mt-4">
@@ -105,7 +95,6 @@ export default function DocsHome() {
     {
       id: 'reading-and-explanations',
       title: 'Reading & Explanations',
-      icon: <MousePointerClick className="text-blue-600" size={20} />,
       description: 'Clicking for explanation is the key mechanism to "keep it comprehensible".',
       content: (
         <div className="space-y-4">
@@ -128,7 +117,6 @@ export default function DocsHome() {
     {
       id: 'difficulty-and-i-plus-one',
       title: 'Difficulty & i+1',
-      icon: <Layers className="text-blue-600" size={20} />,
       description: 'Understand Stephen Krashen\'s core theory.',
       content: (
         <div className="space-y-4">
@@ -148,8 +136,7 @@ export default function DocsHome() {
     {
       id: 'philosophy',
       title: 'Project Philosophy',
-      icon: <Lightbulb className="text-blue-600" size={20} />,
-      description: 'Acquire language, don’t memorize it.',
+      description: 'Acquire language, don\'t memorize it.',
       content: (
         <div className="space-y-6">
           <div className="text-center py-6">
@@ -189,7 +176,6 @@ export default function DocsHome() {
     {
       id: 'advice-for-beginners',
       title: 'Advice For Beginner',
-      icon: <GraduationCap className="text-blue-600" size={20} />,
       description: 'Introductory advice for language learners based on Comprehensible Input Theory.',
       content: (
         <div className="space-y-6">
@@ -228,7 +214,6 @@ export default function DocsHome() {
     {
       id: 'guide-for-beginner',
       title: 'Guide For Beginner',
-      icon: <Brain className="text-blue-600" size={20} />,
       description: 'How to start from scratch? A practical guide based on comprehensible input.',
       content: (
         <div className="space-y-6">
@@ -295,7 +280,6 @@ export default function DocsHome() {
     {
       id: 'privacy',
       title: 'Privacy & Data',
-      icon: <Shield className="text-blue-600" size={20} />,
       description: 'How is your uploaded content handled?',
       content: (
         <div className="space-y-3">
@@ -372,7 +356,6 @@ export default function DocsHome() {
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                {s.icon}
                 <span>{s.title}</span>
               </button>
             ))}
@@ -397,9 +380,6 @@ export default function DocsHome() {
                         : 'text-gray-600 hover:border-l-2 hover:border-blue-600 hover:-ml-[2px] hover:bg-blue-50/50 hover:text-blue-700'
                     }`}
                   >
-                    <span className={`transition-opacity scale-90 ${activeSection === s.id ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>
-                      {s.icon}
-                    </span>
                     <span className="font-medium">{s.title}</span>
                   </button>
                 ))}
@@ -415,10 +395,7 @@ export default function DocsHome() {
                 id={currentSection.id}
                 className="animate-in fade-in slide-in-from-right-4 duration-300"
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
-                    {currentSection.icon}
-                  </div>
+                <div className="mb-4">
                   <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
                     {currentSection.title}
                   </h2>

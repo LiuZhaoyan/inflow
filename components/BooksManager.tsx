@@ -102,7 +102,7 @@ export default function BooksManager({ books }: { books: BookListItem[] }) {
         <div>
           <div className="text-sm font-semibold text-gray-900">Manage books</div>
           <div className="mt-1 text-xs text-gray-500">
-            {total} books • {totalSentences} sentences
+            {total} books
           </div>
         </div>
 

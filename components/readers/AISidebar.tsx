@@ -17,6 +17,7 @@ interface AISidebarProps {
   isAIDepictAvailable: boolean;
   didCopySelection: boolean;
   aiPanelWidth: number;
+  pendingImageTaskId?: string | null;  // Background image task ID
   
   // Callbacks
   onCopySelectedSentence: () => void;
@@ -26,7 +27,7 @@ interface AISidebarProps {
   
   // Control
   hasSelection: boolean;
-  isAnyLoading: boolean;
+  isAnyLoading: boolean;  // only refers to AI explain loading
 }
 
 export function AISidebar({
@@ -42,6 +43,7 @@ export function AISidebar({
   isAIDepictAvailable,
   didCopySelection,
   aiPanelWidth,
+  pendingImageTaskId,
   onCopySelectedSentence,
   onLanguageChange,
   onAskAI,
@@ -119,7 +121,7 @@ export function AISidebar({
 
             {/* Buttons Container */}
             <div className="flex gap-3 mb-6 shrink-0">
-              {/* Explain Button */}
+              {/* Explain Button - only disabled during explain loading, NOT image loading */}
               <button
                 onClick={onAskAI}
                 disabled={!hasSelection || isAnyLoading}
@@ -138,14 +140,14 @@ export function AISidebar({
                 Explain
               </button>
 
-              {/* Depict Button */}
+              {/* Depict Button - disabled only during image loading */}
               {isAIDepictAvailable && (
                 <button
                   onClick={onDepictAI}
-                  disabled={!hasSelection || isAnyLoading}
+                  disabled={!hasSelection || isLoadingImage}
                   className={`
                     flex-1 py-3 px-2 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all text-sm
-                    ${!hasSelection || isAnyLoading
+                    ${!hasSelection || isLoadingImage
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-purple-600 text-white hover:bg-purple-700 shadow hover:shadow-md active:scale-95'}
                   `}
@@ -160,11 +162,19 @@ export function AISidebar({
               )}
             </div>
 
+            {/* Background Image Generation Indicator */}
+            {isLoadingImage && !isLoadingAI && (
+              <div className="mb-4 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 flex items-center gap-2">
+                <Loader2 size={14} className="animate-spin text-purple-600" />
+                <span className="text-xs text-purple-700">Generating image in background...</span>
+              </div>
+            )}
+
             {/* Output Area */}
             <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
               <AnimatePresence mode="wait">
-                {/* Case 1: Loading State */}
-                {isAnyLoading ? (
+                {/* Case 1: AI Explain Loading State */}
+                {isLoadingAI ? (
                   <motion.div
                     key="loading"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -172,7 +182,7 @@ export function AISidebar({
                   >
                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                     <p className="text-sm text-gray-500 font-medium animate-pulse">
-                      {isLoadingAI ? "Consulting teacher..." : "Generating visualization..."}
+                      Consulting teacher...
                     </p>
                   </motion.div>
                 ) : aiExplanation ? (

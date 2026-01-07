@@ -60,6 +60,10 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [didCopySelection, setDidCopySelection] = useState(false);
+  
+  // Async image generation task (background polling)
+  const [pendingImageTaskId, setPendingImageTaskId] = useState<string | null>(null);
+  const imagePollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Prevent stale in-flight AI responses from overwriting the UI after selection changes
   const aiAbortRef = useRef<AbortController | null>(null);
@@ -76,8 +80,9 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(AI_PANEL_DEFAULT);
 
-  // Helper to check if any loading is active
-  const isAnyLoading = isLoadingAI || isLoadingImage;
+  // Helper to check if AI explain is loading (image generation is now non-blocking)
+  // Users can use ai-explain while image generates in background
+  const isAnyLoading = isLoadingAI;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -194,7 +199,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     sentenceIndex: number,
     languageOverride?: LanguageCode
   ) => {
-    if (isLoadingImage) return; // don't compete with image generation
+    // Image generation now runs in background, so we allow explain requests
 
     const currentChapter = bodyChapters[chapterIndex];
     const currentSentence = currentChapter?.paragraphs?.[paragraphIndex]?.[sentenceIndex] || '';
@@ -287,38 +292,96 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
     await fetchAIExplanation(selectedChapterIndex, selectedParagraphIndex, selectedSentenceIndex, selectedLanguage);
   };
 
-  // 4. AI Depict Function 
-  const depictAI = async () => {
-    if (isAnyLoading || selectedParagraphIndex === null || selectedSentenceIndex === null) return;
+  // Stop polling for image task
+  const stopImagePolling = () => {
+    if (imagePollingRef.current) {
+      clearInterval(imagePollingRef.current);
+      imagePollingRef.current = null;
+    }
+  };
 
-    // Depict is a different mode; cancel any in-flight explain request.
+  // Poll for image task status
+  const pollImageTask = (taskId: string) => {
+    stopImagePolling();
+    
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/ai-depict?taskId=${taskId}`);
+        const data = await res.json();
+
+        if (data.status === 'completed' && data.imageUrl) {
+          setGeneratedImage(data.imageUrl);
+          setIsLoadingImage(false);
+          setPendingImageTaskId(null);
+          stopImagePolling();
+        } else if (data.status === 'failed') {
+          console.error('Image generation failed:', data.error);
+          setAiExplanation(data.error || "Image generation failed.");
+          setIsLoadingImage(false);
+          setPendingImageTaskId(null);
+          stopImagePolling();
+        }
+        // If still pending/processing, continue polling
+      } catch (error) {
+        console.error('Polling error:', error);
+        // Don't stop polling on network errors, try again
+      }
+    };
+
+    // Poll immediately, then every 2 seconds
+    poll();
+    imagePollingRef.current = setInterval(poll, 2000);
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => stopImagePolling();
+  }, []);
+
+  // 4. AI Depict Function
+  const depictAI = async () => {
+    if (isLoadingImage || selectedParagraphIndex === null || selectedSentenceIndex === null) return;
+
     if (!isAIDepictAvailable) {
       setAiExplanation("AI-depict feature is not available.");
       return;
     }
-    abortAIExplain();
+
+    // Note: We do NOT abort explain or clear explanation - allow both to work independently
     setIsLoadingImage(true);
     setGeneratedImage(null);
-    setAiExplanation(null); // Clear previous explanation if any
+    stopImagePolling();
+
     try {
       const currentChapter = bodyChapters[selectedChapterIndex];
       const currentSentence = currentChapter?.paragraphs?.[selectedParagraphIndex]?.[selectedSentenceIndex] || '';
+      
+      // Use async mode for non-blocking image generation
+      const useAsync = false;
+      
       const res = await fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: currentSentence }),
+        body: JSON.stringify({ prompt: currentSentence, async: useAsync }),
       });
+      
       if (!res.ok) throw new Error('Image API request failed');
+      
       const data = await res.json();
-      if (data.imageUrl) {
+      
+      if (useAsync && data.taskId) {
+        // Async mode: start polling for task completion
+        setPendingImageTaskId(data.taskId);
+        pollImageTask(data.taskId);
+      } else if (data.imageUrl) {
+        // Sync mode: directly got the image URL
         setGeneratedImage(data.imageUrl);
+        setIsLoadingImage(false);
       } else {
-        throw new Error("No image URL in response");
+        throw new Error("No valid response");
       }
     } catch (error) {
       console.error(error);
-      setAiExplanation("Sorry, I couldn't generate an image right now."); // Fallback message to explanation area
-    } finally {
       setIsLoadingImage(false);
     }
   };
@@ -522,6 +585,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
           isAIDepictAvailable={isAIDepictAvailable}
           didCopySelection={didCopySelection}
           aiPanelWidth={aiPanelWidth}
+          pendingImageTaskId={pendingImageTaskId}
           onCopySelectedSentence={copySelectedSentence}
           onLanguageChange={handleLanguageChange}
           onAskAI={askAI}
