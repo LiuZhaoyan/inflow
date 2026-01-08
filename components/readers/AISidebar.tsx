@@ -172,25 +172,29 @@ export function AISidebar({
 
             {/* Output Area */}
             <div className="flex-grow overflow-y-auto custom-scrollbar pr-2">
+              {/* Case 1: AI Explain Loading State */}
               <AnimatePresence mode="wait">
-                {/* Case 1: AI Explain Loading State */}
-                {isLoadingAI ? (
+                {isLoadingAI && (
                   <motion.div
                     key="loading"
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center text-center space-y-3 pt-10 h-full"
+                    initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                    className="flex flex-col items-center justify-center text-center space-y-3 pt-6 pb-6"
                   >
                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                     <p className="text-sm text-gray-500 font-medium animate-pulse">
                       Consulting teacher...
                     </p>
                   </motion.div>
-                ) : aiExplanation ? (
-                  // Case 2: Text Explanation Result
+                )}
+              </AnimatePresence>
+
+              {/* Case 2: Text Explanation Result */}
+              <AnimatePresence>
+                {!isLoadingAI && aiExplanation && (
                   <motion.div
                     key="explanation"
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                    className="space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100"
+                    className="space-y-2 bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6"
                   >
                     <div className="text-xs font-bold text-blue-800 uppercase tracking-wide mb-1">
                       Insight
@@ -199,12 +203,16 @@ export function AISidebar({
                       {aiExplanation}
                     </p>
                   </motion.div>
-                ) : generatedImage ? (
-                  // Case 3: Image Result
+                )}
+              </AnimatePresence>
+
+              {/* Case 3: Image Result */}
+              <AnimatePresence>
+                {generatedImage && (
                   <motion.div
                     key="image"
                     initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="space-y-2"
+                    className="space-y-2 mb-6"
                   >
                     <div className="text-xs font-bold text-purple-800 uppercase tracking-wide mb-2 px-1">
                       Visualization
@@ -222,8 +230,12 @@ export function AISidebar({
                       AI-generated image based on selection.
                     </p>
                   </motion.div>
-                ) : (
-                  // Case 4: Empty State
+                )}
+              </AnimatePresence>
+              
+              {/* Case 4: Empty State */}
+              <AnimatePresence>
+                {!isLoadingAI && !aiExplanation && !generatedImage && (
                   <motion.div
                     key="empty"
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}

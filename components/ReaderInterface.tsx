@@ -330,7 +330,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
 
     // Poll immediately, then every 2 seconds
     poll();
-    imagePollingRef.current = setInterval(poll, 2000);
+    imagePollingRef.current = setInterval(poll, 10000);
   };
 
   // Cleanup polling on unmount
@@ -356,27 +356,20 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
       const currentChapter = bodyChapters[selectedChapterIndex];
       const currentSentence = currentChapter?.paragraphs?.[selectedParagraphIndex]?.[selectedSentenceIndex] || '';
       
-      // Use async mode for non-blocking image generation
-      const useAsync = false;
-      
       const res = await fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: currentSentence, async: useAsync }),
+        body: JSON.stringify({ prompt: currentSentence }),
       });
       
       if (!res.ok) throw new Error('Image API request failed');
       
       const data = await res.json();
       
-      if (useAsync && data.taskId) {
+      if (data.taskId) {
         // Async mode: start polling for task completion
         setPendingImageTaskId(data.taskId);
         pollImageTask(data.taskId);
-      } else if (data.imageUrl) {
-        // Sync mode: directly got the image URL
-        setGeneratedImage(data.imageUrl);
-        setIsLoadingImage(false);
       } else {
         throw new Error("No valid response");
       }

@@ -55,8 +55,23 @@ export async function chatCompletion(
 export interface ImageGenerationConfig {
   apiUrl?: string;
   timeout?: number;
+  async?: boolean;  // 是否使用异步模式（如果外部 API 支持）
 }
 
+// 外部 API 异步响应格式
+export interface ExternalImageTaskResponse {
+  task_id?: string;  // 外部 API 返回的任务 ID
+  taskId?: string;   // 兼容不同的命名格式
+  status?: string;
+  image_url?: string;
+  imageUrl?: string;
+  images?: string[];
+  error?: string;
+}
+
+/**
+ * 同步模式：等待图片生成完成后返回 URL
+ */
 export async function generateImage(
   prompt: string,
   config: ImageGenerationConfig = {}
@@ -70,17 +85,11 @@ export async function generateImage(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, watermark: false}),
   });
 
-//   if (!response.ok) {
-//     const errorText = await response.text();
-//     console.error('Image Generation API Error:', response.status, errorText);
-//     throw new Error(`Image API request failed with status ${response.status}`);
-//   }
-
   const data = await response.json();
-  const imageUrl = data.images?.[0];
+  const imageUrl = data.images?.[0] || data.image_url || data.imageUrl;
 
   if (!imageUrl) {
     console.error('Unexpected API response structure:', data);
@@ -88,6 +97,70 @@ export async function generateImage(
   }
 
   return imageUrl;
+}
+
+/**
+ * 向外部 AI API 发送异步图片生成请求
+ */
+export async function generateImageAsync(
+  prompt: string,
+  config: ImageGenerationConfig = {}
+): Promise<ExternalImageTaskResponse> {
+  const apiKey = process.env.API_KEY;
+  const apiUrl = config.apiUrl || process.env.AI_DEPICT_API_URL || 'https://api.openai.com/v1/images/generations';
+
+  const requestBody: any = { prompt };
+  if (config.async) {
+    requestBody.async = true;
+  }
+
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Image Generation API Error:', response.status, errorText);
+    throw new Error(`Image API request failed with status ${response.status}`);
+  }
+
+  const data: ExternalImageTaskResponse = await response.json();
+  return data;
+}
+
+/**
+ * 查询外部 AI API 的异步任务状态
+ */
+export async function getExternalImageTaskStatus(
+  taskId: string,
+  config: { statusUrl?: string; apiUrl?: string } = {}
+): Promise<ExternalImageTaskResponse> {
+  const apiKey = process.env.API_KEY;
+  
+  const baseUrl = config.statusUrl || config.apiUrl || process.env.AI_DEPICT_API_URL;
+  const statusUrl = config.statusUrl || `${baseUrl}/status/${taskId}`;
+
+  const response = await fetch(statusUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Status Query API Error:', response.status, errorText);
+    throw new Error(`Failed to get task status: ${response.status}`);
+  }
+
+  const data: ExternalImageTaskResponse = await response.json();
+  return data;
 }
 
 // ============================================

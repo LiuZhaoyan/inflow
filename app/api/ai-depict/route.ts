@@ -20,28 +20,23 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { prompt, async: isAsync = false } = body;
+    const { prompt } = body;
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    if (isAsync) {
-      const task = createTask<{ imageUrl: string }>();
-      
-      executeImageGenerationTask(task.id, prompt).catch((err) => {
-        console.error('Background image generation failed:', err);
-      });
+    const task = createTask<{ imageUrl: string }>();
+    
+    executeImageGenerationTask(task.id, prompt).catch((err) => {
+      console.error('Background image generation failed:', err);
+    });
 
-      return NextResponse.json({
-        taskId: task.id,
-        status: task.status,
-        message: 'Image generation started. Poll GET /api/ai-depict?taskId=<id> for status.',
-      });
-    }
-
-    const imageUrl = await generateImage(prompt);
-    return NextResponse.json({ imageUrl });
+    return NextResponse.json({
+      taskId: task.id,
+      status: task.status,
+      message: 'Image generation started. Poll GET /api/ai-depict?taskId=<id> for status.',
+    });
 
   } catch (error) {
     console.error('AI Depict Route Error:', error);
@@ -85,7 +80,7 @@ export async function GET(request: Request) {
     taskId: task.id,
     status: task.status,
   };
-
+  console.log('[GET /api/ai-depict] Task status:', task);
   if (task.status === 'completed' && task.result) {
     response.imageUrl = task.result.imageUrl;
   }
