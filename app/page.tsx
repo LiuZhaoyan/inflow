@@ -51,6 +51,24 @@ export default function Home() {
               Learn the philosophy
             </Link>
           </div>
+          
+          <div className="mt-6 pt-6 border-t border-gray-100">
+             <h2 className="text-xl font-semibold text-gray-900 mb-4">New Features</h2>
+             <div className="flex flex-col sm:flex-row gap-4">
+                 <Link
+                    href="/vocabulary"
+                    className="group flex flex-col p-5 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300 w-full sm:w-64"
+                 >
+                    <div className="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                       <Sparkles className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-gray-900">Vocabulary</h3>
+                        <p className="text-sm text-gray-500">AI Flashcards & Stories</p>
+                    </div>
+                 </Link>
+             </div>
+          </div>
         </section>
 
       </main>

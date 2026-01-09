@@ -227,3 +227,68 @@ export async function deleteAllBooks(): Promise<{ ok: true; deletedCount: number
   await fs.writeFile(DB_PATH, '[]', 'utf-8');
   return { ok: true, deletedCount: books.length };
 }
+
+// Vocabulary Support
+
+const VOCAB_PATH = path.join(process.cwd(), 'data', 'vocabulary.json');
+
+export interface VocabularyWord {
+  id: string;
+  word: string;
+  definition: string;
+  contextSentence?: string;
+  translation?: string;
+  imagePath?: string;
+  audioPath?: string;
+  createdAt: number;
+}
+
+export async function getVocabulary(): Promise<VocabularyWord[]> {
+  try {
+    await fs.access(VOCAB_PATH);
+    const data = await fs.readFile(VOCAB_PATH, 'utf-8');
+    return JSON.parse(data);
+  } catch {
+    // If file doesn't exist, try creating it
+    await fs.writeFile(VOCAB_PATH, '[]', 'utf-8');
+    return [];
+  }
+}
+
+export async function addWord(word: Omit<VocabularyWord, 'id' | 'createdAt'>): Promise<VocabularyWord> {
+  // Ensure the file exists
+  let vocab: VocabularyWord[] = [];
+  try {
+    vocab = await getVocabulary();
+  } catch (err) {
+    vocab = [];
+  }
+
+  const newWord: VocabularyWord = {
+    ...word,
+    id: Date.now().toString(),
+    createdAt: Date.now(),
+  };
+
+  vocab.push(newWord);
+  await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
+  return newWord;
+}
+
+export async function deleteWord(id: string): Promise<void> {
+    let vocab = await getVocabulary();
+    vocab = vocab.filter(w => w.id !== id);
+    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
+}
+
+export async function updateWord(id: string, updates: Partial<VocabularyWord>): Promise<VocabularyWord | null> {
+    let vocab = await getVocabulary();
+    const index = vocab.findIndex(w => w.id === id);
+    if (index === -1) return null;
+    
+    vocab[index] = { ...vocab[index], ...updates };
+    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
+    return vocab[index];
+}
+
+
