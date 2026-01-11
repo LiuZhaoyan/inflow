@@ -36,6 +36,8 @@ export default function VocabularyPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [story, setStory] = useState<string | null>(null);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
+  const [isStorySidebarOpen, setIsStorySidebarOpen] = useState(false);
+  const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchVocabulary();
@@ -255,6 +257,15 @@ export default function VocabularyPage() {
     setSelectedIds(next);
   };
 
+  const toggleFlip = (id: string) => {
+    setFlippedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const generateStory = async () => {
     if (selectedIds.size === 0) return;
     setIsGeneratingStory(true);
@@ -268,6 +279,7 @@ export default function VocabularyPage() {
        });
        const data = await res.json();
        setStory(data.story);
+       setIsStorySidebarOpen(true);
     } catch (err) {
        console.error(err);
        alert('Failed to generate story');
@@ -414,22 +426,17 @@ export default function VocabularyPage() {
                 </div>
              )}
 
-             {/* Story View */}
-             {story && (
-                 <div className="relative p-8 bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-100 shadow-sm">
-                     <button onClick={() => setStory(null)} className="absolute top-4 right-4 text-indigo-300 hover:text-indigo-600 transition-colors">
-                        <X className="w-5 h-5"/>
-                     </button>
-                     <div className="flex items-center gap-2 font-semibold text-indigo-900 mb-4">
-                        <Wand2 className="text-indigo-600" size={20} />
-                        Generated Story
-                     </div>
-                     <div 
-                        className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium" 
-                        dangerouslySetInnerHTML={{ __html: story.replace(/\*\*(.*?)\*\*/g, '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>') }} 
-                     />
-                 </div>
-             )}
+             {/* Right Sidebar Toggle Handle */}
+             <button
+               onClick={() => setIsStorySidebarOpen(prev => !prev)}
+               className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-white border border-gray-200 shadow-sm rounded-l-full px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:border-indigo-300"
+               title={isStorySidebarOpen ? 'Hide Story' : 'Show Story'}
+             >
+               <span className="inline-flex items-center gap-1">
+                 <Wand2 className="w-4 h-4 text-indigo-600" />
+                 Story
+               </span>
+             </button>
 
              {/* Grid */}
              {loading ? (
@@ -445,7 +452,7 @@ export default function VocabularyPage() {
              ) : (
                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {words.map(word => (
-                       <div 
+                        <div 
                           key={word.id} 
                           className={`
                             relative group bg-white rounded-2xl border transition-all duration-300 overflow-hidden
@@ -453,60 +460,77 @@ export default function VocabularyPage() {
                                 ? 'ring-2 ring-indigo-500 border-transparent shadow-lg shadow-indigo-100 transform -translate-y-1' 
                                 : 'border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-100 hover:-translate-y-1'}
                           `}
-                          onClick={() => selectionMode && toggleSelection(word.id)}
+                          onClick={() => { if (selectionMode) toggleSelection(word.id); else toggleFlip(word.id); }}
                        >
                           
                           {/* Card Image */}
-                          <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden border-b border-gray-50">
-                              {word.imagePath ? (
-                                  <img src={word.imagePath} alt={word.word} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
-                              ) : (
+                          <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden border-b border-gray-50" style={{ perspective: '1000px' }}>
+                            <div className={`absolute inset-0 transition-transform duration-500 [transform-style:preserve-3d] ${flippedIds.has(word.id) ? 'rotate-y-180' : ''}`} style={{ transform: flippedIds.has(word.id) ? 'rotateY(180deg)' : 'rotateY(0deg)' }}>
+                              {/* Front Side */}
+                              <div className="absolute inset-0" style={{ backfaceVisibility: 'hidden' }}>
+                                {word.imagePath ? (
+                                  <img src={word.imagePath} alt={word.word} className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"/>
+                                ) : (
                                   <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50/50">
-                                      <ImageIcon className="w-10 h-10 opacity-50"/>
+                                    <ImageIcon className="w-10 h-10 opacity-50"/>
                                   </div>
-                              )}
-                              
-                              {/* Selection Overlay */}
-                              {selectionMode && (
+                                )}
+
+                                {/* Selection Overlay */}
+                                {selectionMode && (
                                   <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] flex items-start justify-end p-3 transition-opacity">
-                                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm ${selectedIds.has(word.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}>
-                                          {selectedIds.has(word.id) && <Check className="w-3.5 h-3.5 text-white stroke-[3]"/>}
-                                      </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm ${selectedIds.has(word.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-gray-200'}`}>
+                                      {selectedIds.has(word.id) && <Check className="w-3.5 h-3.5 text-white stroke-[3]"/>}
+                                    </div>
                                   </div>
-                              )}
-                              
-                              {/* Floating Controls */}
-                              {!selectionMode && (
-                                <div className="absolute bottom-3 right-3 flex flex-col items-end gap-2">
-                                  {word.audioPath && (
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); playAudio(word.audioPath!); }}
-                                      className="h-10 w-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:shadow-md hover:scale-110 text-blue-600 transition-all border border-gray-100"
-                                      title="Play Pronunciation"
-                                    >
-                                      <Play className="w-4 h-4 fill-current ml-0.5"/>
-                                    </button>
+                                )}
+
+                                {/* Floating Controls */}
+                                {!selectionMode && (
+                                  <div className="absolute bottom-3 right-3 flex flex-col items-end gap-2">
+                                    {word.audioPath && (
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); playAudio(word.audioPath!); }}
+                                        className="h-10 w-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:shadow-md hover:scale-110 text-blue-600 transition-all border border-gray-100"
+                                        title="Play Pronunciation"
+                                      >
+                                        <Play className="w-4 h-4 fill-current ml-0.5"/>
+                                      </button>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); generateImageForWord(word); }}
+                                        disabled={!!generating[word.id]?.img}
+                                        className="h-8 w-8 flex items-center justify-center bg-white/90 rounded-full border border-gray-100 text-gray-700 hover:text-blue-600 hover:shadow-sm transition-all disabled:opacity-50"
+                                        title="Generate Image"
+                                      >
+                                        {generating[word.id]?.img ? <Loader2 className="w-4 h-4 animate-spin"/> : <ImageIcon className="w-4 h-4"/>}
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); generateAudioForWord(word); }}
+                                        disabled={!!generating[word.id]?.audio}
+                                        className="h-8 w-8 flex items-center justify-center bg-white/90 rounded-full border border-gray-100 text-gray-700 hover:text-blue-600 hover:shadow-sm transition-all disabled:opacity-50"
+                                        title="Generate Pronunciation"
+                                      >
+                                        {generating[word.id]?.audio ? <Loader2 className="w-4 h-4 animate-spin"/> : <AudioLines className="w-4 h-4"/>}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Back Side */}
+                              <div className="absolute inset-0 bg-white flex items-center justify-center p-4" style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}>
+                                <div className="text-center">
+                                  <div className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Definition</div>
+                                  {word.definition ? (
+                                    <p className="text-sm text-gray-700 leading-snug">{word.definition}</p>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">No definition</p>
                                   )}
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); generateImageForWord(word); }}
-                                      disabled={!!generating[word.id]?.img}
-                                      className="h-8 w-8 flex items-center justify-center bg-white/90 rounded-full border border-gray-100 text-gray-700 hover:text-blue-600 hover:shadow-sm transition-all disabled:opacity-50"
-                                      title="Generate Image"
-                                    >
-                                      {generating[word.id]?.img ? <Loader2 className="w-4 h-4 animate-spin"/> : <ImageIcon className="w-4 h-4"/>}
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); generateAudioForWord(word); }}
-                                      disabled={!!generating[word.id]?.audio}
-                                      className="h-8 w-8 flex items-center justify-center bg-white/90 rounded-full border border-gray-100 text-gray-700 hover:text-blue-600 hover:shadow-sm transition-all disabled:opacity-50"
-                                      title="Generate Pronunciation"
-                                    >
-                                      {generating[word.id]?.audio ? <Loader2 className="w-4 h-4 animate-spin"/> : <AudioLines className="w-4 h-4"/>}
-                                    </button>
-                                  </div>
                                 </div>
-                              )}
+                              </div>
+                            </div>
                           </div>
 
                           {/* Card Content */}
@@ -522,11 +546,6 @@ export default function VocabularyPage() {
                                     </button>
                                  )}
                               </div>
-                              {word.definition ? (
-                                <p className="text-sm text-gray-600 leading-snug line-clamp-2 font-medium">{word.definition}</p>
-                              ) : (
-                                <p className="text-xs text-gray-400 italic">No definition</p>
-                              )}
                               <div className="mt-3 text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
                                 {new Date(word.createdAt).toLocaleDateString()}
                               </div>
@@ -537,6 +556,44 @@ export default function VocabularyPage() {
              )}
          </div>
       </main>
+      {/* Fixed Right Sidebar for Story */}
+      <aside
+        className={`fixed right-0 top-24 z-40 bg-white border-l border-gray-200 shadow-lg rounded-l-2xl p-4 sm:w-[380px] w-[88vw] h-[calc(100vh-7rem)] overflow-y-auto transition-transform duration-300 ${isStorySidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        aria-hidden={!isStorySidebarOpen}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 font-semibold text-indigo-900">
+            <Wand2 className="text-indigo-600" size={18} />
+            Generated Story
+          </div>
+          <button
+            onClick={() => setIsStorySidebarOpen(false)}
+            className="text-gray-400 hover:text-gray-700 rounded-lg p-1"
+            title="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {isGeneratingStory ? (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Generating...
+          </div>
+        ) : story ? (
+          <div
+            className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
+            dangerouslySetInnerHTML={{
+              __html: story.replace(/\*\*(.*?)\*\*/g,
+                '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>')
+            }}
+          />
+        ) : (
+          <div className="text-sm text-gray-500">
+            No story yet. Select words and click Generate Story.
+          </div>
+        )}
+      </aside>
     </div>
   );
 }

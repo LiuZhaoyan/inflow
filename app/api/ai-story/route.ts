@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     const userPrompt = `Write a short story strictly in ${langLabel} using these words: ${wordsString}.
   Highlight the used words by wrapping them in **bold** (markdown).
-  Keep the story simple, engaging, and entirely in ${langLabel}.`;
+  Keep the story short, engaging, and entirely in ${langLabel}.`;
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },

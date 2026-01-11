@@ -18,7 +18,7 @@ function audioExtFromContentType(ct?: string | null): string {
 
 export async function POST(request: Request) {
   try {
-    const { text, format: reqFormat='mp3', voiceId='female-yujie' } = await request.json();
+    const { text, format: reqFormat='mp3', voiceId='audiobook_female_1' } = await request.json();
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
@@ -48,8 +48,8 @@ export async function POST(request: Request) {
         text: text,
         voice_setting: { 
           voice_id: voiceId,
+          speed: 0.9,
         },
-        language_boost: 'Korean',
         // output_format: 'hex',
         // stream: false,
         // audio_setting: { format:format || 'mp3' }
