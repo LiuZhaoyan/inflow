@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'db.json');
+const DB_PATH = path.join(process.cwd(), 'data', 'books.json');
 const BOOKS_DIR = path.join(process.cwd(), 'data', 'books');
 
 export interface Chapter {
@@ -43,22 +43,22 @@ export interface BookContent {
 // Combined type for the Reader
 export type Book = BookMetadata & { chapters?: Chapter[] };
 
-async function ensureDb() {
-  try {
-    await fs.access(DB_PATH);
-  } catch {
-    await fs.writeFile(DB_PATH, '[]', 'utf-8');
-  }
-  
+export async function initBooksDb() {
   try {
     await fs.access(BOOKS_DIR);
   } catch {
     await fs.mkdir(BOOKS_DIR, { recursive: true });
   }
+
+  try {
+    await fs.access(DB_PATH);
+  } catch {
+    await fs.writeFile(DB_PATH, '[]', 'utf-8');
+  }
 }
 
 export async function getBooks(): Promise<BookMetadata[]> {
-  await ensureDb();
+  await initBooksDb();
   const data = await fs.readFile(DB_PATH, 'utf-8');
   return JSON.parse(data);
 }
@@ -152,7 +152,9 @@ export async function addBook(bookData: Omit<Book, 'id' | 'contentPath'> & { cha
     level: bookData.level,
     language: bookData.language || bookData.metadata?.language,
     metadata: {
-      ...(bookData.metadata || { wordCount: 0, format: 'text' }),
+      wordCount: bookData.metadata?.wordCount ?? 0,
+      format: bookData.metadata?.format ?? 'text',
+      ...(bookData.metadata || {}),
       sentenceCount: totalSentences,
       language: bookData.language || bookData.metadata?.language,
     },
@@ -161,6 +163,68 @@ export async function addBook(bookData: Omit<Book, 'id' | 'contentPath'> & { cha
   };
 
   books.push(newBook);
+  await fs.writeFile(DB_PATH, JSON.stringify(books, null, 2), 'utf-8');
+  
+  return newBook;
+}
+
+export async function updateBook(id: string, updates: Partial<Book>): Promise<BookMetadata | undefined> {
+  const books = await getBooks();
+  const idx = books.findIndex(b => b.id === id);
+  if (idx === -1) return undefined;
+
+  const oldBook = books[idx];
+  
+  // Update Content if chapters are provided
+  if (updates.chapters) {
+    const normalizedChapters = normalizeChapters(updates.chapters);
+    
+    // Recalculate stats if needed
+    const totalSentences = normalizedChapters.reduce((acc, c) => acc + flattenChapterSentences(c).length, 0);
+    const preview = flattenChapterSentences(normalizedChapters[0]).slice(0, 2) || [];
+    
+    // Update content file
+    const contentFileName = oldBook.contentPath || `${id}.json`;
+    const contentPath = path.join(BOOKS_DIR, contentFileName);
+    
+    const bookContent: BookContent = {
+       schemaVersion: 2,
+       id,
+       chapters: normalizedChapters
+    };
+    
+    await fs.writeFile(contentPath, JSON.stringify(bookContent, null, 2), 'utf-8');
+    
+    // Update metadata derived from content
+    updates.metadata = {
+        ...oldBook.metadata,
+        ...updates.metadata,
+        sentenceCount: totalSentences
+    } as any;
+    updates.preview = preview;
+    updates.contentPath = contentFileName;
+  }
+
+  // Update Metadata
+  // We need to be careful not to merge `chapters` into the metadata object in the array
+  const { chapters, ...safeUpdates } = updates;
+
+  const newBook: BookMetadata = {
+    ...oldBook,
+    ...safeUpdates,
+    metadata: {
+        wordCount: oldBook.metadata?.wordCount ?? 0,
+        format: oldBook.metadata?.format ?? 'text',
+        ...oldBook.metadata,
+        ...(safeUpdates.metadata || {})
+    },
+    id: oldBook.id, // Ensure ID doesn't change
+  };
+  
+  // Explicitly delete chapters from the metadata object to keep the list lightweight
+  delete (newBook as any).chapters;
+
+  books[idx] = newBook;
   await fs.writeFile(DB_PATH, JSON.stringify(books, null, 2), 'utf-8');
   
   return newBook;
@@ -177,7 +241,7 @@ async function safeUnlink(filePath: string) {
 }
 
 export async function deleteBook(id: string): Promise<{ ok: boolean; deleted?: BookMetadata }> {
-  await ensureDb();
+  await initBooksDb();
   const books = await getBooks();
   const idx = books.findIndex(b => b.id === id);
   if (idx === -1) return { ok: false };
@@ -200,7 +264,7 @@ export async function deleteBook(id: string): Promise<{ ok: boolean; deleted?: B
 }
 
 export async function deleteAllBooks(): Promise<{ ok: true; deletedCount: number }> {
-  await ensureDb();
+  await initBooksDb();
   const books = await getBooks();
 
   // 1) Best-effort delete referenced content files
@@ -227,103 +291,3 @@ export async function deleteAllBooks(): Promise<{ ok: true; deletedCount: number
   await fs.writeFile(DB_PATH, '[]', 'utf-8');
   return { ok: true, deletedCount: books.length };
 }
-
-// Vocabulary Support
-
-const VOCAB_PATH = path.join(process.cwd(), 'data', 'vocabulary.json');
-
-export interface VocabularyWord {
-  id: string;
-  word: string;
-  definition: string;
-  contextSentence?: string;
-  translation?: string;
-  imagePath?: string;
-  audioPath?: string;
-  createdAt: number;
-}
-
-export async function getVocabulary(): Promise<VocabularyWord[]> {
-  try {
-    await fs.access(VOCAB_PATH);
-    const data = await fs.readFile(VOCAB_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    // If file doesn't exist, try creating it
-    await fs.writeFile(VOCAB_PATH, '[]', 'utf-8');
-    return [];
-  }
-}
-
-export async function addWord(word: Omit<VocabularyWord, 'id' | 'createdAt'>): Promise<VocabularyWord> {
-  // Ensure the file exists
-  let vocab: VocabularyWord[] = [];
-  try {
-    vocab = await getVocabulary();
-  } catch (err) {
-    vocab = [];
-  }
-
-  const newWord: VocabularyWord = {
-    ...word,
-    id: Date.now().toString(),
-    createdAt: Date.now(),
-  };
-
-  vocab.push(newWord);
-  await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-  return newWord;
-}
-
-export async function deleteWord(id: string): Promise<void> {
-    // Also delete any associated media files (image/audio)
-    let vocab = await getVocabulary();
-    const existing = vocab.find(w => w.id === id);
-    if (existing) {
-      // Best-effort cleanup of media files referenced by this word
-      const delPaths: Array<string | undefined> = [existing.imagePath, existing.audioPath];
-      for (const p of delPaths) {
-        if (p && typeof p === 'string') {
-          try {
-            // Convert public URL like "/uploads/images/xxx.jpg" to local file path
-            const rel = p.startsWith('/') ? p.slice(1) : p;
-            // Only allow deletion inside public/uploads
-            if (rel.startsWith('uploads/')) {
-              const full = path.join(process.cwd(), 'public', rel);
-              await safeUnlink(full);
-            }
-          } catch {}
-        }
-      }
-    }
-
-    vocab = vocab.filter(w => w.id !== id);
-    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-}
-
-export async function updateWord(id: string, updates: Partial<VocabularyWord>): Promise<VocabularyWord | null> {
-    let vocab = await getVocabulary();
-    const index = vocab.findIndex(w => w.id === id);
-    if (index === -1) return null;
-
-    const prev = vocab[index];
-
-    // If image/audio path is being updated, remove the old file
-    const maybeDeleteOld = async (oldPath?: string, newPath?: string) => {
-      if (!oldPath || !newPath || oldPath === newPath) return;
-      const rel = oldPath.startsWith('/') ? oldPath.slice(1) : oldPath;
-      if (rel.startsWith('uploads/')) {
-        const full = path.join(process.cwd(), 'public', rel);
-        await safeUnlink(full);
-      }
-    };
-
-    await maybeDeleteOld(prev.imagePath, updates.imagePath);
-    await maybeDeleteOld(prev.audioPath, updates.audioPath);
-
-    vocab[index] = { ...prev, ...updates };
-    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-    return vocab[index];
-}
-
-

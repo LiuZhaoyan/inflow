@@ -558,7 +558,7 @@ export default function VocabularyPage() {
       </main>
       {/* Fixed Right Sidebar for Story */}
       <aside
-        className={`fixed right-0 top-24 z-40 bg-white border-l border-gray-200 shadow-lg rounded-l-2xl p-4 sm:w-[380px] w-[88vw] h-[calc(100vh-7rem)] overflow-y-auto transition-transform duration-300 ${isStorySidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed right-0 top-24 z-40 bg-white border-l border-gray-200 shadow-lg rounded-l-2xl p-4 sm:w-[290px] w-[80vw] h-[calc(100vh-7rem)] overflow-y-auto transition-transform duration-300 ${isStorySidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}
         aria-hidden={!isStorySidebarOpen}
       >
         <div className="flex items-center justify-between mb-3">

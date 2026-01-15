@@ -79,7 +79,7 @@ export default function BooksManager({ books }: { books: BookListItem[] }) {
   };
 
   const deleteAll = async () => {
-    if (!confirm("Delete ALL books? This will remove data/db.json entries and all data/books/*.json files.")) {
+    if (!confirm("Delete ALL books? This will remove data/books.json entries and all data/books/*.json files.")) {
       return;
     }
     setError(null);
