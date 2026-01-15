@@ -30,7 +30,7 @@ export default function LearnPage() {
         const res = await fetch('/api/ai-tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
+            body: JSON.stringify({ text, stream: true })
         });
         if (!res.ok) throw new Error('TTS failed');
         

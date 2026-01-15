@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { generateTTS } from '@/lib/ttsService';
+import { generateTTS, fetchAudioBuffer } from '@/lib/ttsService';
 
 export async function POST(request: Request) {
   try {
-    const { text, format: reqFormat='mp3', voiceId='audiobook_female_1' } = await request.json();
+    const { text, format: reqFormat='mp3', voiceId='audiobook_female_1', stream=false } = await request.json();
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
@@ -11,6 +11,22 @@ export async function POST(request: Request) {
     const format = typeof reqFormat === 'string' && ['mp3','pcm','flac'].includes(reqFormat.toLowerCase())
       ? (reqFormat.toLowerCase() as 'mp3'|'pcm'|'flac')
       : 'mp3';
+
+    if (stream) {
+      const { buffer, ext } = await fetchAudioBuffer(text, {
+          voiceId,
+          format,
+          speed: 0.9
+      });
+      // Simple mime type mapping
+      const mimeType = ext === '.mp3' ? 'audio/mpeg' : 
+                       ext === '.wav' ? 'audio/wav' : 
+                       ext === '.flac' ? 'audio/flac' : 'application/octet-stream';
+
+      return new Response(Buffer.from(buffer), {
+        headers: { 'Content-Type': mimeType }
+      });
+    }
 
     try {
         const publicUrl = await generateTTS(text, {

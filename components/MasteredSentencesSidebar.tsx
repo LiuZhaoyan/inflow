@@ -31,7 +31,7 @@ export default function MasteredSentencesSidebar({ sentences }: Props) {
              const res = await fetch('/api/ai-tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: sentence.content })
+                body: JSON.stringify({ text: sentence.content, stream: false })
             });
             if (!res.ok) throw new Error('TTS failed');
             const blob = await res.blob();
