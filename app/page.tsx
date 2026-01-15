@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookOpen, Sparkles, ArrowRight, Info } from 'lucide-react';
+import { BookOpen, Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -65,6 +65,19 @@ export default function Home() {
                     <div>
                         <h3 className="font-medium text-gray-900">Vocabulary</h3>
                         <p className="text-sm text-gray-500">AI Flashcards & Stories</p>
+                    </div>
+                 </Link>
+                 
+                 <Link
+                    href="/learn"
+                    className="group flex flex-col p-5 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300 w-full sm:w-64"
+                 >
+                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                       <MessageCircle className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                        <h3 className="font-medium text-gray-900">AI Tutor</h3>
+                        <p className="text-sm text-gray-500">Sentence-based Learning</p>
                     </div>
                  </Link>
              </div>

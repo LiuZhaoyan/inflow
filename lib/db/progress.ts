@@ -9,6 +9,7 @@ export interface MasteredSentence {
   translation?: string;
   masteredAt: number;
   difficultyLevel: number;
+  audioPath?: string;
 }
 
 export interface UserProgress {
