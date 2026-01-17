@@ -65,12 +65,18 @@ export async function saveMasteredSentence(sentence: MasteredSentence) {
   if (!progress.masteredSentences) progress.masteredSentences = [];
   if (!progress.recentContext) progress.recentContext = [];
 
-  progress.masteredSentences.push(sentence);
+  // Check if sentence already exists
+  const exists = progress.masteredSentences.some(s => s.content === sentence.content);
+  if (!exists) {
+    progress.masteredSentences.push(sentence);
+  }
   
   // Update recent context
-  progress.recentContext.push(sentence.content);
-  if (progress.recentContext.length > 10) {
-    progress.recentContext.shift();
+  if (!progress.recentContext.includes(sentence.content)) {
+    progress.recentContext.push(sentence.content);
+    if (progress.recentContext.length > 10) {
+      progress.recentContext.shift();
+    }
   }
   
   await updateProgress(progress);

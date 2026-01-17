@@ -5,6 +5,15 @@ import Link from 'next/link';
 import { ArrowLeft, Languages, CheckCircle, HelpCircle, Volume2 } from 'lucide-react';
 import MasteredSentencesSidebar, { MasteredSentence } from '@/components/MasteredSentencesSidebar';
 
+const CONTEXT_OPTIONS = [
+    "Daily Conversation", 
+    "Travel & Airport", 
+    "Restaurant & Food", 
+    "Shopping", 
+    "Business", 
+    "Emergency"
+];
+
 interface Msg {
   id: string;
   role: 'user' | 'ai';
@@ -60,17 +69,9 @@ export default function LearnPage() {
         if (data.sentences) setMasteredSentences(data.sentences);
       })
       .catch(err => console.error("Failed to load history", err));
-
-    // 2. Init session with a fixed sentence (Local start)
-    setMessages([{ 
-        id: 'init-ai', 
-        role: 'ai', 
-        content: "Welcome! Let's start with a basic Korean greeting." 
-    }]);
-    setCurrentSentence("안녕하세요, 반갑습니다.");
   }, []);
 
-  const handleAction = async (action: 'init' | 'explain' | 'translate' | 'understand') => {
+  const handleAction = async (action: 'init' | 'explain' | 'translate' | 'understand', context?: string) => {
     if (loading) return;
     setLoading(true);
 
@@ -94,7 +95,8 @@ export default function LearnPage() {
             body: JSON.stringify({
                 action,
                 currentSentence: sentenceInProgress,
-                history: messages.map(m => ({ role: m.role, content: m.content }))
+                history: messages.map(m => ({ role: m.role, content: m.content })),
+                context
             })
         });
 
@@ -160,6 +162,26 @@ export default function LearnPage() {
           {/* Chat Area */}
           <main className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="max-w-3xl mx-auto space-y-6 pb-4">
+                {messages.length === 0 && !loading && (
+                     <div className="flex flex-col items-center justify-center py-10 space-y-6">
+                        <div className="text-center space-y-2">
+                             <h2 className="text-2xl font-bold text-gray-800">Choose a Context</h2>
+                             <p className="text-gray-500">Select a topic to start your personalized lesson.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+                            {CONTEXT_OPTIONS.map(ctx => (
+                                <button
+                                    key={ctx}
+                                    onClick={() => handleAction('init', ctx)}
+                                    className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm text-left flex items-center justify-between group"
+                                >
+                                    <span className="font-medium text-gray-700 group-hover:text-blue-700">{ctx}</span>
+                                    <ArrowLeft className="rotate-180 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" size={16} />
+                                </button>
+                            ))}
+                        </div>
+                     </div>
+                )}
                 {messages.map((msg) => (
                     <div 
                         key={msg.id} 

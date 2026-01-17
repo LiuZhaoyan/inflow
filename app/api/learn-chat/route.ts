@@ -5,7 +5,7 @@ import { generateTTS } from '@/lib/ttsService';
 
 export async function POST(req: Request) {
   try {
-    const { action, currentSentence, history = [] } = await req.json();
+    const { action, currentSentence, history = [], context } = await req.json();
     const progress = await getProgress();
 
     const systemPrompt = `You are a personalized language tutor. 
@@ -39,7 +39,9 @@ Structure:
 
     let userContent = '';
     if (action === 'init') {
-        userContent = 'Start the session.';
+        userContent = context 
+            ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context.` 
+            : 'Start the session.';
     } else if (action === 'explain') {
         userContent = `Explain this sentence: "${currentSentence}"`;
     } else if (action === 'translate') {
