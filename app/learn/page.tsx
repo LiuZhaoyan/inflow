@@ -138,9 +138,11 @@ export default function LearnPage() {
     if (loading) return;
     setLoading(true);
 
-        if (action === 'init' && context) {
-                setSelectedContext(context);
-                localStorage.setItem('learn-chat:last-context', context);
+    const effectiveContext = context ?? selectedContext ?? undefined;
+
+    if (action === 'init' && effectiveContext) {
+        setSelectedContext(effectiveContext);
+        localStorage.setItem('learn-chat:last-context', effectiveContext);
         }
 
     // Capture the sentence being acted upon BEFORE it potentially changes
@@ -164,7 +166,7 @@ export default function LearnPage() {
                 action,
                 currentSentence: sentenceInProgress,
                 history: messages.map(m => ({ role: m.role, content: m.content })),
-                context
+                context: effectiveContext
             })
         });
 
@@ -178,8 +180,12 @@ export default function LearnPage() {
             content: data.response 
         }]);
 
-        if (data.type === 'sentence') {
-            setCurrentSentence(data.response);
+        const normalizedType = typeof data.type === 'string' ? data.type.toLowerCase() : '';
+
+        if (normalizedType === 'sentence' || action === 'init' || action === 'understand') {
+            if (typeof data.response === 'string' && data.response.trim()) {
+                setCurrentSentence(data.response);
+            }
             
             // If the user understood the previous sentence, add it to the sidebar
             if (action === 'understand' && sentenceInProgress) {
@@ -190,7 +196,7 @@ export default function LearnPage() {
                 }]);
             }
 
-        } else if (data.original && data.type !== 'sentence') {
+        } else if (data.original && normalizedType !== 'sentence') {
              // Ensure we keep the original sentence if the user just asked for explanation
              setCurrentSentence(data.original);
         }

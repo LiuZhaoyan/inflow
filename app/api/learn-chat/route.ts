@@ -3,6 +3,17 @@ import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { getProgress, saveMasteredSentence } from '@/lib/db';
 import { generateTTS } from '@/lib/ttsService';
 
+function buildContextMessages(systemPrompt: string, history: any[], limit = 10): ChatMessage[] {
+    const safeHistory = Array.isArray(history) ? history : [];
+    return [
+        { role: 'system', content: systemPrompt },
+        ...safeHistory.slice(-limit).map((h: any) => ({
+            role: h.role === 'ai' ? 'assistant' : h.role,
+            content: h.content
+        }))
+    ];
+}
+
 export async function POST(req: Request) {
   try {
     const { action, currentSentence, history = [], context } = await req.json();
@@ -11,13 +22,18 @@ export async function POST(req: Request) {
     const systemPrompt = `You are a personalized language tutor. 
 Target Language Code: ${progress.targetLanguage}
 User Level: ${progress.userLevel}
+Selected Context: ${context || 'None'}
 
 Your goal is to help the user learn by providing ONE sentence at a time.
 Verify user understanding. Adjust difficulty based on feedback.
 
+CONTEXT RULES:
+- If Selected Context is not 'None', all sentences and explanations must stay strictly within that context.
+- Do not drift to unrelated topics. If unsure, keep it generic but still within the selected context.
+
 PROTOCOL:
 1. If action is 'init': Output a simple greeting and the first practice sentence in the target language.
-2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the target language (simplified).
+2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the target language.
 3. If action is 'translate': Provide the translation of 'currentSentence' in the user's native language (assume English or inference from context).
 4. If action is 'understand': The user understood 'currentSentence'. Output a NEW sentence. It can be a variation or a logical follow-up.
 
@@ -31,11 +47,8 @@ Structure:
 }
 `;
 
-    const messages: ChatMessage[] = [
-      { role: 'system', content: systemPrompt },
-      // Filter history to keep context manageable
-      ...history.slice(-10).map((h: any) => ({ role: h.role === 'ai' ? 'assistant' : h.role, content: h.content })),
-    ];
+        // Filter history to keep context manageable
+        const messages: ChatMessage[] = buildContextMessages(systemPrompt, history, 10);
 
     let userContent = '';
     if (action === 'init') {
@@ -73,10 +86,12 @@ Structure:
     }
 
     messages.push({ role: 'user', content: userContent });
+    console.log("Learn Chat Messages:", messages);
 
     const aiRes = await chatCompletion(messages, {
         temperature: 0.7
     });
+    console.log("Learn Chat AI Response:", aiRes);
 
     let data;
     try {
