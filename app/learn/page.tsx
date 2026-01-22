@@ -20,13 +20,42 @@ interface Msg {
   content: string;
 }
 
+interface StoredChat {
+    messages: Msg[];
+    currentSentence: string;
+    updatedAt: number;
+}
+
 export default function LearnPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [currentSentence, setCurrentSentence] = useState('');
   const [loading, setLoading] = useState(false);
   const [playing, setPlaying] = useState(false);
+    const [selectedContext, setSelectedContext] = useState<string | null>(null);
+    const [showContextMenu, setShowContextMenu] = useState(false);
   const [masteredSentences, setMasteredSentences] = useState<MasteredSentence[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const getStorageKey = (context: string) => `learn-chat:${context}`;
+
+    const loadStoredChat = (context: string) => {
+        try {
+            const raw = localStorage.getItem(getStorageKey(context));
+            if (!raw) return null;
+            return JSON.parse(raw) as StoredChat;
+        } catch (err) {
+            console.error('Failed to load stored chat', err);
+            return null;
+        }
+    };
+
+    const saveStoredChat = (context: string, data: StoredChat) => {
+        try {
+            localStorage.setItem(getStorageKey(context), JSON.stringify(data));
+        } catch (err) {
+            console.error('Failed to save stored chat', err);
+        }
+    };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,6 +90,15 @@ export default function LearnPage() {
     scrollToBottom();
   }, [messages]);
 
+    useEffect(() => {
+        if (!selectedContext) return;
+        saveStoredChat(selectedContext, {
+            messages,
+            currentSentence,
+            updatedAt: Date.now()
+        });
+    }, [messages, currentSentence, selectedContext]);
+
   useEffect(() => {
     // 1. Fetch Mastered Sentences
     fetch('/api/mastered-sentences')
@@ -69,11 +107,41 @@ export default function LearnPage() {
         if (data.sentences) setMasteredSentences(data.sentences);
       })
       .catch(err => console.error("Failed to load history", err));
+
+        const lastContext = localStorage.getItem('learn-chat:last-context');
+        if (lastContext) {
+            setSelectedContext(lastContext);
+            const stored = loadStoredChat(lastContext);
+            if (stored) {
+                setMessages(stored.messages);
+                setCurrentSentence(stored.currentSentence);
+            }
+        }
   }, []);
+
+    const switchContext = (context: string) => {
+        setSelectedContext(context);
+        setShowContextMenu(false);
+        localStorage.setItem('learn-chat:last-context', context);
+        const stored = loadStoredChat(context);
+        if (stored) {
+            setMessages(stored.messages);
+            setCurrentSentence(stored.currentSentence);
+            return;
+        }
+        setMessages([]);
+        setCurrentSentence('');
+        handleAction('init', context);
+    };
 
   const handleAction = async (action: 'init' | 'explain' | 'translate' | 'understand', context?: string) => {
     if (loading) return;
     setLoading(true);
+
+        if (action === 'init' && context) {
+                setSelectedContext(context);
+                localStorage.setItem('learn-chat:last-context', context);
+        }
 
     // Capture the sentence being acted upon BEFORE it potentially changes
     const sentenceInProgress = currentSentence; 
@@ -155,14 +223,53 @@ export default function LearnPage() {
                     <span className="font-medium">Back</span>
                 </Link>
                 <h1 className="text-lg font-bold text-gray-900">AI Tutor</h1>
-                <div className="w-8" /> 
+                <div className="min-w-[120px] flex justify-end relative">
+                    {selectedContext ? (
+                        <button
+                            onClick={() => setShowContextMenu(prev => !prev)}
+                            className="text-xs md:text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors"
+                            title="Switch context"
+                        >
+                            {selectedContext}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setShowContextMenu(true)}
+                            className="text-xs md:text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full hover:bg-gray-100 transition-colors"
+                            title="Choose context"
+                        >
+                            Choose
+                        </button>
+                    )}
+
+                    {showContextMenu && (
+                        <div className="absolute right-0 top-9 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-20">
+                            <div className="text-xs text-gray-400 px-2 py-1">Switch context</div>
+                            <div className="max-h-64 overflow-auto">
+                                {CONTEXT_OPTIONS.map(ctx => (
+                                    <button
+                                        key={ctx}
+                                        onClick={() => switchContext(ctx)}
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                            ctx === selectedContext
+                                                ? 'bg-blue-50 text-blue-700'
+                                                : 'text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {ctx}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
           </header>
 
           {/* Chat Area */}
           <main className="flex-1 overflow-y-auto p-4 scroll-smooth">
             <div className="max-w-3xl mx-auto space-y-6 pb-4">
-                {messages.length === 0 && !loading && (
+                {(messages.length === 0 && !loading) && (
                      <div className="flex flex-col items-center justify-center py-10 space-y-6">
                         <div className="text-center space-y-2">
                              <h2 className="text-2xl font-bold text-gray-800">Choose a Context</h2>
@@ -172,7 +279,7 @@ export default function LearnPage() {
                             {CONTEXT_OPTIONS.map(ctx => (
                                 <button
                                     key={ctx}
-                                    onClick={() => handleAction('init', ctx)}
+                                    onClick={() => switchContext(ctx)}
                                     className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm text-left flex items-center justify-between group"
                                 >
                                     <span className="font-medium text-gray-700 group-hover:text-blue-700">{ctx}</span>
