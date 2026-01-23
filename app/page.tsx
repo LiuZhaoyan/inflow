@@ -1,9 +1,166 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
+import { LANGUAGE_OPTIONS } from '@/lib/language';
+
+interface UserProfile {
+  username: string;
+  nativeLanguage: string;
+  targetLanguage: string;
+  isOnboarded?: boolean;
+}
 
 export default function Home() {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileForm, setProfileForm] = useState({
+    username: '',
+    nativeLanguage: 'en',
+    targetLanguage: 'ko'
+  });
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const res = await fetch('/api/user');
+        if (res.ok) {
+          const data = await res.json();
+          const profile = data?.profile as UserProfile | undefined;
+          if (profile) {
+            setUserProfile(profile);
+            setProfileForm({
+              username: profile.username || '',
+              nativeLanguage: profile.nativeLanguage || 'en',
+              targetLanguage: profile.targetLanguage || 'ko'
+            });
+            setShowProfileModal(!profile.isOnboarded);
+          } else {
+            setShowProfileModal(true);
+          }
+        } else {
+          setShowProfileModal(true);
+        }
+      } catch (err) {
+        console.error('Failed to load user profile', err);
+        setShowProfileModal(true);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    init();
+  }, []);
+
+  const handleSaveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (savingProfile) return;
+    setSavingProfile(true);
+    setProfileError(null);
+
+    try {
+      const res = await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: profileForm.username,
+          nativeLanguage: profileForm.nativeLanguage,
+          targetLanguage: profileForm.targetLanguage
+        })
+      });
+
+      if (!res.ok) throw new Error('Save failed');
+      const data = await res.json();
+      const profile = data?.profile as UserProfile | undefined;
+      if (profile) {
+        setUserProfile(profile);
+        setShowProfileModal(false);
+      } else {
+        setProfileError('保存失败，请重试。');
+      }
+    } catch (error) {
+      console.error(error);
+      setProfileError('保存失败，请检查网络后重试。');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100">
+      {!profileLoading && showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Start Learning</p>
+                <h2 className="text-xl font-bold text-gray-900 mt-1">Set your learning profile</h2>
+                <p className="text-sm text-gray-500 mt-1">We’ll use this to personalize lessons and translations.</p>
+              </div>
+              <div className="text-xs text-gray-400 font-semibold px-2 py-1 bg-gray-50 rounded-full border">Required</div>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Username (Optional)</label>
+                <input
+                  type="text"
+                  value={profileForm.username}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, username: e.target.value }))}
+                  placeholder="e.g. Lina"
+                  className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Native Language</label>
+                  <select
+                    value={profileForm.nativeLanguage}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, nativeLanguage: e.target.value }))}
+                    className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  >
+                    {LANGUAGE_OPTIONS.map(option => (
+                      <option key={`native-${option.value}`} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Target Language</label>
+                  <select
+                    value={profileForm.targetLanguage}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, targetLanguage: e.target.value }))}
+                    className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  >
+                    {LANGUAGE_OPTIONS.map(option => (
+                      <option key={`target-${option.value}`} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {profileError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  {profileError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60"
+              >
+                {savingProfile ? 'Saving...' : 'Save and start learning'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       
       {/* 1. Header: 极其简单，只保留 Logo */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">

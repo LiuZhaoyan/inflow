@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Languages, CheckCircle, HelpCircle, Volume2 } from 'lucide-react';
 import MasteredSentencesSidebar, { MasteredSentence } from '@/components/MasteredSentencesSidebar';
-import { LANGUAGE_OPTIONS } from '@/lib/language';
 
 const CONTEXT_OPTIONS = [
     "Daily Conversation", 
@@ -46,14 +45,6 @@ export default function LearnPage() {
 
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(true);
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const [savingProfile, setSavingProfile] = useState(false);
-    const [profileError, setProfileError] = useState<string | null>(null);
-    const [profileForm, setProfileForm] = useState({
-        username: '',
-        nativeLanguage: 'en',
-        targetLanguage: 'ko'
-    });
 
     const getStorageKey = (context: string) => `learn-chat:${context}`;
 
@@ -127,21 +118,15 @@ export default function LearnPage() {
                     const profile = data?.profile as UserProfile | undefined;
                     if (profile) {
                         setUserProfile(profile);
-                        setProfileForm({
-                            username: profile.username || '',
-                            nativeLanguage: profile.nativeLanguage || 'en',
-                            targetLanguage: profile.targetLanguage || 'ko'
-                        });
-                        setShowProfileModal(!profile.isOnboarded);
                     } else {
-                        setShowProfileModal(true);
+                        setUserProfile(null);
                     }
                 } else {
-                    setShowProfileModal(true);
+                    setUserProfile(null);
                 }
             } catch (err) {
                 console.error('Failed to load user profile', err);
-                setShowProfileModal(true);
+                setUserProfile(null);
             } finally {
                 setProfileLoading(false);
             }
@@ -189,7 +174,6 @@ export default function LearnPage() {
 
     const switchContext = (context: string) => {
         if (!userProfile?.isOnboarded) {
-            setShowProfileModal(true);
             return;
         }
         setSelectedContext(context);
@@ -209,8 +193,7 @@ export default function LearnPage() {
     const handleAction = async (action: 'init' | 'explain' | 'translate' | 'understand', context?: string) => {
         if (loading) return;
         if (!userProfile?.isOnboarded) {
-                setShowProfileModal(true);
-                return;
+            return;
         }
         setLoading(true);
 
@@ -289,111 +272,20 @@ export default function LearnPage() {
     }
   };
 
-    const handleSaveProfile = async (event: React.FormEvent) => {
-        event.preventDefault();
-        if (savingProfile) return;
-        setSavingProfile(true);
-        setProfileError(null);
-
-        try {
-            const res = await fetch('/api/user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: profileForm.username,
-                    nativeLanguage: profileForm.nativeLanguage,
-                    targetLanguage: profileForm.targetLanguage
-                })
-            });
-
-            if (!res.ok) throw new Error('Save failed');
-            const data = await res.json();
-            const profile = data?.profile as UserProfile | undefined;
-            if (profile) {
-                setUserProfile(profile);
-                setShowProfileModal(false);
-                if (selectedContext && !currentSentence && messages.length === 0) {
-                    handleAction('init', selectedContext);
-                }
-            } else {
-                setProfileError('保存失败，请重试。');
-            }
-        } catch (error) {
-            console.error(error);
-            setProfileError('保存失败，请检查网络后重试。');
-        } finally {
-            setSavingProfile(false);
-        }
-    };
-
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-            {!profileLoading && showProfileModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                    <div className="w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Start Learning</p>
-                                <h2 className="text-xl font-bold text-gray-900 mt-1">Set your learning profile</h2>
-                                <p className="text-sm text-gray-500 mt-1">We’ll use this to personalize lessons and translations.</p>
-                            </div>
-                            <div className="text-xs text-gray-400 font-semibold px-2 py-1 bg-gray-50 rounded-full border">Required</div>
-                        </div>
-
-                        <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
-                            <div>
-                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Username (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={profileForm.username}
-                                    onChange={(e) => setProfileForm(prev => ({ ...prev, username: e.target.value }))}
-                                    placeholder="e.g. Lina"
-                                    className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Native Language</label>
-                                    <select
-                                        value={profileForm.nativeLanguage}
-                                        onChange={(e) => setProfileForm(prev => ({ ...prev, nativeLanguage: e.target.value }))}
-                                        className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                    >
-                                        {LANGUAGE_OPTIONS.map(option => (
-                                            <option key={`native-${option.value}`} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Target Language</label>
-                                    <select
-                                        value={profileForm.targetLanguage}
-                                        onChange={(e) => setProfileForm(prev => ({ ...prev, targetLanguage: e.target.value }))}
-                                        className="mt-2 w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                                    >
-                                        {LANGUAGE_OPTIONS.map(option => (
-                                            <option key={`target-${option.value}`} value={option.value}>{option.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            {profileError && (
-                                <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                                    {profileError}
-                                </div>
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={savingProfile}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-60"
-                            >
-                                {savingProfile ? 'Saving...' : 'Save and start learning'}
-                            </button>
-                        </form>
+            {!profileLoading && !userProfile?.isOnboarded && (
+                <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                    <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Profile Required</p>
+                        <h2 className="text-xl font-bold text-gray-900 mt-2">Complete your learning profile</h2>
+                        <p className="text-sm text-gray-500 mt-2">Finish setup on the home page to start lessons.</p>
+                        <Link
+                            href="/"
+                            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                        >
+                            Go to home
+                        </Link>
                     </div>
                 </div>
             )}

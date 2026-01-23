@@ -1,5 +1,36 @@
 import { NextResponse } from 'next/server';
-import { getVocabulary, addWord, deleteWord, updateWord, VocabularyWord } from '@/lib/db';
+import { getVocabulary, addWord, deleteWord, updateWord, VocabularyWord, getUserProfile } from '@/lib/db';
+import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
+
+async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
+  try {
+    const messages: ChatMessage[] = [
+      {
+        role: 'system',
+        content:
+          `You are a language teacher. Write two short, clear definitions for the word.\n` +
+          `1) Definition in the same language as the word. Keep line under 10 words.\n` +
+          `2) Direct translation in the learner's native language: "${nativeLanguage}".\n` +
+          `Output exactly two lines separated by a newline.  Avoid quotes and extra punctuation.`,
+      },
+      {
+        role: 'user',
+        content: `Word: ${word}`,
+      },
+    ];
+
+    const definition = await chatCompletion(messages, {
+      model: 'deepseek/deepseek-v3.2',
+      temperature: 0.5,
+      maxTokens: 60,
+    });
+
+    return (definition || '').trim();
+  } catch (err) {
+    console.error('Definition generation failed:', err);
+    return '';
+  }
+}
 
 export async function GET() {
   const vocab = await getVocabulary();
@@ -11,6 +42,14 @@ export async function POST(request: Request) {
     const wordData = await request.json();
     if (!wordData.word) {
        return NextResponse.json({ error: 'Word is required' }, { status: 400 });
+    }
+    if (!wordData.definition || String(wordData.definition).trim() === '') {
+      const profile = await getUserProfile();
+      const nativeLanguage = profile?.nativeLanguage || 'en';
+      const generated = await generateDefinition(wordData.word, nativeLanguage);
+      if (generated) {
+        wordData.definition = generated;
+      }
     }
     const newWord = await addWord(wordData);
     return NextResponse.json(newWord);

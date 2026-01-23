@@ -29,7 +29,7 @@ export default function VocabularyPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newDefinition, setNewDefinition] = useState('');
-  const [addingStatus, setAddingStatus] = useState<'idle' | 'generating' | 'saving'>('idle');
+  const [addingStatus, setAddingStatus] = useState<'idle' | 'saving'>('idle');
 
   // Selection & Story Mode State
   const [selectionMode, setSelectionMode] = useState(false);
@@ -62,70 +62,32 @@ export default function VocabularyPage() {
     e.preventDefault();
     if (!newWord.trim()) return;
 
-    setAddingStatus('generating');
+    setAddingStatus('saving');
 
     try {
-      // 1. Parallel: Generate Image & Audio
-      const imagePromise = fetch('/api/ai-depict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Create a single-panel, flat illustration that unambiguously shows the meaning of the word "${newWord}" using a human action or clear object interaction. Avoid symbolic or indirect cues (e.g., for "hot" show a person holding a steaming cup and fanning their mouth or a hand near a steaming pan, NOT the sun). For function/abstract words (e.g., "say", "no", "thank you", "sorry") show a clear face-to-face interaction with expressive gestures (speaking mouth for "say", head shake/hand stop for "no", slight bow and thankful gesture for "thank you", apologetic posture for "sorry"). Flashcard-friendly, white background, single focal action, 1–3 contextual props, no text/letters, high contrast, kid-friendly, universal symbols.` }),
-      }).then(res => {
-         if(!res.ok) throw new Error("Image gen failed");
-         return res.json();
-      });
-
-      const audioPromise = fetch('/api/ai-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: newWord }),
-      }).then(res => {
-         if(!res.ok) throw new Error("TTS failed");
-         return res.json();
-      });
-
-      const [imageRes, audioRes] = await Promise.all([imagePromise, audioPromise]);
-
-      let imagePath = '';
-      if (imageRes.taskId) {
-          // Poll for image
-          const remoteUrl = await pollForImage(imageRes.taskId);
-          if (remoteUrl) {
-            try {
-              const saveRes = await fetch('/api/save-image', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: remoteUrl })
-              });
-              const saveData = await saveRes.json();
-              imagePath = saveData.url || '';
-            } catch (e) {
-              console.error('Failed to save image locally, fallback to remote URL');
-              imagePath = remoteUrl;
-            }
-          }
-      }
-
-      const audioPath = audioRes.url || '';
-
-      // 2. Save
-      setAddingStatus('saving');
+      // 1) Save card first (definition auto-generated server-side if empty)
       const saveRes = await fetch('/api/vocabulary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           word: newWord,
           definition: newDefinition,
-          imagePath,
-          audioPath
         }),
       });
 
       if (saveRes.ok) {
+        const created = await saveRes.json();
+        setWords(prev => [created, ...prev]);
         setNewWord('');
         setNewDefinition('');
         setIsAdding(false); // Close form on success
-        fetchVocabulary();
+
+        // 2) Generate image asynchronously (do not block creation)
+        if (created?.id && !created?.imagePath) {
+          void generateImageForWord(created);
+        }
+      } else {
+        throw new Error('Failed to create card');
       }
     } catch (err) {
       console.error(err);
@@ -418,7 +380,6 @@ export default function VocabularyPage() {
                              className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-200"
                           >
                              {addingStatus === 'idle' && 'Create Card'}
-                             {addingStatus === 'generating' && <><Loader2 className="w-4 h-4 animate-spin"/> Generating Assets...</>}
                              {addingStatus === 'saving' && <><Loader2 className="w-4 h-4 animate-spin"/> Saving...</>}
                           </button>
                       </div>
