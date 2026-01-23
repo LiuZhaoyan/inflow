@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
-import { getProgress, saveMasteredSentence } from '@/lib/db';
+import { getProgress, getUserProfile, saveMasteredSentence } from '@/lib/db';
 import { generateTTS } from '@/lib/ttsService';
 
 function buildContextMessages(systemPrompt: string, history: any[], limit = 10): ChatMessage[] {
@@ -28,9 +28,13 @@ export async function POST(req: Request) {
   try {
     const { action, currentSentence, history = [], context } = await req.json();
     const progress = await getProgress();
+    const userProfile = await getUserProfile();
+    const targetLanguage = userProfile?.targetLanguage || progress.targetLanguage;
+    const nativeLanguage = userProfile?.nativeLanguage || 'en';
 
     const systemPrompt = `You are a personalized language tutor. 
-Target Language Code: ${progress.targetLanguage}
+Target Language Code: ${targetLanguage}
+User Native Language Code: ${nativeLanguage}
 User Level: ${progress.userLevel}
 Selected Context: ${context || 'None'}
 
@@ -43,8 +47,8 @@ CONTEXT RULES:
 
 PROTOCOL:
 1. If action is 'init': Output a simple greeting and the first practice sentence in the target language.
-2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the target language.
-3. If action is 'translate': Provide the translation of 'currentSentence' in the user's native language (assume English or inference from context).
+2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the native language.
+3. If action is 'translate': Provide the translation of 'currentSentence' in the user's native language.
 4. If action is 'understand': The user understood 'currentSentence'. Output a NEW sentence. It can be a variation or a logical follow-up.
 
 RESPONSE FORMAT:
