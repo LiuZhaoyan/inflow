@@ -82,6 +82,21 @@ export async function saveMasteredSentence(sentence: MasteredSentence) {
   await updateProgress(progress);
 }
 
+export async function deleteMasteredSentence(id: string) {
+  const progress = await getProgress();
+  const existing = progress.masteredSentences || [];
+  const toDelete = existing.find(s => s.id === id);
+
+  progress.masteredSentences = existing.filter(s => s.id !== id);
+
+  if (toDelete?.content && progress.recentContext) {
+    progress.recentContext = progress.recentContext.filter(c => c !== toDelete.content);
+  }
+
+  await updateProgress(progress);
+  return progress;
+}
+
 export async function resetProgress() {
     await fs.writeFile(PROGRESS_FILE, JSON.stringify(DEFAULT_PROGRESS, null, 2), 'utf-8');
     return DEFAULT_PROGRESS;

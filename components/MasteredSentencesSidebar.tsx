@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Book, Volume2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Book, Volume2, Trash2 } from 'lucide-react';
 
 export interface MasteredSentence {
   id: string;
@@ -11,9 +11,10 @@ export interface MasteredSentence {
 
 interface Props {
   sentences: MasteredSentence[];
+  onDelete?: (id: string) => void;
 }
 
-export default function MasteredSentencesSidebar({ sentences }: Props) {
+export default function MasteredSentencesSidebar({ sentences, onDelete }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -81,18 +82,33 @@ export default function MasteredSentencesSidebar({ sentences }: Props) {
             ) : (
                 sentences.slice().reverse().map((s) => (
                     <div key={s.id} className="group p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-default">
-                        <div className="flex justify-between items-start gap-2">
-                             <p className="text-gray-800 font-medium leading-relaxed flex-1">{s.content}</p>
-                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    playSavedAudio(s);
-                                }}
-                                className={`p-1.5 rounded-full hover:bg-blue-100/50 text-blue-500 transition-colors flex-shrink-0 ${playingId === s.id ? 'animate-pulse text-blue-700' : 'opacity-60 group-hover:opacity-100'}`}
-                             >
-                                <Volume2 size={16} />
-                             </button>
-                        </div>
+                      <div className="flex justify-between items-start gap-2">
+                         <p className="text-gray-800 font-medium leading-relaxed flex-1">{s.content}</p>
+                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                           <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playSavedAudio(s);
+                            }}
+                            className={`p-1.5 rounded-full hover:bg-blue-100/50 text-blue-500 transition-colors ${playingId === s.id ? 'animate-pulse text-blue-700' : 'opacity-60 group-hover:opacity-100'}`}
+                            title="Play audio"
+                           >
+                            <Volume2 size={16} />
+                           </button>
+                           {onDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(s.id);
+                              }}
+                              className="p-1.5 rounded-full hover:bg-red-100/60 text-red-500 transition-colors opacity-60 group-hover:opacity-100"
+                              title="Delete sentence"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                           )}
+                         </div>
+                      </div>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="text-[10px] text-gray-400 font-mono bg-white px-1.5 py-0.5 rounded border border-gray-100">
                                 {new Date(s.masteredAt).toLocaleDateString()}

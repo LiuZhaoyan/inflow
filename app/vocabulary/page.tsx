@@ -69,7 +69,7 @@ export default function VocabularyPage() {
       const imagePromise = fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Create a minimal, flat scene that clearly shows the meaning of "${newWord}". Flashcard-friendly, white background, single focal action or object, a few contextual props, no text or letters, high contrast, kid-friendly, universal symbols.` }),
+        body: JSON.stringify({ prompt: `Create a single-panel, flat illustration that unambiguously shows the meaning of the word "${newWord}" using a human action or clear object interaction. Avoid symbolic or indirect cues (e.g., for "hot" show a person holding a steaming cup and fanning their mouth or a hand near a steaming pan, NOT the sun). For function/abstract words (e.g., "say", "no", "thank you", "sorry") show a clear face-to-face interaction with expressive gestures (speaking mouth for "say", head shake/hand stop for "no", slight bow and thankful gesture for "thank you", apologetic posture for "sorry"). Flashcard-friendly, white background, single focal action, 1–3 contextual props, no text/letters, high contrast, kid-friendly, universal symbols.` }),
       }).then(res => {
          if(!res.ok) throw new Error("Image gen failed");
          return res.json();
@@ -175,7 +175,7 @@ export default function VocabularyPage() {
       const res = await fetch('/api/ai-depict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Create a minimal, flat scene that clearly shows the meaning of "${word.word}". Flashcard-friendly, white background, single focal action or object, a few contextual props, no text or letters, high contrast, kid-friendly, universal symbols.` })
+        body: JSON.stringify({ prompt: `Create a single-panel, flat illustration that unambiguously shows the meaning of the word "${word.word}" using a human action or clear object interaction. Avoid symbolic or indirect cues (e.g., for "hot" show a person holding a steaming cup and fanning their mouth or a hand near a steaming pan, NOT the sun). For function/abstract words (e.g., "say", "no", "thank you", "sorry") show a clear face-to-face interaction with expressive gestures (speaking mouth for "say", head shake/hand stop for "no", slight bow and thankful gesture for "thank you", apologetic posture for "sorry"). Flashcard-friendly, white background, single focal action, 1–3 contextual props, no text/letters, high contrast, kid-friendly, universal symbols.` })
       });
       if (!res.ok) throw new Error('Image task start failed');
       const data = await res.json();
@@ -520,7 +520,10 @@ export default function VocabularyPage() {
                               </div>
 
                               {/* Back Side */}
-                              <div className="absolute inset-0 bg-white flex items-center justify-center p-4" style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}>
+                              <div
+                                className="absolute inset-0 bg-white flex items-center justify-center p-4"
+                                style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
+                              >
                                 <div className="text-center">
                                   <div className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Definition</div>
                                   {word.definition ? (

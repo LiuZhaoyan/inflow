@@ -119,6 +119,25 @@ export default function LearnPage() {
         }
   }, []);
 
+    const handleDeleteMasteredSentence = async (id: string) => {
+        const previous = masteredSentences;
+        setMasteredSentences(prev => prev.filter(s => s.id !== id));
+
+        try {
+            const res = await fetch('/api/mastered-sentences', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            if (!res.ok) throw new Error('Delete failed');
+            const data = await res.json();
+            if (data.sentences) setMasteredSentences(data.sentences);
+        } catch (error) {
+            console.error(error);
+            setMasteredSentences(previous);
+        }
+    };
+
     const switchContext = (context: string) => {
         setSelectedContext(context);
         setShowContextMenu(false);
@@ -217,7 +236,10 @@ export default function LearnPage() {
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       
       {/* Sidebar Component */}
-      <MasteredSentencesSidebar sentences={masteredSentences} />
+            <MasteredSentencesSidebar
+                sentences={masteredSentences}
+                onDelete={handleDeleteMasteredSentence}
+            />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-full">

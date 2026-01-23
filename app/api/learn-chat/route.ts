@@ -5,9 +5,19 @@ import { generateTTS } from '@/lib/ttsService';
 
 function buildContextMessages(systemPrompt: string, history: any[], limit = 10): ChatMessage[] {
     const safeHistory = Array.isArray(history) ? history : [];
+    const filtered: any[] = [];
+
+    for (let i = 0; i < safeHistory.length - 1; i += 1) {
+        const current = safeHistory[i];
+        const next = safeHistory[i + 1];
+        if (current?.content === 'I got it!' && next?.content) {
+            filtered.push(next);
+        }
+    }
+
     return [
         { role: 'system', content: systemPrompt },
-        ...safeHistory.slice(-limit).map((h: any) => ({
+        ...filtered.slice(-limit).map((h: any) => ({
             role: h.role === 'ai' ? 'assistant' : h.role,
             content: h.content
         }))
