@@ -10,7 +10,7 @@ async function generateDefinition(word: string, nativeLanguage: string): Promise
         content:
           `You are a language teacher. Write two short, clear definitions for the word.\n` +
           `1) Definition in the same language as the word. Keep line under 10 words.\n` +
-          `2) Direct translation in the learner's native language: "${nativeLanguage}".\n` +
+          `2) Translate the word into the learner's native language: "${nativeLanguage}". No explanations.\n` +
           `Output exactly two lines separated by a newline.  Avoid quotes and extra punctuation.`,
       },
       {
