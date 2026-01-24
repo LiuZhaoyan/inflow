@@ -10,6 +10,8 @@ export interface MasteredSentence {
   masteredAt: number;
   difficultyLevel: number;
   audioPath?: string;
+  context?: string;
+  messageId?: string;
 }
 
 export interface UserProgress {
@@ -66,7 +68,7 @@ export async function saveMasteredSentence(sentence: MasteredSentence) {
   if (!progress.recentContext) progress.recentContext = [];
 
   // Check if sentence already exists
-  const exists = progress.masteredSentences.some(s => s.content === sentence.content);
+  const exists = progress.masteredSentences.some(s => s.content === sentence.content && s.context === sentence.context);
   if (!exists) {
     progress.masteredSentences.push(sentence);
   }

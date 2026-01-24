@@ -7,14 +7,17 @@ export interface MasteredSentence {
   content: string;
   masteredAt: number;
   audioPath?: string;
+  context?: string;
+  messageId?: string;
 }
 
 interface Props {
   sentences: MasteredSentence[];
   onDelete?: (id: string) => void;
+  onSelect?: (sentence: MasteredSentence) => void;
 }
 
-export default function MasteredSentencesSidebar({ sentences, onDelete }: Props) {
+export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
 
@@ -81,7 +84,11 @@ export default function MasteredSentencesSidebar({ sentences, onDelete }: Props)
                  </div>
             ) : (
                 sentences.slice().reverse().map((s) => (
-                    <div key={s.id} className="group p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-default">
+                    <div
+                      key={s.id}
+                      onClick={() => onSelect?.(s)}
+                      className="group p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer"
+                    >
                       <div className="flex justify-between items-start gap-2">
                          <p className="text-gray-800 font-medium leading-relaxed flex-1">{s.content}</p>
                          <div className="flex flex-col items-end gap-2 flex-shrink-0">

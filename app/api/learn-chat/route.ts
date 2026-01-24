@@ -26,7 +26,7 @@ function buildContextMessages(systemPrompt: string, history: any[], limit = 10):
 
 export async function POST(req: Request) {
   try {
-    const { action, currentSentence, history = [], context } = await req.json();
+        const { action, currentSentence, history = [], context, messageId } = await req.json();
     const progress = await getProgress();
     const userProfile = await getUserProfile();
     const targetLanguage = userProfile?.targetLanguage || progress.targetLanguage;
@@ -94,7 +94,9 @@ Structure:
                 content: currentSentence,
                 masteredAt: Date.now(),
                 difficultyLevel: 1,
-                audioPath
+                audioPath,
+                context,
+                messageId
             });
         }
     }

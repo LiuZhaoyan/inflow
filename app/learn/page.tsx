@@ -36,12 +36,14 @@ interface UserProfile {
 export default function LearnPage() {
     const [messages, setMessages] = useState<Msg[]>([]);
     const [currentSentence, setCurrentSentence] = useState('');
+    const [currentSentenceMessageId, setCurrentSentenceMessageId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [playing, setPlaying] = useState(false);
     const [selectedContext, setSelectedContext] = useState<string | null>(null);
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [masteredSentences, setMasteredSentences] = useState<MasteredSentence[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const sentenceRef = useRef<HTMLDivElement>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
     const [selectedText, setSelectedText] = useState('');
@@ -242,6 +244,7 @@ export default function LearnPage() {
             if (stored) {
                 setMessages(stored.messages);
                 setCurrentSentence(stored.currentSentence);
+                setCurrentSentenceMessageId(null);
             }
         }
     }, []);
@@ -318,7 +321,8 @@ export default function LearnPage() {
                     action,
                     currentSentence: sentenceInProgress,
                     history: messages.map(m => ({ role: m.role, content: m.content })),
-                    context: effectiveContext
+                    context: effectiveContext,
+                    messageId: currentSentenceMessageId
                 })
             });
 
@@ -326,8 +330,9 @@ export default function LearnPage() {
 
             const data = await res.json();
 
+            const aiMessageId = Date.now().toString() + 'ai';
             setMessages(prev => [...prev, {
-                id: Date.now().toString() + 'ai',
+                id: aiMessageId,
                 role: 'ai',
                 content: data.response
             }]);
@@ -337,6 +342,7 @@ export default function LearnPage() {
             if (normalizedType === 'sentence' || action === 'init' || action === 'understand') {
                 if (typeof data.response === 'string' && data.response.trim()) {
                     setCurrentSentence(data.response);
+                    setCurrentSentenceMessageId(aiMessageId);
                 }
 
                 // If the user understood the previous sentence, add it to the sidebar
@@ -344,7 +350,9 @@ export default function LearnPage() {
                     setMasteredSentences(prev => [...prev, {
                         id: Date.now().toString(),
                         content: sentenceInProgress,
-                        masteredAt: Date.now()
+                        masteredAt: Date.now(),
+                        context: effectiveContext ?? undefined,
+                        messageId: currentSentenceMessageId ?? undefined
                     }]);
                 }
 
@@ -385,8 +393,23 @@ export default function LearnPage() {
 
             {/* Sidebar Component */}
             <MasteredSentencesSidebar
-                sentences={masteredSentences}
+                sentences={selectedContext ? masteredSentences.filter(s => s.context === selectedContext) : []}
                 onDelete={handleDeleteMasteredSentence}
+                onSelect={(sentence) => {
+                    const targetId = sentence.messageId;
+                    if (targetId && messageRefs.current[targetId]) {
+                        messageRefs.current[targetId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+
+                    for (let i = messages.length - 1; i >= 0; i -= 1) {
+                        const msg = messages[i];
+                        if (msg.role === 'ai' && msg.content.includes(sentence.content)) {
+                            messageRefs.current[msg.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            break;
+                        }
+                    }
+                }}
             />
 
             {/* Main Content */}
@@ -467,6 +490,7 @@ export default function LearnPage() {
                         {messages.map((msg) => (
                             <div
                                 key={msg.id}
+                                ref={(el) => { messageRefs.current[msg.id] = el; }}
                                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`

@@ -24,6 +24,7 @@ export default function VocabularyPage() {
   const [words, setWords] = useState<VocabularyWord[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState<Record<string, { img?: boolean; audio?: boolean }>>({});
+  const flipTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
   
   // Add Word State
   const [isAdding, setIsAdding] = useState(false);
@@ -222,8 +223,27 @@ export default function VocabularyPage() {
   const toggleFlip = (id: string) => {
     setFlippedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const willFlipToBack = !next.has(id);
+      if (willFlipToBack) {
+        next.add(id);
+        if (flipTimeoutsRef.current[id]) {
+          clearTimeout(flipTimeoutsRef.current[id]!);
+        }
+        flipTimeoutsRef.current[id] = setTimeout(() => {
+          setFlippedIds(current => {
+            const reverted = new Set(current);
+            reverted.delete(id);
+            return reverted;
+          });
+          flipTimeoutsRef.current[id] = null;
+        }, 2000);
+      } else {
+        next.delete(id);
+        if (flipTimeoutsRef.current[id]) {
+          clearTimeout(flipTimeoutsRef.current[id]!);
+          flipTimeoutsRef.current[id] = null;
+        }
+      }
       return next;
     });
   };
