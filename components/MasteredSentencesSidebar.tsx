@@ -31,21 +31,22 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
 
     try {
         if (!url) {
-             // Fallback: Generate on the fly (though typically we should have it saved)
-             const res = await fetch('/api/ai-tts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: sentence.content, stream: false })
-            });
-            if (!res.ok) throw new Error('TTS failed');
-            const blob = await res.blob();
-            url = URL.createObjectURL(blob);
+           // Fallback: Generate on the fly (though typically we should have it saved)
+           const res = await fetch('/api/ai-tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: sentence.content, stream: false })
+          });
+          if (!res.ok) throw new Error('TTS failed');
+          const data = await res.json();
+          if (!data?.url) throw new Error('TTS missing url');
+          url = data.url;
         }
 
         const audio = new Audio(url);
         audio.onended = () => {
             setPlayingId(null);
-            if (!sentence.audioPath && url) URL.revokeObjectURL(url);
+            if (!sentence.audioPath && url?.startsWith('blob:')) URL.revokeObjectURL(url);
         };
         await audio.play();
 

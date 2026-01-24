@@ -6,7 +6,7 @@
    node scripts/cleanup_uploads.js --confirm    # delete files
 
  Only removes files under public/uploads/images and public/uploads/audio
- that are NOT referenced by data/vocabulary.json.
+ that are NOT referenced by data/vocabulary.json or data/learn_progress.json.
 */
 
 const fs = require('fs');
@@ -15,6 +15,7 @@ const path = require('path');
 
 const ROOT = process.cwd();
 const VOCAB_JSON = path.join(ROOT, 'data', 'vocabulary.json');
+const LEARN_PROGRESS_JSON = path.join(ROOT, 'data', 'learn_progress.json');
 const UPLOADS_IMAGES_DIR = path.join(ROOT, 'public', 'uploads', 'images');
 const UPLOADS_AUDIO_DIR = path.join(ROOT, 'public', 'uploads', 'audio');
 
@@ -32,6 +33,17 @@ async function readVocabulary() {
     return arr;
   } catch {
     return [];
+  }
+}
+
+async function readLearnProgress() {
+  try {
+    const raw = await fsp.readFile(LEARN_PROGRESS_JSON, 'utf-8');
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== 'object') return null;
+    return obj;
+  } catch {
+    return null;
   }
 }
 
@@ -56,12 +68,21 @@ async function listFiles(dir) {
 async function main() {
   const mode = getArgFlag();
   const vocab = await readVocabulary();
+  const learnProgress = await readLearnProgress();
 
   const referenced = new Set();
   for (const w of vocab) {
     const ip = toRelUploadPath(w?.imagePath);
     const ap = toRelUploadPath(w?.audioPath);
     if (ip) referenced.add(path.join(ROOT, 'public', ip));
+    if (ap) referenced.add(path.join(ROOT, 'public', ap));
+  }
+
+  const mastered = Array.isArray(learnProgress?.masteredSentences)
+    ? learnProgress.masteredSentences
+    : [];
+  for (const s of mastered) {
+    const ap = toRelUploadPath(s?.audioPath);
     if (ap) referenced.add(path.join(ROOT, 'public', ap));
   }
 

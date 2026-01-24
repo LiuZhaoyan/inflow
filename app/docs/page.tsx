@@ -47,15 +47,14 @@ const Callout = ({
 };
 
 const StepItem = ({ number, title, children }: { number: number; title: string; children: ReactNode }) => (
-  <div className="relative pl-8 pb-8 last:pb-0">
-    <div className="absolute left-[11px] top-8 bottom-0 w-px bg-gray-200 last:hidden"></div>
-    <div className="absolute left-0 top-0 flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 ring-4 ring-white">
-      {number}
-    </div>
-    <div className="space-y-2">
-      <h3 className="font-semibold text-gray-900">{title}</h3>
-      <div className="text-gray-600">{children}</div>
-    </div>
+  <div className="space-y-2">
+    <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">
+        {number}
+      </span>
+      {title}
+    </h3>
+    <div className="text-gray-700 leading-relaxed">{children}</div>
   </div>
 );
 
@@ -71,22 +70,22 @@ export default function DocsHome() {
     {
       id: 'getting-started',
       title: 'Getting Started',
-      description: 'Just three simple steps to start your acquisition journey.',
+      description: 'Three pillars to start your acquisition journey.',
       content: (
         <div className="mt-4">
           <p className="mb-6 text-gray-600">
             Inflow's goal is to let you acquire language through <strong>Comprehensible Input</strong>.
             You don't need to memorize vocabulary lists, just read, understand, and keep reading.
           </p>
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <StepItem number={1} title="Upload Content">
-              Supports PDF, EPUB, TXT formats. It is recommended to start with materials that interest you and are of moderate difficulty.
+          <div className='space-y-8'>
+            <StepItem number={1} title="Reading">
+              Upload your content (EPUB/TXT) and open the reader. Inflow segments text by sentences so you can focus on meaning, not mechanics.When you click a sentence, you get a concise, context-aware explanation. This keeps your understanding flowing without breaking immersion.
             </StepItem>
-            <StepItem number={2} title="Immersive Reading">
-              Open the reading page, and the system will automatically segment the text by sentences. Focus on the content itself.
+            <StepItem number={2} title="AI Tutor">
+              After you choose a learning context, the AI continuously generates the current challenge sentence. You can request <strong>Explain</strong>/<strong>Translate</strong>, or tap <strong>Got it!</strong> to mark mastery; it also supports audio playback and one‑click vocabulary saving from selected text, with mastered sentences kept in the sidebar for review.
             </StepItem>
-            <StepItem number={3} title="Explain on Demand">
-              Encounter something you don't understand? Click it. AI will provide an explanation based on the <strong>current context</strong>, rather than a rigid dictionary definition.
+            <StepItem number={3} title="Vocabulary">
+              Save words or phrases that feel important. Review them lightly to reinforce recognition while continuing to read.
             </StepItem>
           </div>
         </div>
@@ -94,12 +93,12 @@ export default function DocsHome() {
     },
     {
       id: 'reading-and-explanations',
-      title: 'Reading & Explanations',
-      description: 'Clicking for explanation is the key mechanism to "keep it comprehensible".',
+      title: 'Reading & Sentence Explanations',
+      description: 'Clicking for explanation is the key mechanism to keep it comprehensible.',
       content: (
         <div className="space-y-4">
           <p>
-            Inflow encourages you to prioritize understanding <strong>meaning</strong> over rote memorization. When you click on a word or phrase, we provide a short explanation combined with the context.
+            Inflow encourages you to prioritize understanding <strong>meaning</strong> over rote memorization. When you click on a sentence or phrase, Inflow provides a short explanation combined with the current context.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
             <div className="rounded-xl bg-gray-50 p-4 border border-gray-100">
@@ -111,6 +110,13 @@ export default function DocsHome() {
               <p className="text-sm text-gray-600">Long explanations feel like "class", which can easily take you out of the reading state. We strive to be short and to the point.</p>
             </div>
           </div>
+          <Callout type="tip" title="Sentence Tutor Best Practices">
+            <ul className="list-disc list-inside space-y-1 text-sm text-indigo-900/90">
+              <li>Click only when meaning is unclear or repeatedly blocks understanding.</li>
+              <li>Read the explanation once, then return to the story immediately.</li>
+              <li>Prefer understanding the whole sentence rather than isolated words.</li>
+            </ul>
+          </Callout>
         </div>
       ),
     },
@@ -174,47 +180,9 @@ export default function DocsHome() {
       ),
     },
     {
-      id: 'advice-for-beginners',
-      title: 'Advice For Beginner',
-      description: 'Introductory advice for language learners based on Comprehensible Input Theory.',
-      content: (
-        <div className="space-y-6">
-          <p className="text-gray-600">
-            If this is your first time trying to master a language through "acquisition" rather than "learning", the following advice can help you avoid detours:
-          </p>
-          <div className="space-y-4">
-            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-5">
-              <h4 className="font-semibold text-blue-900 mb-2">1. Tolerate Ambiguity</h4>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                Don't try to understand every single word. If a word you don't know doesn't affect your understanding of the general idea, <strong>skip it</strong>. Only click for an explanation when you feel it appears repeatedly and hinders understanding.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">2. Start Simple</h4>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Don't start with classics. Children's books, graded readers, or books you have already read in your native language are the best starting materials. You need <strong>i+1</strong> (slightly above current level), not i+10.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">3. Quantity {'>'} Precision</h4>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Reading 10 simple books is more useful than intensive reading of 1 difficult book. You need to "see" the word in different scenarios extensively, rather than digging into its 10 usages.
-              </p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-              <h4 className="font-semibold text-gray-900 mb-2">4. Consistency</h4>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                15 minutes a day is more useful than 2 hours of cramming on weekends. The brain needs sleep to organize and internalize language patterns.
-              </p>
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
       id: 'guide-for-beginner',
       title: 'Guide For Beginner',
-      description: 'How to start from scratch? A practical guide based on comprehensible input.',
+      description: 'A practical guide that maps to Reading, Sentence Tutor, and Vocabulary.',
       content: (
         <div className="space-y-6">
           <p className="text-gray-600">
@@ -222,57 +190,38 @@ export default function DocsHome() {
           </p>
           
           <div className="space-y-8">
-            <div>
-              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">1</span>
-                Find "Comprehensible" Materials (The Input)
-              </h3>
-              <p className="text-gray-600 mb-3">
-                This is the most critical step. You need to find content where you can understand <strong>more than 80%</strong>.
-              </p>
+            <StepItem number={1} title='Find "Comprehensible" Materials (The Input)'>
+              This is the most critical step. You need to find content where you can understand <strong>more than 80%</strong>.
               <ul className="list-disc list-inside space-y-1 text-gray-600 ml-2">
                 <li><strong>Zero/Beginner:</strong> Look for Graded Readers designed for learners, or children's picture books.</li>
                 <li><strong>Elementary:</strong> Simple podcasts (Slow Podcast), YouTube tutorial videos (with subtitles).</li>
                 <li><strong>Intermediate:</strong> Young adult novels, non-fiction articles of interest.</li>
               </ul>
-            </div>
-
-            <div>
-              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">2</span>
-                Build "Sound-Meaning" Connection (Mapping)
-              </h3>
-              <p className="text-gray-600 mb-3">
-                Language is primarily sound. While reading, try to listen as much as possible.
-              </p>
+            </StepItem>
+            <StepItem number={2} title='Build "Sound-Meaning" Connection (Mapping)'>
+              Language is primarily sound. While reading, try to listen as much as possible.
               <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
                 <p className="text-sm text-blue-900">
                   <strong>Inflow Tip:</strong> Even when reading, try to "play" the sound in your mind, or find audiobooks to accompany your reading.
                 </p>
               </div>
-            </div>
-
-            <div>
-              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">3</span>
-                Don't Memorize, "Encounter" Words (Acquisition)
-              </h3>
+            </StepItem>
+            <StepItem number={3} title="Don't Memorize, &quot;Encounter&quot; Words (Acquisition)">
               <p className="text-gray-600">
-                Mechanically memorized words are "dead". Only by repeatedly encountering the same word in different contexts can you truly master it.
+                Mechanically memorized words are "dead". The real learning happens when you meet them again during reading.
                 <br/>
                 When you click a word in Inflow to see the explanation, <strong>don't try to remember it immediately</strong>. Keep reading. The next time you see it, you might click it again, until one day you suddenly realize: "Oh, I don't need to click, I know what it means." That is the moment acquisition happens.
               </p>
-            </div>
-            
-             <div>
-              <h3 className="flex items-center gap-2 text-lg font-bold text-gray-900 mb-3">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700">4</span>
-                Keep it Low Stress (Low Affective Filter)
-              </h3>
-              <p className="text-gray-600">
-                Anxiety is the enemy of language acquisition. If reading gives you a headache or looking up words is too tiring, it means the material is too hard. <strong>Switch to a simpler book, or take a break.</strong> The brain is more willing to absorb new language when you are in a good mood.
-              </p>
-            </div>
+            </StepItem>
+            <StepItem number={4} title='Tolerate Ambiguity'>
+              Don't try to understand every single word. If a word you don't know doesn't affect your understanding of the general idea, <strong>skip it</strong>. Only click for an explanation when you feel it appears repeatedly and hinders understanding.
+            </StepItem>
+            <StepItem number={5} title='Consistency'>
+              15 minutes a day is more useful than 2 hours of cramming on weekends. The brain needs sleep to organize and internalize language patterns.
+            </StepItem>
+            <StepItem number={6} title='Quantity &gt; Precision'>
+              Reading 10 simple books is more useful than intensive reading of 1 difficult book. You need to "see" the word in different scenarios extensively, rather than digging into its 10 usages.
+            </StepItem>
           </div>
         </div>
       ),
