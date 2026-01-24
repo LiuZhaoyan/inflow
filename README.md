@@ -14,22 +14,24 @@ Inflow is designed around the idea that language acquisition happens when we und
 
 ## ✨ Features
 
-- **📚 EPUB Reader**: Upload and read your favorite EPUB books directly in the browser.
-- **🤖 AI Explanations**: Click on any sentence to get an instant, context-aware explanation tailored to your proficiency level (Beginner, Intermediate, Advanced).
-- **🎨 AI Depiction**: Visualize the scene with AI-generated images based on the text context to aid memory and understanding.
-- **🌍 Multi-language Support**: Auto-detection and support for multiple languages including English, Chinese, Japanese, Spanish, French, German, and Russian.
-- **📂 Library Management**: Easily upload, manage, and organize your reading collection.
+- **📚 Multi-format Reader**: Upload and read EPUBfiles directly in the browser.
+- **🤖 AI Explanations (i+1)**: Click any sentence for a concise, context-aware explanation tailored to your level.
+- **🎨 AI Depiction (Optional)**: Generate scene images asynchronously to aid comprehension.
+- **📝 AI Story Builder**: Create short stories from your vocabulary list.
+- **🧑‍🏫 Guided Practice Chat**: One-sentence-at-a-time tutoring with explanations and translations.
+- **🔊 Text-to-Speech**: Generate audio for sentences and mastered items.
+- **🌍 Multi-language Support**: Auto-detection across major languages.
+- **📂 Library & Progress Tracking**: Manage books, vocabulary, and mastered sentences.
 
 ## 🛠️ Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
-- **Language**: TypeScript
+- **Language**: TypeScript + React 19
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
 - **UI Components**: [Lucide React](https://lucide.dev/), [Framer Motion](https://www.framer.com/motion/)
-- **AI Integration**: 
-  - OpenAI API (Text Explanation)
-  - PPInfra / Seedream (Image Generation)
-- **File Processing**: `epub2`, `cheerio`
+- **AI Integration**: OpenAI-compatible chat + image APIs
+- **TTS**: PPInfra / MiniMax Speech (server-side)
+- **File Processing**: `epub2`, `cheerio`, `pdf-parse`
 - **Data Storage**: Local JSON-based database
 
 ## 🚀 Getting Started
@@ -55,15 +57,17 @@ Inflow is designed around the idea that language acquisition happens when we und
    ```
 
 3. **Configure Environment Variables**
-   Create a `.env.local` file in the root directory and add your API keys:
+   Create a `.env.local` file in the root directory:
 
    ```env
-   # OpenAI Configuration (for AI Explanations)
+   # OpenAI-compatible API key (used for explanations, stories, and optional image generation)
    API_KEY=your_openai_api_key
-   BASE_URL=https://api.openai.com/v1 # or your custom endpoint
+   BASE_URL=https://api.openai.com/v1
 
-   # Image Generation Configuration (if different from above)
-   # Ensure your backend logic in app/api/ai-depict/route.ts matches your provider
+   # Optional: enable AI depiction
+   ENABLE_AI_DEPICT=true
+   AI_DEPICT_API_URL=https://api.openai.com/v1/images/generations
+   # Only support sync image generation  URL
    ```
 
 4. **Run the development server**
@@ -74,22 +78,56 @@ Inflow is designed around the idea that language acquisition happens when we und
 5. **Open the application**
    Visit [http://localhost:3000](http://localhost:3000) in your browser.
 
+## 📦 Scripts
+
+- `npm run dev` – start dev server
+- `npm run build` – build for production
+- `npm run start` – run production server
+- `npm run lint` – lint codebase
+
 ## 📂 Project Structure
 
 ```
 inflow/
 ├── app/                 # Next.js App Router pages and API routes
-│   ├── api/             # Backend API endpoints (ai-explain, ai-depict, upload, etc.)
-│   ├── about/           # About page
-│   ├── docs/            # Documentation page
-│   ├── read/            # Reader interface
-│   └── user/            # User library page
-├── components/          # React components (BooksManager, ReaderInterface, etc.)
+│   ├── api/             # Backend API endpoints
+│   ├── about/
+│   ├── docs/
+│   ├── learn/
+│   ├── read/
+│   │   └── [id]/
+│   ├── user/
+│   └── vocabulary/
+├── components/
 ├── data/                # Local JSON database and book metadata
-├── lib/                 # Utility functions (db, language, textProcessor)
-├── public/              # Static assets and uploads
-└── uploads/             # Raw uploaded EPUB files
+│   ├── books/
+│   ├── books.json
+│   ├── learn_progress.json
+│   ├── user_profile.json
+│   └── vocabulary.json
+├── lib/
+│   ├── db/
+├── materials/            # Sample public-domain books
+├── public/
+│   └── uploads/          # Images and audio outputs
+├── scripts/
+└── uploads/              # Raw uploaded files
 ```
+
+## ✅ Supported Uploads
+
+- EPUB (`.epub`)
+- Plain text (`.txt`)
+
+##   Format to be supported
+
+- Subtitles (`.srt`, `.vtt`)
+- PDF (`.pdf`)
+
+## 💾 Storage Notes
+
+- Processed books and user data live under [data/](data/).
+- Uploaded files are saved in [uploads/](uploads/) and extracted media in [public/uploads/](public/uploads/).
 
 ## 📚 Contributing Materials
 
