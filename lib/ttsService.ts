@@ -28,7 +28,7 @@ export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): 
     throw new Error('Missing API key for TTS service');
   }
 
-  const ttsRes = await fetch('https://api.ppinfra.com/v3/minimax-speech-02-hd', {
+  const ttsRes = await fetch(process.env.TTS_API_URL || '', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

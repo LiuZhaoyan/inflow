@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getVocabulary, addWord, deleteWord, updateWord, VocabularyWord, getUserProfile } from '@/lib/db';
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
+import { detectLanguageFromSentences } from '@/lib/language';
 
 async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
   try {
@@ -43,6 +44,17 @@ export async function POST(request: Request) {
     if (!wordData.word) {
        return NextResponse.json({ error: 'Word is required' }, { status: 400 });
     }
+
+    if (!wordData.language || String(wordData.language).trim() === '') {
+      const hint = detectLanguageFromSentences([
+        wordData.word || '',
+        wordData.contextSentence || '',
+      ]);
+      if (hint.code !== 'auto') {
+        wordData.language = hint.code;
+      }
+    }
+
     if (!wordData.definition || String(wordData.definition).trim() === '') {
       const profile = await getUserProfile();
       const nativeLanguage = profile?.nativeLanguage || 'en';

@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   AudioLines
 } from 'lucide-react';
+import { resolveLanguageLabel } from '@/lib/language';
 
 interface VocabularyWord {
   id: string;
@@ -17,6 +18,7 @@ interface VocabularyWord {
   translation?: string;
   imagePath?: string;
   audioPath?: string;
+  language?: string;
   createdAt: number;
 }
 
@@ -39,6 +41,7 @@ export default function VocabularyPage() {
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
   const [isStorySidebarOpen, setIsStorySidebarOpen] = useState(false);
   const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
 
   useEffect(() => {
     fetchVocabulary();
@@ -270,6 +273,14 @@ export default function VocabularyPage() {
     }
   };
 
+  const availableLanguages = Array.from(
+    new Set(words.map(w => w.language).filter(Boolean) as string[])
+  ).sort();
+
+  const filteredWords = selectedLanguage === 'all'
+    ? words
+    : words.filter(w => w.language === selectedLanguage);
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
       {/* Header - Consistent with Docs Page */}
@@ -407,6 +418,31 @@ export default function VocabularyPage() {
                 </div>
              )}
 
+             {/* Left Sidebar - Language Tags */}
+             <div className="fixed left-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
+               <button
+                 onClick={() => setSelectedLanguage('all')}
+                 className={`bg-white border border-gray-200 shadow-sm rounded-r-full px-3 py-2 text-sm text-gray-700 cursor-pointer hover:text-blue-700 hover:border-blue-300 ${selectedLanguage === 'all' ? 'text-blue-700 border-blue-300' : ''}`}
+                 title="All"
+               >
+                 <span className="inline-flex items-center gap-1">
+                   All
+                 </span>
+               </button>
+               {availableLanguages.map(code => (
+                 <button
+                   key={code}
+                   onClick={() => setSelectedLanguage(code)}
+                   className={`bg-white border border-gray-200 shadow-sm rounded-r-full px-3 py-2 text-sm text-gray-700 cursor-pointer hover:text-blue-700 hover:border-blue-300 ${selectedLanguage === code ? 'text-blue-700 border-blue-300' : ''}`}
+                   title={resolveLanguageLabel(code)}
+                 >
+                   <span className="inline-flex items-center gap-1">
+                     {resolveLanguageLabel(code)}
+                   </span>
+                 </button>
+               ))}
+             </div>
+
              {/* Right Sidebar Toggle Handle */}
              <button
                onClick={() => setIsStorySidebarOpen(prev => !prev)}
@@ -422,17 +458,17 @@ export default function VocabularyPage() {
              {/* Grid */}
              {loading ? (
                  <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-gray-300"/></div>
-             ) : words.length === 0 ? (
+             ) : filteredWords.length === 0 ? (
                  <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                     <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
                         <BookOpen className="text-gray-400" size={24}/>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">No words yet</h3>
-                    <p className="text-gray-500 max-w-sm mx-auto mt-2">Add a word to generate a flashcard with AI-powered image and pronunciation.</p>
+                <h3 className="text-lg font-semibold text-gray-900">No words</h3>
+                <p className="text-gray-500 max-w-sm mx-auto mt-2">Add a word or switch language filters.</p>
                  </div>
              ) : (
                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    {words.map(word => (
+                {filteredWords.map(word => (
                         <div 
                           key={word.id} 
                           className={`

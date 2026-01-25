@@ -11,6 +11,7 @@ export interface VocabularyWord {
   translation?: string;
   imagePath?: string;
   audioPath?: string;
+  language?: string;
   createdAt: number;
 }
 
@@ -32,7 +33,31 @@ export async function initVocabularyDb() {
 export async function getVocabulary(): Promise<VocabularyWord[]> {
   await initVocabularyDb();
   const data = await fs.readFile(VOCAB_PATH, 'utf-8');
-  return JSON.parse(data);
+  let vocab: VocabularyWord[] = JSON.parse(data);
+
+  // Migration (方案A): backfill missing language based on word/contextSentence
+  const { detectLanguageFromSentences } = await import('../language');
+  let changed = false;
+  vocab = vocab.map((item) => {
+    if (!item.language) {
+      const hint = detectLanguageFromSentences([
+        item.word || '',
+        item.contextSentence || '',
+      ]);
+      const language = hint.code === 'auto' ? undefined : hint.code;
+      if (language) {
+        changed = true;
+        return { ...item, language };
+      }
+    }
+    return item;
+  });
+
+  if (changed) {
+    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
+  }
+
+  return vocab;
 }
 
 export async function addWord(word: Omit<VocabularyWord, 'id' | 'createdAt'>): Promise<VocabularyWord> {
