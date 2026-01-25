@@ -143,3 +143,7 @@ If you have EPUB books that are suitable for language learners (e.g., graded rea
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## 📄 License
+
+This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+
