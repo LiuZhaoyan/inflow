@@ -40,9 +40,6 @@ export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): 
         voice_id: voiceId,
         speed: speed,
       },
-      // output_format: 'hex',
-      // stream: false,
-      // audio_setting: { format:format || 'mp3' }
     })
   });
 

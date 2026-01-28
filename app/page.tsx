@@ -210,7 +210,7 @@ export default function Home() {
           </div>
           
           <div className="mt-6 pt-6 border-t border-gray-100">
-             <h2 className="text-xl font-semibold text-gray-900 mb-4">New Features</h2>
+             <h2 className="text-xl font-semibold text-gray-900 mb-4">Features</h2>
              <div className="flex flex-col sm:flex-row gap-4">
                  <Link
                     href="/vocabulary"

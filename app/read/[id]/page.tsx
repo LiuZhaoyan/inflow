@@ -1,5 +1,5 @@
 import { getBookById } from '@/lib/db';
-import ReaderInterface from '@/components/ReaderInterface';
+import ReaderInterface from '@/components/read/ReaderInterface';
 
 interface PageProps {
   params: Promise<{ id: string }>;

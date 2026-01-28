@@ -13,8 +13,8 @@ import {
   flatIndexToParagraphSentence,
   type Chapter,
 } from '@/lib/readerUtils';
-import { ChapterSidebar, MobileChapterList } from './readers/ChapterSidebar';
-import { AISidebar } from './readers/AISidebar';
+import { ChapterSidebar, MobileChapterList } from './sidebars/ChapterSidebar';
+import { AISidebar } from './sidebars/AISidebar';
 
 interface ReaderProps {
   bookId: string;

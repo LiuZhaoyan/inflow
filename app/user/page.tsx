@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Brain, ArrowRight, BarChart, Info } from "lucide-react";
 import { getBooks } from "@/lib/db";
-import BooksManager from "@/components/BooksManager";
+import BooksManager from "@/components/user/BooksManager";
 
 export default async function UserPage() {
   const books = await getBooks();
