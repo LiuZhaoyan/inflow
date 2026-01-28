@@ -8,7 +8,7 @@ const sanitizeSelection = (text: string) => {
     return cleaned;
 };
 
-export default function useSelectionPopover() {
+export default function useSelectionPopover(options?: { languageCode?: string; contextSentence?: string }) {
     const sentenceRef = useRef<HTMLDivElement>(null);
     const popoverRef = useRef<HTMLDivElement>(null);
     const [selectedText, setSelectedText] = useState('');
@@ -64,7 +64,11 @@ export default function useSelectionPopover() {
             const res = await fetch('/api/vocabulary', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ word: selectedText }),
+                body: JSON.stringify({
+                    word: selectedText,
+                    contextSentence: options?.contextSentence,
+                    language: options?.languageCode,
+                }),
             });
 
             if (!res.ok) {

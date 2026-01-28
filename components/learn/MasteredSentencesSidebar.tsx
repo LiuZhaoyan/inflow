@@ -9,6 +9,7 @@ export interface MasteredSentence {
   audioPath?: string;
   context?: string;
   messageId?: string;
+  languageCode?: string;
 }
 
 interface Props {

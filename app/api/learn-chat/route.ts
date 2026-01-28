@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { getProgress, getUserProfile, saveMasteredSentence } from '@/lib/db';
+import { normalizeLanguageCode } from '@/lib/language';
 import { generateTTS } from '@/lib/ttsService';
 
 function buildContextMessages(systemPrompt: string, history: any[], limit = 10): ChatMessage[] {
@@ -26,10 +27,12 @@ function buildContextMessages(systemPrompt: string, history: any[], limit = 10):
 
 export async function POST(req: Request) {
   try {
-        const { action, currentSentence, history = [], context, messageId } = await req.json();
+        const { action, currentSentence, history = [], context, messageId, languageCode } = await req.json();
     const progress = await getProgress();
     const userProfile = await getUserProfile();
-    const targetLanguage = userProfile?.targetLanguage || progress.targetLanguage;
+    const requestedLanguage = normalizeLanguageCode(languageCode);
+    const fallbackLanguage = userProfile?.currentLanguageCode || userProfile?.targetLanguage || progress.targetLanguage;
+    const targetLanguage = requestedLanguage === 'auto' ? fallbackLanguage : requestedLanguage;
     const nativeLanguage = userProfile?.nativeLanguage || 'en';
 
     const systemPrompt = `You are a personalized language tutor. 
@@ -61,9 +64,8 @@ Structure:
 }
 `;
 
-        // Filter history to keep context manageable
-        const messages: ChatMessage[] = buildContextMessages(systemPrompt, history, 10);
-
+    // Filter history to keep context manageable
+    const messages: ChatMessage[] = buildContextMessages(systemPrompt, history, 10);
     let userContent = '';
     if (action === 'init') {
         userContent = context 
@@ -96,7 +98,8 @@ Structure:
                 difficultyLevel: 1,
                 audioPath,
                 context,
-                messageId
+                messageId,
+                languageCode: targetLanguage
             });
         }
     }

@@ -23,11 +23,15 @@ export async function POST(req: Request) {
     const username = typeof body?.username === 'string' ? body.username.trim() : '';
     const nativeLanguage = normalizeRequiredLanguage(body?.nativeLanguage, 'en');
     const targetLanguage = normalizeRequiredLanguage(body?.targetLanguage, 'ko');
+    const currentLanguageCode = body?.currentLanguageCode
+      ? normalizeRequiredLanguage(body.currentLanguageCode, targetLanguage)
+      : targetLanguage;
 
     const profile = await updateUserProfile({
       username,
       nativeLanguage,
       targetLanguage,
+      currentLanguageCode,
       isOnboarded: true,
     });
 
@@ -54,10 +58,15 @@ export async function PUT(req: Request) {
       ? normalizeRequiredLanguage(body.targetLanguage, current.targetLanguage)
       : current.targetLanguage;
 
+    const currentLanguageCode = body?.currentLanguageCode
+      ? normalizeRequiredLanguage(body.currentLanguageCode, current.currentLanguageCode || current.targetLanguage)
+      : (current.currentLanguageCode || targetLanguage);
+
     const profile = await updateUserProfile({
       username,
       nativeLanguage,
       targetLanguage,
+      currentLanguageCode,
       isOnboarded: true,
     });
 

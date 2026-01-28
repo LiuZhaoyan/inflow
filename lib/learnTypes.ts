@@ -26,5 +26,6 @@ export interface UserProfile {
     username: string;
     nativeLanguage: string;
     targetLanguage: string;
+    currentLanguageCode?: string;
     isOnboarded?: boolean;
 }

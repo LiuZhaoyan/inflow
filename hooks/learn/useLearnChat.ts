@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MasteredSentence } from '@/components/learn/MasteredSentencesSidebar';
 import type { Msg, StoredChat, UserProfile } from '@/lib/learnTypes';
+import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
 
 export default function useLearnChat() {
     const [messages, setMessages] = useState<Msg[]>([]);
@@ -8,6 +9,7 @@ export default function useLearnChat() {
     const [currentSentenceMessageId, setCurrentSentenceMessageId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [selectedContext, setSelectedContext] = useState<string | null>(null);
+    const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
     const [showContextMenu, setShowContextMenu] = useState(false);
     const [masteredSentences, setMasteredSentences] = useState<MasteredSentence[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -15,12 +17,13 @@ export default function useLearnChat() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
+    const languageInitializedRef = useRef(false);
 
-    const getStorageKey = (context: string) => `learn-chat:${context}`;
+    const getStorageKey = (language: string, context: string) => `learn-chat:${language}:${context}`;
 
-    const loadStoredChat = (context: string) => {
+    const loadStoredChat = (language: string, context: string) => {
         try {
-            const raw = localStorage.getItem(getStorageKey(context));
+            const raw = localStorage.getItem(getStorageKey(language, context));
             if (!raw) return null;
             return JSON.parse(raw) as StoredChat;
         } catch (err) {
@@ -29,9 +32,9 @@ export default function useLearnChat() {
         }
     };
 
-    const saveStoredChat = (context: string, data: StoredChat) => {
+    const saveStoredChat = (language: string, context: string, data: StoredChat) => {
         try {
-            localStorage.setItem(getStorageKey(context), JSON.stringify(data));
+            localStorage.setItem(getStorageKey(language, context), JSON.stringify(data));
         } catch (err) {
             console.error('Failed to save stored chat', err);
         }
@@ -46,13 +49,13 @@ export default function useLearnChat() {
     }, [messages]);
 
     useEffect(() => {
-        if (!selectedContext) return;
-        saveStoredChat(selectedContext, {
+        if (!selectedContext || !selectedLanguage) return;
+        saveStoredChat(selectedLanguage, selectedContext, {
             messages,
             currentSentence,
             updatedAt: Date.now()
         });
-    }, [messages, currentSentence, selectedContext]);
+    }, [messages, currentSentence, selectedContext, selectedLanguage]);
 
     useEffect(() => {
         const init = async () => {
@@ -78,25 +81,45 @@ export default function useLearnChat() {
         };
 
         init();
+    }, []);
 
-        fetch('/api/mastered-sentences')
+    useEffect(() => {
+        if (profileLoading) return;
+        const savedLanguage = localStorage.getItem('learn-chat:last-language');
+        const fallbackLanguage = userProfile?.currentLanguageCode || userProfile?.targetLanguage || 'en';
+        const normalizedSaved = normalizeLanguageCode(savedLanguage || fallbackLanguage);
+        setSelectedLanguage(normalizedSaved === 'auto' ? normalizeLanguageCode(fallbackLanguage) : normalizedSaved);
+        languageInitializedRef.current = true;
+    }, [profileLoading, userProfile?.currentLanguageCode, userProfile?.targetLanguage]);
+
+    useEffect(() => {
+        if (!selectedLanguage || !languageInitializedRef.current) return;
+        localStorage.setItem('learn-chat:last-language', selectedLanguage);
+
+        fetch(`/api/mastered-sentences?languageCode=${selectedLanguage}`)
             .then(res => res.json())
             .then(data => {
                 if (data.sentences) setMasteredSentences(data.sentences);
             })
             .catch(err => console.error('Failed to load history', err));
 
-        const lastContext = localStorage.getItem('learn-chat:last-context');
+        const lastContext = localStorage.getItem(`learn-chat:last-context:${selectedLanguage}`);
         if (lastContext) {
             setSelectedContext(lastContext);
-            const stored = loadStoredChat(lastContext);
+            const stored = loadStoredChat(selectedLanguage, lastContext);
             if (stored) {
                 setMessages(stored.messages);
                 setCurrentSentence(stored.currentSentence);
                 setCurrentSentenceMessageId(null);
+                return;
             }
         }
-    }, []);
+
+        setSelectedContext(null);
+        setMessages([]);
+        setCurrentSentence('');
+        setCurrentSentenceMessageId(null);
+    }, [selectedLanguage]);
 
     const handleDeleteMasteredSentence = useCallback(async (id: string) => {
         const previous = masteredSentences;
@@ -106,7 +129,7 @@ export default function useLearnChat() {
             const res = await fetch('/api/mastered-sentences', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id })
+                body: JSON.stringify({ id, languageCode: selectedLanguage })
             });
             if (!res.ok) throw new Error('Delete failed');
             const data = await res.json();
@@ -115,7 +138,7 @@ export default function useLearnChat() {
             console.error(error);
             setMasteredSentences(previous);
         }
-    }, [masteredSentences]);
+    }, [masteredSentences, selectedLanguage]);
 
     const handleAction = useCallback(async (action: 'init' | 'explain' | 'translate' | 'understand', context?: string) => {
         if (loading) return;
@@ -151,7 +174,8 @@ export default function useLearnChat() {
                     currentSentence: sentenceInProgress,
                     history: messages.map(m => ({ role: m.role, content: m.content })),
                     context: effectiveContext,
-                    messageId: currentSentenceMessageId
+                        messageId: currentSentenceMessageId,
+                        languageCode: selectedLanguage
                 })
             });
 
@@ -180,7 +204,8 @@ export default function useLearnChat() {
                         content: sentenceInProgress,
                         masteredAt: Date.now(),
                         context: effectiveContext ?? undefined,
-                        messageId: currentSentenceMessageId ?? undefined
+                        messageId: currentSentenceMessageId ?? undefined,
+                        languageCode: selectedLanguage
                     }]);
                 }
 
@@ -198,7 +223,7 @@ export default function useLearnChat() {
         } finally {
             setLoading(false);
         }
-    }, [currentSentence, currentSentenceMessageId, loading, messages, selectedContext, userProfile?.isOnboarded]);
+    }, [currentSentence, currentSentenceMessageId, loading, messages, selectedContext, selectedLanguage, userProfile?.isOnboarded]);
 
     const switchContext = useCallback((context: string) => {
         if (!userProfile?.isOnboarded) {
@@ -206,8 +231,8 @@ export default function useLearnChat() {
         }
         setSelectedContext(context);
         setShowContextMenu(false);
-        localStorage.setItem('learn-chat:last-context', context);
-        const stored = loadStoredChat(context);
+        localStorage.setItem(`learn-chat:last-context:${selectedLanguage}`, context);
+        const stored = loadStoredChat(selectedLanguage, context);
         if (stored) {
             setMessages(stored.messages);
             setCurrentSentence(stored.currentSentence);
@@ -216,7 +241,22 @@ export default function useLearnChat() {
         setMessages([]);
         setCurrentSentence('');
         handleAction('init', context);
-    }, [handleAction, userProfile?.isOnboarded]);
+    }, [handleAction, selectedLanguage, userProfile?.isOnboarded]);
+
+    const switchLanguage = useCallback((language: LanguageCode) => {
+        const normalized = normalizeLanguageCode(language);
+        const fallback = normalizeLanguageCode(userProfile?.targetLanguage || 'en');
+        const resolved = normalized === 'auto' ? (fallback === 'auto' ? 'en' : fallback) : normalized;
+        setSelectedLanguage(resolved);
+        localStorage.setItem('learn-chat:last-language', resolved);
+        if (userProfile?.isOnboarded) {
+            fetch('/api/user', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentLanguageCode: resolved })
+            }).catch(() => {});
+        }
+    }, [userProfile?.isOnboarded, userProfile?.targetLanguage]);
 
     return {
         messages,
@@ -224,6 +264,7 @@ export default function useLearnChat() {
         currentSentenceMessageId,
         loading,
         selectedContext,
+        selectedLanguage,
         showContextMenu,
         masteredSentences,
         userProfile,
@@ -233,6 +274,7 @@ export default function useLearnChat() {
         setShowContextMenu,
         handleAction,
         switchContext,
+        switchLanguage,
         handleDeleteMasteredSentence,
     };
 }

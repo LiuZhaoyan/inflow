@@ -12,6 +12,7 @@ export interface MasteredSentence {
   audioPath?: string;
   context?: string;
   messageId?: string;
+  languageCode?: string;
 }
 
 export interface UserProgress {
@@ -68,14 +69,19 @@ export async function saveMasteredSentence(sentence: MasteredSentence) {
   if (!progress.recentContext) progress.recentContext = [];
 
   // Check if sentence already exists
-  const exists = progress.masteredSentences.some(s => s.content === sentence.content && s.context === sentence.context);
+  const exists = progress.masteredSentences.some(s =>
+    s.content === sentence.content &&
+    s.context === sentence.context &&
+    (s.languageCode || '') === (sentence.languageCode || '')
+  );
   if (!exists) {
     progress.masteredSentences.push(sentence);
   }
   
   // Update recent context
-  if (!progress.recentContext.includes(sentence.content)) {
-    progress.recentContext.push(sentence.content);
+  const recentKey = `${sentence.languageCode || 'default'}:${sentence.content}`;
+  if (!progress.recentContext.includes(recentKey)) {
+    progress.recentContext.push(recentKey);
     if (progress.recentContext.length > 10) {
       progress.recentContext.shift();
     }
@@ -92,7 +98,8 @@ export async function deleteMasteredSentence(id: string) {
   progress.masteredSentences = existing.filter(s => s.id !== id);
 
   if (toDelete?.content && progress.recentContext) {
-    progress.recentContext = progress.recentContext.filter(c => c !== toDelete.content);
+    const recentKey = `${toDelete.languageCode || 'default'}:${toDelete.content}`;
+    progress.recentContext = progress.recentContext.filter(c => c !== recentKey);
   }
 
   await updateProgress(progress);

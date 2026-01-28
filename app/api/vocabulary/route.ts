@@ -33,9 +33,14 @@ async function generateDefinition(word: string, nativeLanguage: string): Promise
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const vocab = await getVocabulary();
-  return NextResponse.json(vocab);
+  const url = new URL(request.url);
+  const languageCode = (url.searchParams.get('languageCode') || '').trim().toLowerCase();
+  if (!languageCode || languageCode === 'all') {
+    return NextResponse.json(vocab);
+  }
+  return NextResponse.json(vocab.filter(w => (w.language || '') === languageCode));
 }
 
 export async function POST(request: Request) {

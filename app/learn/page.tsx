@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 import MasteredSentencesSidebar from '@/components/learn/MasteredSentencesSidebar';
 import ChatArea from '@/components/learn/ChatArea';
 import ContextSwitcher from '@/components/learn/ContextSwitcher';
+import LanguageSwitcher from '@/components/learn/LanguageSwitcher';
 import ControlButtons from '@/components/learn/ControlButtons';
 import CurrentSentenceCard from '@/components/learn/CurrentSentenceCard';
 import useAudioTTS from '@/hooks/learn/useAudioTTS';
@@ -17,6 +19,7 @@ export default function LearnPage() {
         currentSentence,
         loading,
         selectedContext,
+        selectedLanguage,
         showContextMenu,
         masteredSentences,
         userProfile,
@@ -26,8 +29,11 @@ export default function LearnPage() {
         setShowContextMenu,
         handleAction,
         switchContext,
+        switchLanguage,
         handleDeleteMasteredSentence,
     } = useLearnChat();
+
+    const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
     const {
         sentenceRef,
@@ -38,7 +44,10 @@ export default function LearnPage() {
         addVocabError,
         handleSelectionEnd,
         addSelectionToVocabulary,
-    } = useSelectionPopover();
+    } = useSelectionPopover({
+        languageCode: selectedLanguage,
+        contextSentence: currentSentence,
+    });
 
     const { playing, playAudio } = useAudioTTS();
 
@@ -91,12 +100,23 @@ export default function LearnPage() {
                             <span className="font-medium">Back</span>
                         </Link>
                         <h1 className="text-lg font-bold text-gray-900">AI Tutor</h1>
-                        <ContextSwitcher
-                            selectedContext={selectedContext}
-                            showContextMenu={showContextMenu}
-                            setShowContextMenu={setShowContextMenu}
-                            onSelectContext={switchContext}
-                        />
+                        <div className="flex items-center gap-2">
+                            <LanguageSwitcher
+                                selectedLanguage={selectedLanguage}
+                                showLanguageMenu={showLanguageMenu}
+                                setShowLanguageMenu={setShowLanguageMenu}
+                                onSelectLanguage={(lang) => {
+                                    setShowLanguageMenu(false);
+                                    switchLanguage(lang);
+                                }}
+                            />
+                            <ContextSwitcher
+                                selectedContext={selectedContext}
+                                showContextMenu={showContextMenu}
+                                setShowContextMenu={setShowContextMenu}
+                                onSelectContext={switchContext}
+                            />
+                        </div>
                     </div>
                 </header>
 
