@@ -40,6 +40,20 @@ export default function useLearnChat() {
         }
     };
 
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const fetchWithRetry = async (input: RequestInfo | URL, init?: RequestInit) => {
+        const maxRetries = 3;
+        for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+            console.log(`Fetch attempt ${attempt + 1}`);
+            const res = await fetch(input, init);
+            if (res.status !== 429) return res;
+            if (attempt === maxRetries) return res;
+            await delay(10_000);
+        }
+        return fetch(input, init);
+    };
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -166,7 +180,7 @@ export default function useLearnChat() {
         }
 
         try {
-            const res = await fetch('/api/learn-chat', {
+            const res = await fetchWithRetry('/api/learn-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

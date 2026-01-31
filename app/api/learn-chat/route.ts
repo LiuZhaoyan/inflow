@@ -4,6 +4,19 @@ import { getProgress, getUserProfile, saveMasteredSentence } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { generateTTS } from '@/lib/ttsService';
 
+function isRateLimitError(error: unknown) {
+    const err = error as any;
+    const status =
+        err?.status ||
+        err?.response?.status ||
+        err?.cause?.status ||
+        err?.cause?.response?.status;
+
+    const code = err?.code || err?.response?.data?.error?.code;
+
+    return status === 429 || code === 'rate_limit' || code === 'rate_limited';
+}
+
 function buildContextMessages(systemPrompt: string, history: any[], limit = 10): ChatMessage[] {
     const safeHistory = Array.isArray(history) ? history : [];
     const filtered: any[] = [];
@@ -127,8 +140,14 @@ Structure:
 
     return NextResponse.json(data);
 
-  } catch (error) {
-    console.error('Learn Chat Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
+    } catch (error) {
+        console.error('Learn Chat Error:', error);
+        if (isRateLimitError(error)) {
+                return NextResponse.json(
+                        { error: 'Rate limited' },
+                        { status: 429, headers: { 'Retry-After': '10' } }
+                );
+        }
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
 }
