@@ -1,4 +1,5 @@
-![Inflow Icon](app/icon.svg)
+<img src="app/icon.svg" alt="Inflow Icon" width="64" height="64" />
+
 
 # Inflow
 
