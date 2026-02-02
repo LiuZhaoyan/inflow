@@ -1,3 +1,5 @@
+![Inflow Icon](app/icon.svg)
+
 # Inflow
 
 **Acquire language, don't memorize it.**
