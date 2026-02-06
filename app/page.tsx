@@ -74,11 +74,11 @@ export default function Home() {
         setUserProfile(profile);
         setShowProfileModal(false);
       } else {
-        setProfileError('保存失败，请重试。');
+        setProfileError('Failed to save profile. Please try again.');
       }
     } catch (error) {
       console.error(error);
-      setProfileError('保存失败，请检查网络后重试。');
+      setProfileError('save failed. Please try again.');
     } finally {
       setSavingProfile(false);
     }

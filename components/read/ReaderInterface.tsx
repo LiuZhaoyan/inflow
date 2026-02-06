@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { BookOpen } from 'lucide-react';
+import Link from 'next/link';
 import { LANGUAGE_OPTIONS, LanguageCode, normalizeLanguageCode, resolveLanguageLabel } from '@/lib/language';
 import {
   getImageKey,
@@ -460,19 +460,27 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-        <h1 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-          <BookOpen className="w-5 h-5 text-blue-600" /> Inflow
-        </h1>
-        <select 
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value as any)}
-          className="text-sm border rounded-lg px-3 py-1.5 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="beginner">Level: Beginner</option>
-          <option value="intermediate">Level: Intermediate</option>
-          <option value="advanced">Level: Advanced</option>
-        </select>
+      <header className="sticky top-0 z-20 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900 hover:text-blue-700 transition-colors"
+          >
+            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
+            Inflow
+          </Link>
+          <div className="flex items-center gap-3">
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as any)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white hover:bg-gray-50 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            >
+              <option value="beginner">Level: Beginner</option>
+              <option value="intermediate">Level: Intermediate</option>
+              <option value="advanced">Level: Advanced</option>
+            </select>
+          </div>
+        </div>
       </header>
 
       {/* Main Layout: Split View */}

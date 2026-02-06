@@ -272,20 +272,18 @@ export default function VocabularyPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
-      {/* Header - Consistent with Docs Page */}
+      {/* Header - Consistent with Home Page */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
         <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
           <Link
             href="/"
             className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900 hover:text-blue-700 transition-colors"
           >
-            <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
-              <BookOpen size={20} />
-            </div>
+            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
             Inflow
           </Link>
-          <nav className="flex items-center gap-4">
-             <span className="text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100">Beta v0.1</span>
+          <nav className="text-sm text-gray-500 font-medium">
+            <span>Beta v0.1</span>
           </nav>
         </div>
       </header>

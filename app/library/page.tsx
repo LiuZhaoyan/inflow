@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, Brain, ArrowRight, BarChart, Info } from "lucide-react";
+import { Brain, ArrowRight, BarChart } from "lucide-react";
 import { getBooks } from "@/lib/db";
 import BooksManager from "@/components/user/BooksManager";
 
@@ -8,22 +8,19 @@ export default async function UserPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100">
-      <header className="px-6 py-6 max-w-5xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900">
-          <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-            <BookOpen size={20} />
-          </div>
-          Inflow
+      <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
+        <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
+          <Link
+            href="/"
+            className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900 hover:text-blue-700 transition-colors"
+          >
+            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
+            Inflow
+          </Link>
+          <nav className="text-sm text-gray-500 font-medium">
+            <span>Beta v0.1</span>
+          </nav>
         </div>
-        <nav className="text-sm text-gray-500 font-medium flex items-center gap-4">
-          <Link href="/" className="hover:text-gray-800 transition-colors">
-            Home
-          </Link>
-          <Link href="/docs" className="hover:text-gray-800 transition-colors flex items-center gap-1">
-            <Info size={14} />
-            Docs
-          </Link>
-        </nav>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 pb-20">
