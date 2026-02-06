@@ -171,68 +171,153 @@ export default function Home() {
       </header>
 
       <main className="w-full px-6 lg:px-12 pb-20">
-        
-        {/* 2. Hero Section: 强调理念，弱化装饰 */}
-        <section className="py-16 md:py-24 max-w-4xl">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
-            Acquire language, <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-              don&apos;t memorize it.
-            </span>
-          </h1>
-          <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
-            Immerse yourself in stories slightly above your level. 
-            Click to translate contextually. Master vocabulary naturally.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link
-              href="/user"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all duration-300 shadow-lg hover:shadow-xl text-lg"
-            >
-              Enter your library
-              <ArrowRight size={20} />
-            </Link>
-            <Link
-              href="/docs"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-300 shadow-sm text-lg"
-            >
-              <Info size={20} />
-              Learn the philosophy
-            </Link>
-          </div>
-          
-          <div className="mt-6 pt-6 border-t border-gray-100">
-             <h2 className="text-xl font-semibold text-gray-900 mb-4">Features</h2>
-             <div className="flex flex-col sm:flex-row gap-4">
-                 <Link
-                    href="/vocabulary"
-                    className="group flex flex-col p-5 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300 w-full sm:w-64"
-                 >
-                    <div className="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                       <Sparkles className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div>
-                        <h3 className="font-medium text-gray-900">Vocabulary</h3>
-                        <p className="text-sm text-gray-500">AI Flashcards & Stories</p>
-                    </div>
-                 </Link>
-                 
-                 <Link
-                    href="/learn"
-                    className="group flex flex-col p-5 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300 w-full sm:w-64"
-                 >
-                    <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                       <MessageCircle className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                        <h3 className="font-medium text-gray-900">AI Tutor</h3>
-                        <p className="text-sm text-gray-500">Sentence-based Learning</p>
-                    </div>
-                 </Link>
-             </div>
+        <section className="pt-16 md:pt-24 pb-12">
+          <div className="mx-auto max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-600">Inflow AI Studio</p>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mt-4 mb-6 leading-tight">
+                Acquire language, <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                  don&apos;t memorize it.
+                </span>
+              </h1>
+              <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
+                Immerse yourself in your personal library, then sharpen every sentence with your AI tutor. Inflow keeps
+                input, feedback, and vocabulary in one continuous learning loop.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link
+                  href="/learn"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl text-lg"
+                >
+                  Start AI Tutor
+                  <MessageCircle size={20} />
+                </Link>
+                <Link
+                  href="/library"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-300 shadow-sm text-lg"
+                >
+                  Open your library
+                  <BookOpen size={20} />
+                </Link>
+              </div>
+              <div className="mt-5">
+                <Link
+                  href="/docs"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-blue-600 transition-colors"
+                >
+                  <Info size={16} />
+                  Learn the philosophy
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-6">
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full bg-indigo-600/10 flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">AI Tutor</h3>
+                    <p className="text-sm text-gray-600">Sentence-level coaching, always in context.</p>
+                  </div>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                    Adaptive difficulty with immediate feedback.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                    Explain, translate, or deepen understanding instantly.
+                  </li>
+                </ul>
+                <Link
+                  href="/learn"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700 hover:text-indigo-800"
+                >
+                  Practice now <ArrowRight size={16} />
+                </Link>
+              </div>
+
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full bg-blue-600/10 flex items-center justify-center">
+                    <BookOpen className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Library</h3>
+                    <p className="text-sm text-gray-600">Curate stories and track what you read.</p>
+                  </div>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    Organize input by level and topic.
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                    Jump into any story with instant translations.
+                  </li>
+                </ul>
+                <Link
+                  href="/library"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800"
+                >
+                  Visit your library <ArrowRight size={16} />
+                </Link>
+              </div>
+            </div>
           </div>
         </section>
 
+        <section className="mx-auto max-w-6xl mt-8 pt-10 border-t border-gray-100">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
+            <h2 className="text-2xl font-semibold text-gray-900">Your learning loop</h2>
+            <p className="text-sm text-gray-500">Build input, practice daily, retain vocabulary.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Link
+              href="/library"
+              className="group flex flex-col p-6 rounded-2xl bg-white border border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <BookOpen className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Reading Library</h3>
+                <p className="text-sm text-gray-500">Collect stories and reading goals.</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/learn"
+              className="group flex flex-col p-6 rounded-2xl bg-white border border-indigo-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <MessageCircle className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">AI Tutor Sessions</h3>
+                <p className="text-sm text-gray-500">Work through sentences with feedback.</p>
+              </div>
+            </Link>
+
+            <Link
+              href="/vocabulary"
+              className="group flex flex-col p-6 rounded-2xl bg-white border border-gray-200 hover:border-blue-200 hover:shadow-lg transition-all duration-300"
+            >
+              <div className="h-10 w-10 rounded-full bg-gray-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <Sparkles className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Vocabulary Studio</h3>
+                <p className="text-sm text-gray-500">AI flashcards and story practice.</p>
+              </div>
+            </Link>
+          </div>
+        </section>
       </main>
     </div>
   );

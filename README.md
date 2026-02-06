@@ -99,7 +99,7 @@ inflow/
 │   ├── learn/
 │   ├── read/
 │   │   └── [id]/
-│   ├── user/
+│   ├── library/
 │   └── vocabulary/
 ├── components/
 ├── data/                # Local JSON database and book metadata

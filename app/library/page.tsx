@@ -69,10 +69,6 @@ export default async function UserPage() {
                   {book.title}
                 </h3>
 
-                <p className="text-gray-500 text-sm line-clamp-3 mb-6 leading-relaxed">
-                  {book.preview?.join(" ") || "No preview available"}...
-                </p>
-
                 <div className="mt-auto w-full flex items-center justify-between border-t border-gray-50 pt-4">
                   <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
                     <BarChart size={12} />
