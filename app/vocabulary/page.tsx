@@ -9,18 +9,7 @@ import {
   AudioLines
 } from 'lucide-react';
 import { resolveLanguageLabel } from '@/lib/language';
-
-interface VocabularyWord {
-  id: string;
-  word: string;
-  definition: string;
-  contextSentence?: string;
-  translation?: string;
-  imagePath?: string;
-  audioPath?: string;
-  language?: string;
-  createdAt: number;
-}
+import type { VocabularyWord } from '@/lib/types/vocabulary';
 
 export default function VocabularyPage() {
   const [words, setWords] = useState<VocabularyWord[]>([]);

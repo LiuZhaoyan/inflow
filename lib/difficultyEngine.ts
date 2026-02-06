@@ -5,8 +5,8 @@
  * Uses a sliding-window approach over recent sessions to adapt in real-time.
  */
 
-import type { LearningProfile, PerformanceMetrics } from './learnTypes';
-import type { MasteredSentence, UserProgress } from './db/progress';
+import type { LearningProfile, PerformanceMetrics } from './types/learnTypes';
+import type { MasteredSentence, UserProgress } from './types/progress';
 
 // ── Difficulty context passed to the AI prompt ──────────────────────────
 export interface DifficultyContext {

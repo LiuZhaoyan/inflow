@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getVocabulary, addWord, deleteWord, updateWord, VocabularyWord, getUserProfile } from '@/lib/db';
+import { getVocabulary, addWord, deleteWord, updateWord, getUserProfile } from '@/lib/db';
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageFromSentences } from '@/lib/language';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { Chapter } from '@/lib/readerUtils';
+import { Chapter } from '@/lib/types/books';
 
 interface ChapterSidebarProps {
   bodyChapters: Chapter[];

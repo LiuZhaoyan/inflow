@@ -1,19 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
+import type { VocabularyWord } from '@/lib/types/vocabulary';
 
 const VOCAB_PATH = path.join(process.cwd(), 'data', 'vocabulary.json');
-
-export interface VocabularyWord {
-  id: string;
-  word: string;
-  definition: string;
-  contextSentence?: string;
-  translation?: string;
-  imagePath?: string;
-  audioPath?: string;
-  language?: string;
-  createdAt: number;
-}
 
 export async function initVocabularyDb() {
   try {

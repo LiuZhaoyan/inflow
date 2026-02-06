@@ -1,9 +1,5 @@
 // Utility functions for Reader components
-
-export interface Chapter {
-  title: string;
-  paragraphs: string[][];
-}
+import type { Chapter } from './types/books';
 
 export function getImageKey(text: string): string | null {
   const match = text.match(/<<<IMAGE:([^>]+)>>>/);

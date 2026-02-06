@@ -1,30 +1,10 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { normalizeLanguageCode } from '@/lib/language';
+import { DEFAULT_USER, type UserProfile } from '@/lib/types/user';
 
 const USER_FILE = path.join(process.cwd(), 'data', 'user_profile.json');
 
-export interface UserProfile {
-  id: string;
-  username: string;
-  nativeLanguage: string;
-  targetLanguage: string;
-  currentLanguageCode?: string;
-  isOnboarded: boolean;
-  createdAt: number;
-  updatedAt: number;
-}
-
-const DEFAULT_USER: UserProfile = {
-  id: 'single-user',
-  username: '',
-  nativeLanguage: 'en',
-  targetLanguage: 'ko',
-  currentLanguageCode: 'ko',
-  isOnboarded: false,
-  createdAt: Date.now(),
-  updatedAt: Date.now(),
-};
 
 function sanitizeProfile(input: Partial<UserProfile> | null | undefined): UserProfile {
   const now = Date.now();

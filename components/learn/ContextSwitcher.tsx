@@ -1,4 +1,4 @@
-import { CONTEXT_OPTIONS } from '@/lib/learnTypes';
+import { CONTEXT_OPTIONS } from '@/lib/types/learnTypes';
 
 interface ContextSwitcherProps {
     selectedContext: string | null;

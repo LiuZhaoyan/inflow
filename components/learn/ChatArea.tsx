@@ -1,13 +1,13 @@
 import { ArrowLeft } from 'lucide-react';
-import type { MutableRefObject, RefObject } from 'react';
-import type { Msg } from '@/lib/learnTypes';
-import { CONTEXT_OPTIONS } from '@/lib/learnTypes';
+import type { RefObject } from 'react';
+import type { Msg } from '@/lib/types/learnTypes';
+import { CONTEXT_OPTIONS } from '@/lib/types/learnTypes';
 
 interface ChatAreaProps {
     messages: Msg[];
     loading: boolean;
     onSelectContext: (context: string) => void;
-    messageRefs: MutableRefObject<Record<string, HTMLDivElement | null>>;
+    messageRefs: RefObject<Record<string, HTMLDivElement | null>>;
     messagesEndRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -44,7 +44,11 @@ export default function ChatArea({
                 {messages.map((msg) => (
                     <div
                         key={msg.id}
-                        ref={(el) => { messageRefs.current[msg.id] = el; }}
+                        ref={(el) => {
+                            if (messageRefs.current) {
+                                messageRefs.current[msg.id] = el;
+                            }
+                        }}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                         <div className={`

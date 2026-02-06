@@ -22,14 +22,6 @@ export interface StoredChat {
     updatedAt: number;
 }
 
-export interface UserProfile {
-    username: string;
-    nativeLanguage: string;
-    targetLanguage: string;
-    currentLanguageCode?: string;
-    isOnboarded?: boolean;
-}
-
 // ── Difficulty & Personalization Types ──────────────────────────────────
 
 export interface PerformanceMetrics {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { MasteredSentence } from '@/components/learn/MasteredSentencesSidebar';
-import type { Msg, StoredChat, UserProfile } from '@/lib/learnTypes';
+import type { MasteredSentence } from '@/lib/types/progress';
+import type { Msg, StoredChat } from '@/lib/types/learnTypes';
+import type { UserProfile } from '@/lib/types/user';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
 
 export default function useLearnChat() {
@@ -245,6 +246,7 @@ export default function useLearnChat() {
                         id: Date.now().toString(),
                         content: sentenceInProgress,
                         masteredAt: Date.now(),
+                        difficultyLevel,
                         context: effectiveContext ?? undefined,
                         messageId: currentSentenceMessageId ?? undefined,
                         languageCode: selectedLanguage
@@ -265,7 +267,7 @@ export default function useLearnChat() {
         } finally {
             setLoading(false);
         }
-    }, [currentSentence, currentSentenceMessageId, loading, messages, selectedContext, selectedLanguage, userProfile?.isOnboarded]);
+    }, [currentSentence, currentSentenceMessageId, difficultyLevel, loading, messages, selectedContext, selectedLanguage, userProfile?.isOnboarded]);
 
     const switchContext = useCallback((context: string) => {
         if (!userProfile?.isOnboarded) {

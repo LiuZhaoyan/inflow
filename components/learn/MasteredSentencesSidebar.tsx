@@ -1,16 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { ChevronRight, ChevronLeft, Book, Volume2, Trash2 } from 'lucide-react';
-
-export interface MasteredSentence {
-  id: string;
-  content: string;
-  masteredAt: number;
-  audioPath?: string;
-  context?: string;
-  messageId?: string;
-  languageCode?: string;
-}
+import { MasteredSentence } from '@/lib/types/progress';
 
 interface Props {
   sentences: MasteredSentence[];

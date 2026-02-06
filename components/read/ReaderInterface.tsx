@@ -11,7 +11,6 @@ import {
   paragraphSentenceToFlatIndex,
   flatIndexToPosition,
   flatIndexToParagraphSentence,
-  type Chapter,
 } from '@/lib/readerUtils';
 import { ChapterSidebar, MobileChapterList } from './sidebars/ChapterSidebar';
 import { AISidebar } from './sidebars/AISidebar';

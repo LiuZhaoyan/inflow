@@ -4,13 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
 import { LANGUAGE_OPTIONS } from '@/lib/language';
-
-interface UserProfile {
-  username: string;
-  nativeLanguage: string;
-  targetLanguage: string;
-  isOnboarded?: boolean;
-}
+import type { UserProfile } from '@/lib/types/user';
 
 export default function Home() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);

@@ -1,81 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { DEFAULT_PROGRESS, type MasteredSentence, type UserProgress } from '@/lib/types/progress';
 
 const PROGRESS_FILE = path.join(process.cwd(), 'data', 'learn_progress.json');
 
-export interface MasteredSentence {
-  id: string;
-  content: string;
-  translation?: string;
-  masteredAt: number;
-  difficultyLevel: number;
-  audioPath?: string;
-  context?: string;
-  messageId?: string;
-  languageCode?: string;
-  reviewCount?: number;
-  lastReviewedAt?: number;
-}
-
-export interface UserProgress {
-  targetLanguage: string;
-  currentDifficultyLevel: number;   // 1-10 adaptive difficulty
-  initialDifficultyLevel: number;   // set by placement test
-  masteredSentences: MasteredSentence[];
-  recentContext: string[];
-  performanceMetrics: {
-    avgResponseTimeMs: number;
-    explainRequestRate: number;
-    translateRequestRate: number;
-    masterySpeed: number;
-    totalSessions: number;
-    totalSentencesMastered: number;
-    lastSessionAt: number;
-  };
-  learningProfile: {
-    knownVocabulary: string[];
-    weakVocabulary: Record<string, number>;
-    masteredGrammar: string[];
-    strugglingGrammar: string[];
-    preferredContexts: string[];
-    learningPace: 'slow' | 'normal' | 'fast';
-    totalSentencesMastered: number;
-    totalStudyTimeMs: number;
-    lastUpdated: number;
-  };
-  placementCompleted: boolean;
-  lastUpdated: number;
-}
-
-const DEFAULT_PROGRESS: UserProgress = {
-  targetLanguage: 'ko',
-  currentDifficultyLevel: 3,
-  initialDifficultyLevel: 3,
-  masteredSentences: [],
-  recentContext: [],
-  performanceMetrics: {
-    avgResponseTimeMs: 0,
-    explainRequestRate: 0,
-    translateRequestRate: 0,
-    masterySpeed: 0,
-    totalSessions: 0,
-    totalSentencesMastered: 0,
-    lastSessionAt: 0,
-  },
-  learningProfile: {
-    knownVocabulary: [],
-    weakVocabulary: {},
-    masteredGrammar: [],
-    strugglingGrammar: [],
-    preferredContexts: [],
-    learningPace: 'normal',
-    totalSentencesMastered: 0,
-    totalStudyTimeMs: 0, // TODO: track actual study time in the app
-    lastUpdated: Date.now(),
-  },
-  placementCompleted: false,
-  lastUpdated: Date.now(),
-};
 
 export async function initProgressDb() {
   try {
