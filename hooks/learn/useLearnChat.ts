@@ -15,6 +15,13 @@ export default function useLearnChat() {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(true);
 
+    // Difficulty & placement state
+    const [difficultyLevel, setDifficultyLevel] = useState(3);
+    const [difficultyDirection, setDifficultyDirection] = useState<'decrease' | 'maintain' | 'increase'>('maintain');
+    const [difficultyPerformance, setDifficultyPerformance] = useState<string>('learning');
+    const [placementCompleted, setPlacementCompleted] = useState(false);
+    const [placementLoading, setPlacementLoading] = useState(true);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const languageInitializedRef = useRef(false);
@@ -91,6 +98,20 @@ export default function useLearnChat() {
                 setUserProfile(null);
             } finally {
                 setProfileLoading(false);
+            }
+
+            // Load placement test / difficulty status
+            try {
+                const res = await fetch('/api/placement-test');
+                if (res.ok) {
+                    const data = await res.json();
+                    setPlacementCompleted(data.completed ?? false);
+                    setDifficultyLevel(data.level ?? 3);
+                }
+            } catch (err) {
+                console.error('Failed to load placement status', err);
+            } finally {
+                setPlacementLoading(false);
             }
         };
 
@@ -204,6 +225,13 @@ export default function useLearnChat() {
                 content: data.response
             }]);
 
+            // Update difficulty state from response
+            if (data.difficulty) {
+                setDifficultyLevel(data.difficulty.level ?? difficultyLevel);
+                setDifficultyDirection(data.difficulty.direction ?? 'maintain');
+                setDifficultyPerformance(data.difficulty.performance ?? 'learning');
+            }
+
             const normalizedType = typeof data.type === 'string' ? data.type.toLowerCase() : '';
 
             if (normalizedType === 'sentence' || action === 'init' || action === 'understand') {
@@ -285,6 +313,13 @@ export default function useLearnChat() {
         profileLoading,
         messagesEndRef,
         messageRefs,
+        difficultyLevel,
+        difficultyDirection,
+        difficultyPerformance,
+        placementCompleted,
+        placementLoading,
+        setPlacementCompleted,
+        setDifficultyLevel,
         setShowContextMenu,
         handleAction,
         switchContext,

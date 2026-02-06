@@ -13,20 +13,68 @@ export interface MasteredSentence {
   context?: string;
   messageId?: string;
   languageCode?: string;
+  reviewCount?: number;
+  lastReviewedAt?: number;
 }
 
 export interface UserProgress {
   targetLanguage: string;
-  userLevel: 'beginner' | 'intermediate' | 'advanced';
+  currentDifficultyLevel: number;   // 1-10 adaptive difficulty
+  initialDifficultyLevel: number;   // set by placement test
   masteredSentences: MasteredSentence[];
-  recentContext: string[]; 
+  recentContext: string[];
+  performanceMetrics: {
+    avgResponseTimeMs: number;
+    explainRequestRate: number;
+    translateRequestRate: number;
+    masterySpeed: number;
+    totalSessions: number;
+    totalSentencesMastered: number;
+    lastSessionAt: number;
+  };
+  learningProfile: {
+    knownVocabulary: string[];
+    weakVocabulary: Record<string, number>;
+    masteredGrammar: string[];
+    strugglingGrammar: string[];
+    preferredContexts: string[];
+    learningPace: 'slow' | 'normal' | 'fast';
+    totalSentencesMastered: number;
+    totalStudyTimeMs: number;
+    lastUpdated: number;
+  };
+  placementCompleted: boolean;
+  lastUpdated: number;
 }
 
 const DEFAULT_PROGRESS: UserProgress = {
-  targetLanguage: 'ko', // Defaulting to Korean as seen in vocabulary examples
-  userLevel: 'beginner',
+  targetLanguage: 'ko',
+  currentDifficultyLevel: 3,
+  initialDifficultyLevel: 3,
   masteredSentences: [],
   recentContext: [],
+  performanceMetrics: {
+    avgResponseTimeMs: 0,
+    explainRequestRate: 0,
+    translateRequestRate: 0,
+    masterySpeed: 0,
+    totalSessions: 0,
+    totalSentencesMastered: 0,
+    lastSessionAt: 0,
+  },
+  learningProfile: {
+    knownVocabulary: [],
+    weakVocabulary: {},
+    masteredGrammar: [],
+    strugglingGrammar: [],
+    preferredContexts: [],
+    learningPace: 'normal',
+    totalSentencesMastered: 0,
+    totalStudyTimeMs: 0, // TODO: track actual study time in the app
+    lastUpdated: Date.now(),
+  },
+  placementCompleted: false,
+  lastUpdated: Date.now(),
 };
 
 export async function initProgressDb() {
@@ -48,7 +96,20 @@ export async function getProgress(): Promise<UserProgress> {
   await initProgressDb();
   const data = await fs.readFile(PROGRESS_FILE, 'utf-8');
   try {
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    // Migrate old data: fill in new fields with defaults if missing
+    return {
+      ...DEFAULT_PROGRESS,
+      ...parsed,
+      performanceMetrics: {
+        ...DEFAULT_PROGRESS.performanceMetrics,
+        ...(parsed.performanceMetrics || {}),
+      },
+      learningProfile: {
+        ...DEFAULT_PROGRESS.learningProfile,
+        ...(parsed.learningProfile || {}),
+      },
+    };
   } catch (e) {
     return DEFAULT_PROGRESS;
   }
@@ -109,4 +170,54 @@ export async function deleteMasteredSentence(id: string) {
 export async function resetProgress() {
     await fs.writeFile(PROGRESS_FILE, JSON.stringify(DEFAULT_PROGRESS, null, 2), 'utf-8');
     return DEFAULT_PROGRESS;
+}
+
+// ── Learning Profile helpers ────────────────────────────────────────────
+
+export async function getLearningProfile() {
+  const progress = await getProgress();
+  return progress.learningProfile ?? DEFAULT_PROGRESS.learningProfile;
+}
+
+export async function updateLearningProfile(profile: UserProgress['learningProfile']) {
+  const progress = await getProgress();
+  progress.learningProfile = profile;
+  progress.lastUpdated = Date.now();
+  await updateProgress(progress);
+  return profile;
+}
+
+export async function getDifficultyLevel(): Promise<number> {
+  const progress = await getProgress();
+  return progress.currentDifficultyLevel ?? DEFAULT_PROGRESS.currentDifficultyLevel;
+}
+
+export async function setDifficultyLevel(level: number) {
+  const progress = await getProgress();
+  progress.currentDifficultyLevel = Math.max(1, Math.min(10, level));
+  progress.lastUpdated = Date.now();
+  await updateProgress(progress);
+  return progress.currentDifficultyLevel;
+}
+
+export async function setPlacementResult(level: number) {
+  const clamped = Math.max(1, Math.min(10, level));
+  const progress = await getProgress();
+  progress.currentDifficultyLevel = clamped;
+  progress.initialDifficultyLevel = clamped;
+  progress.placementCompleted = true;
+  progress.lastUpdated = Date.now();
+  await updateProgress(progress);
+  return progress;
+}
+
+export async function updatePerformanceMetrics(metrics: Partial<UserProgress['performanceMetrics']>) {
+  const progress = await getProgress();
+  progress.performanceMetrics = {
+    ...(progress.performanceMetrics ?? DEFAULT_PROGRESS.performanceMetrics),
+    ...metrics,
+  };
+  progress.lastUpdated = Date.now();
+  await updateProgress(progress);
+  return progress.performanceMetrics;
 }

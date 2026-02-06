@@ -1,7 +1,7 @@
-<img src="app/icon.svg" alt="Inflow Icon" width="64" height="64" />
-
-
-# Inflow
+<div align="center">
+   <img src="app/icon.svg" alt="Inflow Icon" width="64" height="64" />
+   <h1>Inflow</h1>
+</div>
 
 **Acquire language, don't memorize it.**
 

@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
-import { getProgress, getUserProfile, saveMasteredSentence } from '@/lib/db';
+import { getProgress, getUserProfile, saveMasteredSentence, setDifficultyLevel, updateProgress } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { generateTTS } from '@/lib/ttsService';
+import {
+    calculateDifficultyContext,
+    computeNewDifficultyLevel,
+    buildPersonalizationPrompt,
+    updateLearningProfileFromAction,
+} from '@/lib/difficultyEngine';
 
 function isRateLimitError(error: unknown) {
     const err = error as any;
@@ -48,10 +54,14 @@ export async function POST(req: Request) {
     const targetLanguage = requestedLanguage === 'auto' ? fallbackLanguage : requestedLanguage;
     const nativeLanguage = userProfile?.nativeLanguage || 'en';
 
+    // Calculate difficulty context from progress + learning profile + history
+    const difficultyCtx = calculateDifficultyContext(progress, progress.learningProfile, history);
+    const personalizationBlock = buildPersonalizationPrompt(difficultyCtx);
+
     const systemPrompt = `You are a personalized language tutor. 
 Target Language Code: ${targetLanguage}
 User Native Language Code: ${nativeLanguage}
-User Level: ${progress.userLevel}
+User Level: ${difficultyCtx.levelLabel}
 Selected Context: ${context || 'None'}
 
 Your goal is to help the user learn by providing ONE sentence at a time.
@@ -61,11 +71,13 @@ CONTEXT RULES:
 - If Selected Context is not 'None', all sentences and explanations must stay strictly within that context.
 - Do not drift to unrelated topics. If unsure, keep it generic but still within the selected context.
 
+${personalizationBlock}
+
 PROTOCOL:
-1. If action is 'init': Output a simple greeting and the first practice sentence in the target language.
-2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the native language.
+1. If action is 'init': Output a simple greeting and the first practice sentence in the target language. Match the sentence to the current difficulty level.
+2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the native language. Tailor explanation depth to the user's level.
 3. If action is 'translate': Provide the translation of 'currentSentence' in the user's native language.
-4. If action is 'understand': The user understood 'currentSentence'. Output a NEW sentence. It can be a variation or a logical follow-up.
+4. If action is 'understand': The user understood 'currentSentence'. Output a NEW sentence. It can be a variation or a logical follow-up. Follow the difficulty adjustment direction.
 
 RESPONSE FORMAT:
 You MUST return a valid JSON object. Do not include markdown formatting (like \`\`\`json).
@@ -73,7 +85,8 @@ Structure:
 {
   "response": "The content to display to the user (the explanation, translation, or the NEW sentence)",
   "type": "sentence" | "explanation" | "translation",
-  "original": "If type is explanation/translation, keep the original sentence here. If type is sentence, put the new sentence here."
+  "original": "If type is explanation/translation, keep the original sentence here. If type is sentence, put the new sentence here.",
+  "difficultyEstimate": <number 1-10 estimating the difficulty of the sentence you generated>
 }
 `;
 
@@ -82,22 +95,51 @@ Structure:
     let userContent = '';
     if (action === 'init') {
         userContent = context 
-            ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context.` 
-            : 'Start the session.';
+            ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context at difficulty level ${difficultyCtx.currentLevel}/10.` 
+            : `Start the session. Generate a sentence at difficulty level ${difficultyCtx.currentLevel}/10.`;
     } else if (action === 'explain') {
         userContent = `Explain this sentence: "${currentSentence}"`;
     } else if (action === 'translate') {
         userContent = `Translate this sentence: "${currentSentence}"`;
     } else if (action === 'understand') {
-        userContent = `I understand this sentence: "${currentSentence}". Give me the next one.`;
+        userContent = `I understand this sentence: "${currentSentence}". Give me the next one at the appropriate difficulty level.`;
+
+        // ── Update difficulty level ──
+        const newLevel = computeNewDifficultyLevel(progress.currentDifficultyLevel ?? 3, difficultyCtx);
+        if (newLevel !== (progress.currentDifficultyLevel ?? 3)) {
+            await setDifficultyLevel(newLevel);
+        }
+
+        // ── Update learning profile ──
+        const updatedProfile = updateLearningProfileFromAction(
+            progress.learningProfile ?? {
+                knownVocabulary: [], weakVocabulary: {}, masteredGrammar: [],
+                strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
+                totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
+            },
+            action,
+            currentSentence || '',
+            history,
+        );
+        // Track preferred context
+        if (context && !updatedProfile.preferredContexts.includes(context)) {
+            updatedProfile.preferredContexts.push(context);
+            if (updatedProfile.preferredContexts.length > 5) {
+                updatedProfile.preferredContexts.shift();
+            }
+        }
+
+        await updateProgress({
+            learningProfile: updatedProfile,
+            currentDifficultyLevel: newLevel,
+            lastUpdated: Date.now(),
+        });
+
         if (currentSentence) {
             let audioPath: string | undefined;
             try {
-                // Determine target language voice based on progress (simple heuristic for now)
-                // Defaulting to Korean female for now as per context of "ko". 
-                // In a real app, map progress.targetLanguage to specific voiceIds.
                 audioPath = await generateTTS(currentSentence, {
-                    voiceId: 'audiobook_female_1', // Adjust if needed based on lang
+                    voiceId: 'audiobook_female_1',
                     speed: 1.0
                 });
             } catch (err) {
@@ -108,13 +150,28 @@ Structure:
                 id: Date.now().toString(),
                 content: currentSentence,
                 masteredAt: Date.now(),
-                difficultyLevel: 1,
+                difficultyLevel: difficultyCtx.currentLevel,
                 audioPath,
                 context,
                 messageId,
                 languageCode: targetLanguage
             });
         }
+    }
+
+    // For explain/translate actions, also update learning profile
+    if (action === 'explain' || action === 'translate') {
+        const updatedProfile = updateLearningProfileFromAction(
+            progress.learningProfile ?? {
+                knownVocabulary: [], weakVocabulary: {}, masteredGrammar: [],
+                strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
+                totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
+            },
+            action,
+            currentSentence || '',
+            history,
+        );
+        await updateProgress({ learningProfile: updatedProfile, lastUpdated: Date.now() });
     }
 
     messages.push({ role: 'user', content: userContent });
@@ -137,6 +194,14 @@ Structure:
             original: currentSentence
         };
     }
+
+    // Include current difficulty info in response
+    const latestProgress = await getProgress();
+    data.difficulty = {
+        level: latestProgress.currentDifficultyLevel ?? 3,
+        direction: difficultyCtx.direction,
+        performance: difficultyCtx.performance,
+    };
 
     return NextResponse.json(data);
 

@@ -166,9 +166,7 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
         <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
           <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900">
-            <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-              <BookOpen size={20} />
-            </div>
+            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
             Inflow
           </div>
           <nav className="text-sm text-gray-500 font-medium">

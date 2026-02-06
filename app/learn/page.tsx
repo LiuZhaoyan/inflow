@@ -9,6 +9,8 @@ import ContextSwitcher from '@/components/learn/ContextSwitcher';
 import LanguageSwitcher from '@/components/learn/LanguageSwitcher';
 import ControlButtons from '@/components/learn/ControlButtons';
 import CurrentSentenceCard from '@/components/learn/CurrentSentenceCard';
+import DifficultyIndicator from '@/components/learn/DifficultyIndicator';
+import PlacementTest from '@/components/learn/PlacementTest';
 import useAudioTTS from '@/hooks/learn/useAudioTTS';
 import useLearnChat from '@/hooks/learn/useLearnChat';
 import useSelectionPopover from '@/hooks/learn/useSelectionPopover';
@@ -26,6 +28,13 @@ export default function LearnPage() {
         profileLoading,
         messagesEndRef,
         messageRefs,
+        difficultyLevel,
+        difficultyDirection,
+        difficultyPerformance,
+        placementCompleted,
+        placementLoading,
+        setPlacementCompleted,
+        setDifficultyLevel: setDifficultyLevelState,
         setShowContextMenu,
         handleAction,
         switchContext,
@@ -51,6 +60,31 @@ export default function LearnPage() {
 
     const { playing, playAudio } = useAudioTTS();
 
+    const handleManualDifficultyAdjust = async (level: number) => {
+        try {
+            const res = await fetch('/api/difficulty', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ level }),
+            });
+            if (res.ok) {
+                setDifficultyLevelState(level);
+            }
+        } catch (err) {
+            console.error('Failed to adjust difficulty', err);
+        }
+    };
+
+    const handlePlacementComplete = (level: number) => {
+        setPlacementCompleted(true);
+        setDifficultyLevelState(level);
+    };
+
+    const handlePlacementSkip = async () => {
+        setPlacementCompleted(true);
+        setDifficultyLevelState(1);
+    };
+
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
             {!profileLoading && !userProfile?.isOnboarded && (
@@ -67,6 +101,15 @@ export default function LearnPage() {
                         </Link>
                     </div>
                 </div>
+            )}
+
+            {/* Placement Test Modal */}
+            {!profileLoading && !placementLoading && userProfile?.isOnboarded && !placementCompleted && (
+                <PlacementTest
+                    languageCode={selectedLanguage}
+                    onComplete={handlePlacementComplete}
+                    onSkip={handlePlacementSkip}
+                />
             )}
 
             {/* Sidebar Component */}
@@ -101,6 +144,12 @@ export default function LearnPage() {
                         </Link>
                         <h1 className="text-lg font-bold text-gray-900">AI Tutor</h1>
                         <div className="flex items-center gap-2">
+                            <DifficultyIndicator
+                                level={difficultyLevel}
+                                direction={difficultyDirection}
+                                performance={difficultyPerformance}
+                                onManualAdjust={handleManualDifficultyAdjust}
+                            />
                             <LanguageSwitcher
                                 selectedLanguage={selectedLanguage}
                                 showLanguageMenu={showLanguageMenu}
