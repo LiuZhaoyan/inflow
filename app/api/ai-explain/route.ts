@@ -119,7 +119,7 @@ export async function POST(request: Request) {
     if (error?.status === 429) {
       return NextResponse.json(
         { error: 'AI Service is busy (Rate Limit). Please try again later.' },
-        { status: 429 }
+        { status: 429, headers: { 'Retry-After': '10' } }
       );
     }
 

@@ -14,6 +14,7 @@ import {
 } from '@/lib/readerUtils';
 import { ChapterSidebar, MobileChapterList } from './sidebars/ChapterSidebar';
 import { AISidebar } from './sidebars/AISidebar';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 interface ReaderProps {
   bookId: string;
@@ -234,7 +235,7 @@ export default function ReaderInterface({ bookId, chapters, initialLanguage }: R
         targetLanguage: languageForRequest,
       });
 
-      const res = await fetch('/api/ai-explain', {
+      const res = await fetchWithRetry('/api/ai-explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',

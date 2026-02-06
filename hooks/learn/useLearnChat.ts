@@ -3,6 +3,7 @@ import type { MasteredSentence } from '@/lib/types/progress';
 import type { Msg, StoredChat } from '@/lib/types/learnTypes';
 import type { UserProfile } from '@/lib/types/user';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
+import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
 export default function useLearnChat() {
     const [messages, setMessages] = useState<Msg[]>([]);
@@ -46,20 +47,6 @@ export default function useLearnChat() {
         } catch (err) {
             console.error('Failed to save stored chat', err);
         }
-    };
-
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-    const fetchWithRetry = async (input: RequestInfo | URL, init?: RequestInit) => {
-        const maxRetries = 3;
-        for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-            console.log(`Fetch attempt ${attempt + 1}`);
-            const res = await fetch(input, init);
-            if (res.status !== 429) return res;
-            if (attempt === maxRetries) return res;
-            await delay(10_000);
-        }
-        return fetch(input, init);
     };
 
     const scrollToBottom = () => {
