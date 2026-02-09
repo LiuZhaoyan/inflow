@@ -9,7 +9,7 @@ import AddWordForm from '@/components/vocabulary/AddWordForm';
 import LanguageFilterRail from '@/components/vocabulary/LanguageFilterRail';
 import StorySidebar from '@/components/vocabulary/StorySidebar';
 import Header from '@/components/Header';
-import VocabularyTitle from '@/components/vocabulary/VocabularyTitle';
+import SectionTitle from '@/components/SectionTitle';
 import VocabularyToolbar from '@/components/vocabulary/VocabularyToolbar';
 import WordGrid from '@/components/vocabulary/WordGrid';
 
@@ -60,9 +60,14 @@ export default function VocabularyPage() {
       <main className="w-full px-6 lg:px-12 pb-20 pt-10">
          
          {/* Title Section */}
-         <div className="mb-12 max-w-4xl mx-auto">
-            <div className="flex justify-between items-start">
-              <VocabularyTitle title="Vocabulary &" highlight="Flashcards" />
+         <div className="mb-8 max-w-4xl mx-auto">
+            <div className="flex flex-col">
+              <SectionTitle
+                eyebrow="Your space"
+                title="Vocabulary &"
+                highlight="Flashcards"
+                description="Browse your collection, open a story, or upload fresh input."
+              />
               <VocabularyToolbar
                 selectionMode={selectionMode}
                 selectedCount={selectedIds.size}
@@ -75,7 +80,7 @@ export default function VocabularyPage() {
             </div>
          </div>
 
-         <div className="max-w-4xl mx-auto space-y-10">
+         <div className="max-w-4xl mx-auto space-y-8">
              
              <AddWordForm
               isOpen={isAdding}

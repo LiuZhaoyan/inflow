@@ -3,6 +3,7 @@ import { Brain, ArrowRight, BarChart } from "lucide-react";
 import { getBooks } from "@/lib/db";
 import Header from "@/components/Header";
 import BooksManager from "@/components/user/BooksManager";
+import SectionTitle from "@/components/SectionTitle";
 
 export default async function UserPage() {
   const books = await getBooks();
@@ -12,16 +13,11 @@ export default async function UserPage() {
       <Header />
 
       <main className="max-w-5xl mx-auto px-6 pb-20">
-        <section className="py-10">
-          <p className="text-sm font-semibold uppercase text-blue-600 tracking-wider mb-2">Your space</p>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 leading-tight">
-            Manage everything you read in one place.
-          </h1>
-          <p className="text-base text-gray-600 max-w-2xl">
-            Browse your collection, open a story, or upload fresh input. This is where you’ll spend most of your time inside
-            Inflow.
-          </p>
-        </section>
+        <SectionTitle
+          eyebrow="Your space"
+          title="Manage everything you read in one place."
+          description="Browse your collection, open a story, or upload fresh input. This is where you’ll spend most of your time inside Inflow."
+        />
 
         <section>
           <div className="flex items-center justify-between mb-8">
