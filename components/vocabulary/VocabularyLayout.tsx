@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react';
+
 interface VocabularyLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export default function VocabularyLayout({ children }: VocabularyLayoutProps) {

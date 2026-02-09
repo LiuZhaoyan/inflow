@@ -157,7 +157,7 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this card?')) return;
     await fetch(`/api/vocabulary?id=${id}`, { method: 'DELETE' });
-    setWords(words.filter(w => w.id !== id));
+    setWords(prev => prev.filter(w => w.id !== id));
   };
 
   const playAudio = (path: string) => {

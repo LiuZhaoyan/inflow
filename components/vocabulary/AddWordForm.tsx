@@ -1,3 +1,4 @@
+import type { FormEvent } from 'react';
 import { Loader2, X } from 'lucide-react';
 
 interface AddWordFormProps {
@@ -7,7 +8,7 @@ interface AddWordFormProps {
   addingStatus: 'idle' | 'saving';
   onChangeWord: (value: string) => void;
   onChangeDefinition: (value: string) => void;
-  onSubmit: (event: React.FormEvent) => void;
+  onSubmit: (event: FormEvent) => void;
   onClose: () => void;
 }
 
