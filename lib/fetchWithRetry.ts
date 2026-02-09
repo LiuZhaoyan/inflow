@@ -19,7 +19,7 @@ export interface FetchRetryOptions {
 }
 
 const DEFAULT_MAX_RETRIES = 3;
-const DEFAULT_DELAY_MS = 10_000;
+const DEFAULT_DELAY_MS = 15_000;
 
 function parseRetryAfter(res: Response, fallback: number): number {
     const header = res.headers.get('Retry-After');

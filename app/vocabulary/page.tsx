@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { 
   BookOpen, Plus, Play, Trash2, Wand2, X, Check, Loader2, 
@@ -9,258 +9,42 @@ import {
   AudioLines
 } from 'lucide-react';
 import { resolveLanguageLabel } from '@/lib/language';
-import type { VocabularyWord } from '@/lib/types/vocabulary';
+import useVocabularyData from '@/hooks/vocabulary/useVocabularyData';
+import useVocabularyActions from '@/hooks/vocabulary/useVocabularyActions';
+import useStoryMode from '@/hooks/vocabulary/useStoryMode';
+import useCardFlip from '@/hooks/vocabulary/useCardFlip';
 
 export default function VocabularyPage() {
-  const [words, setWords] = useState<VocabularyWord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState<Record<string, { img?: boolean; audio?: boolean }>>({});
-  const flipTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout> | null>>({});
-  
-  // Add Word State
-  const [isAdding, setIsAdding] = useState(false);
-  const [newWord, setNewWord] = useState('');
-  const [newDefinition, setNewDefinition] = useState('');
-  const [addingStatus, setAddingStatus] = useState<'idle' | 'saving'>('idle');
-
-  // Selection & Story Mode State
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [story, setStory] = useState<string | null>(null);
-  const [isGeneratingStory, setIsGeneratingStory] = useState(false);
-  const [isStorySidebarOpen, setIsStorySidebarOpen] = useState(false);
-  const [flippedIds, setFlippedIds] = useState<Set<string>>(new Set());
+  const { words, setWords, loading } = useVocabularyData();
+  const {
+    generating,
+    isAdding,
+    newWord,
+    newDefinition,
+    addingStatus,
+    setIsAdding,
+    setNewWord,
+    setNewDefinition,
+    handleAddWord,
+    handleDelete,
+    generateImageForWord,
+    generateAudioForWord,
+    playAudio,
+  } = useVocabularyActions({ words, setWords });
+  const {
+    selectionMode,
+    selectedIds,
+    story,
+    isGeneratingStory,
+    isStorySidebarOpen,
+    setSelectionMode,
+    setIsStorySidebarOpen,
+    toggleSelection,
+    generateStory,
+    resetStory,
+  } = useStoryMode({ words });
+  const { flippedIds, toggleFlip } = useCardFlip();
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
-
-  useEffect(() => {
-    fetchVocabulary();
-  }, []);
-
-  const fetchVocabulary = async () => {
-    try {
-      const res = await fetch('/api/vocabulary');
-      if (res.ok) {
-        const data = await res.json();
-        // Sort by newest first
-        setWords(data.sort((a: VocabularyWord, b: VocabularyWord) => b.createdAt - a.createdAt));
-      }
-    } catch (err) {
-      console.error('Failed to load vocabulary', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddWord = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWord.trim()) return;
-
-    setAddingStatus('saving');
-
-    try {
-      // 1) Save card first (definition auto-generated server-side if empty)
-      const saveRes = await fetch('/api/vocabulary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          word: newWord,
-          definition: newDefinition,
-        }),
-      });
-
-      if (saveRes.ok) {
-        const created = await saveRes.json();
-        setWords(prev => [created, ...prev]);
-        setNewWord('');
-        setNewDefinition('');
-        setIsAdding(false); // Close form on success
-
-        // 2) Generate image asynchronously (do not block creation)
-        if (created?.id && !created?.imagePath) {
-          void generateImageForWord(created);
-        }
-      } else {
-        throw new Error('Failed to create card');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Failed to create card. Please check your API keys and try again.');
-    } finally {
-      setAddingStatus('idle');
-    }
-  };
-
-  const pollForImage = async (taskId: string): Promise<string> => {
-    return new Promise((resolve) => {
-       const interval = setInterval(async () => {
-          try {
-             const res = await fetch(`/api/ai-depict?taskId=${taskId}`);
-             const data = await res.json();
-             if (data.status === 'completed') {
-                clearInterval(interval);
-                resolve(data.imageUrl);
-             } else if (data.status === 'failed') {
-                clearInterval(interval);
-                resolve('');
-             }
-          } catch {
-             clearInterval(interval);
-             resolve('');
-          }
-       }, 2000);
-    });
-  };
-
-  const playAudio = (path: string) => {
-     try {
-       const audio = new Audio(path);
-       audio.play();
-     } catch (e) {
-        console.error("Failed to play audio", e);
-     }
-  };
-
-  const setGeneratingState = (id: string, key: 'img' | 'audio', value: boolean) => {
-    setGenerating(prev => ({ ...prev, [id]: { ...(prev[id] || {}), [key]: value } }));
-  };
-
-  const generateImageForWord = async (word: VocabularyWord) => {
-    setGeneratingState(word.id, 'img', true);
-    try {
-      const res = await fetch('/api/ai-depict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: `Create a single-panel, flat illustration that unambiguously shows the meaning of the word "${word.word}" using a human action or clear object interaction. Avoid symbolic or indirect cues (e.g., for "hot" show a person holding a steaming cup and fanning their mouth or a hand near a steaming pan, NOT the sun). For function/abstract words (e.g., "say", "no", "thank you", "sorry") show a clear face-to-face interaction with expressive gestures (speaking mouth for "say", head shake/hand stop for "no", slight bow and thankful gesture for "thank you", apologetic posture for "sorry"). Flashcard-friendly, white background, single focal action, 1–3 contextual props, no text/letters, high contrast, kid-friendly, universal symbols.` })
-      });
-      if (!res.ok) throw new Error('Image task start failed');
-      const data = await res.json();
-      let imagePath = '';
-      if (data.taskId) {
-        const remoteUrl = await pollForImage(data.taskId);
-        if (remoteUrl) {
-          try {
-            const saveRes = await fetch('/api/save-image', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url: remoteUrl })
-            });
-            const saveData = await saveRes.json();
-            imagePath = saveData.url || '';
-          } catch (e) {
-            imagePath = remoteUrl;
-          }
-        }
-      }
-      if (imagePath) {
-        // update DB
-        const putRes = await fetch('/api/vocabulary', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: word.id, imagePath })
-        });
-        if (putRes.ok) {
-          setWords(prev => prev.map(w => w.id === word.id ? { ...w, imagePath } : w));
-        }
-      }
-    } catch (err) {
-      console.error('Generate image failed', err);
-      alert('Failed to generate image');
-    } finally {
-      setGeneratingState(word.id, 'img', false);
-    }
-  };
-
-  const generateAudioForWord = async (word: VocabularyWord) => {
-    setGeneratingState(word.id, 'audio', true);
-    try {
-      const res = await fetch('/api/ai-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: word.word })
-      });
-      if (!res.ok) throw new Error('TTS failed');
-      const data = await res.json();
-      const audioPath = data.url || '';
-      if (audioPath) {
-        const putRes = await fetch('/api/vocabulary', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: word.id, audioPath })
-        });
-        if (putRes.ok) {
-          setWords(prev => prev.map(w => w.id === word.id ? { ...w, audioPath } : w));
-        }
-      }
-    } catch (err) {
-      console.error('Generate audio failed', err);
-      alert('Failed to generate pronunciation');
-    } finally {
-      setGeneratingState(word.id, 'audio', false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this card?')) return;
-    await fetch(`/api/vocabulary?id=${id}`, { method: 'DELETE' });
-    setWords(words.filter(w => w.id !== id));
-  };
-
-  const toggleSelection = (id: string) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
-  const toggleFlip = (id: string) => {
-    setFlippedIds(prev => {
-      const next = new Set(prev);
-      const willFlipToBack = !next.has(id);
-      if (willFlipToBack) {
-        next.add(id);
-        if (flipTimeoutsRef.current[id]) {
-          clearTimeout(flipTimeoutsRef.current[id]!);
-        }
-        flipTimeoutsRef.current[id] = setTimeout(() => {
-          setFlippedIds(current => {
-            const reverted = new Set(current);
-            reverted.delete(id);
-            return reverted;
-          });
-          flipTimeoutsRef.current[id] = null;
-        }, 2000);
-      } else {
-        next.delete(id);
-        if (flipTimeoutsRef.current[id]) {
-          clearTimeout(flipTimeoutsRef.current[id]!);
-          flipTimeoutsRef.current[id] = null;
-        }
-      }
-      return next;
-    });
-  };
-
-  const generateStory = async () => {
-    if (selectedIds.size === 0) return;
-    setIsGeneratingStory(true);
-    setStory(null);
-    try {
-       const selectedWords = words.filter(w => selectedIds.has(w.id)).map(w => w.word);
-       const res = await fetch('/api/ai-story', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ words: selectedWords })
-       });
-       const data = await res.json();
-       setStory(data.story);
-       setIsStorySidebarOpen(true);
-    } catch (err) {
-       console.error(err);
-       alert('Failed to generate story');
-    } finally {
-       setIsGeneratingStory(false);
-    }
-  };
 
   const availableLanguages = Array.from(
     new Set(words.map(w => w.language).filter(Boolean) as string[])
@@ -322,7 +106,7 @@ export default function VocabularyPage() {
                            Generate Story
                         </button>
                         <button 
-                           onClick={() => { setSelectionMode(false); setSelectedIds(new Set()); setStory(null); }}
+                           onClick={resetStory}
                            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
                         >
                            <X className="w-5 h-5"/>
