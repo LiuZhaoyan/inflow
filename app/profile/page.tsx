@@ -10,15 +10,21 @@ import {
   Pencil,
   X,
   Loader2,
+  ScrollText,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import type { UserProfile } from '@/lib/types/user';
+import type { Story } from '@/lib/types/story';
 import { resolveLanguageLabel, LANGUAGE_OPTIONS } from '@/lib/language';
 
 interface ProfileStats {
   vocabulary: { total: number; byLanguage: Record<string, number> };
   sentences: { total: number; byLanguage: Record<string, number> };
   books: { total: number };
+  stories: { total: number };
 }
 
 export default function ProfilePage() {
@@ -29,15 +35,20 @@ export default function ProfilePage() {
   const [form, setForm] = useState({ username: '', nativeLanguage: 'en', targetLanguage: 'ko' });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [stories, setStories] = useState<Story[]>([]);
+  const [storiesExpanded, setStoriesExpanded] = useState(true);
+  const [expandedStoryId, setExpandedStoryId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch('/api/user').then(r => r.json()),
       fetch('/api/profile/stats').then(r => r.json()),
+      fetch('/api/stories').then(r => r.json()),
     ])
-      .then(([userData, statsData]) => {
+      .then(([userData, statsData, storiesData]) => {
         setProfile(userData.profile);
         setStats(statsData);
+        setStories(storiesData.stories || []);
         if (userData.profile) {
           setForm({
             username: userData.profile.username || '',
@@ -71,6 +82,21 @@ export default function ProfilePage() {
   };
 
   const initials = (profile?.username || '?').slice(0, 2).toUpperCase();
+
+  const handleDeleteStory = async (id: string) => {
+    try {
+      const res = await fetch('/api/stories', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      setStories(prev => prev.filter(s => s.id !== id));
+      if (expandedStoryId === id) setExpandedStoryId(null);
+    } catch (err) {
+      console.error('Failed to delete story:', err);
+    }
+  };
 
   const statCards: {
     key: string;
@@ -111,6 +137,15 @@ export default function ProfilePage() {
           href: '/library',
           color: 'text-amber-600',
           bgColor: 'bg-amber-50',
+        },
+        {
+          key: 'stories',
+          icon: <ScrollText size={22} />,
+          label: 'Stories',
+          total: stats.stories.total,
+          href: '#stories',
+          color: 'text-indigo-600',
+          bgColor: 'bg-indigo-50',
         },
       ]
     : [];
@@ -181,42 +216,129 @@ export default function ProfilePage() {
         </section>
 
         {/* ── Stats Overview ── */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          {statCards.map(card => (
-            <Link
-              key={card.key}
-              href={card.href}
-              className="group bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${card.bgColor} ${card.color} mb-4`}>
-                  {card.icon}
+        <section className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+          {statCards.map(card => {
+            const isAnchor = card.href.startsWith('#');
+            const CardWrapper = isAnchor ? 'a' : Link;
+            return (
+              <CardWrapper
+                key={card.key}
+                href={card.href}
+                className="group bg-white border border-gray-100 rounded-2xl p-5 hover:shadow-lg hover:border-blue-100 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${card.bgColor} ${card.color} mb-4`}>
+                    {card.icon}
+                  </div>
+
+                  <p className="text-sm font-medium text-gray-500 mb-1">{card.label}</p>
+                  <p className="text-3xl font-extrabold text-gray-900">{card.total}</p>
+
+                  {card.byLanguage && Object.keys(card.byLanguage).length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {Object.entries(card.byLanguage)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([lang, count]) => (
+                          <span
+                            key={lang}
+                            className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600"
+                          >
+                            {resolveLanguageLabel(lang as any)} {count}
+                          </span>
+                        ))}
+                    </div>
+                  )}
                 </div>
 
-                <p className="text-sm font-medium text-gray-500 mb-1">{card.label}</p>
-                <p className="text-3xl font-extrabold text-gray-900">{card.total}</p>
+                <div className="mt-4 flex items-center text-sm font-semibold text-blue-600 gap-1 group-hover:gap-2 transition-all">
+                  View <ArrowRight size={14} />
+                </div>
+              </CardWrapper>
+            );
+          })}
+        </section>
 
-                {card.byLanguage && Object.keys(card.byLanguage).length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {Object.entries(card.byLanguage)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([lang, count]) => (
-                        <span
-                          key={lang}
-                          className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600"
-                        >
-                          {resolveLanguageLabel(lang as any)} {count}
-                        </span>
-                      ))}
+        {/* ── Stories Section ── */}
+        <section id="stories" className="bg-white border border-gray-100 rounded-2xl p-6 mb-8">
+          <button
+            onClick={() => setStoriesExpanded(prev => !prev)}
+            className="w-full flex items-center justify-between"
+          >
+            <h3 className="text-sm font-semibold uppercase text-gray-400 tracking-wider flex items-center gap-2">
+              <ScrollText size={16} className="text-indigo-500" />
+              Your Stories
+              {stories.length > 0 && (
+                <span className="text-xs bg-indigo-100 text-indigo-600 rounded-full px-2 py-0.5 font-semibold normal-case">
+                  {stories.length}
+                </span>
+              )}
+            </h3>
+            {storiesExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+          </button>
+
+          {storiesExpanded && (
+            <div className="mt-4 space-y-3">
+              {stories.length === 0 ? (
+                <p className="text-sm text-gray-400 py-4 text-center">
+                  No stories yet. Go to{' '}
+                  <Link href="/vocabulary" className="text-blue-600 hover:underline">Vocabulary</Link>{' '}
+                  to generate your first story.
+                </p>
+              ) : (
+                stories.map(s => (
+                  <div key={s.id} className="group border border-gray-100 rounded-xl p-4 hover:border-indigo-200 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onClick={() => setExpandedStoryId(prev => prev === s.id ? null : s.id)}
+                      >
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-xs text-gray-400">
+                            {new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          {s.language && (
+                            <span className="text-[10px] font-medium bg-gray-100 text-gray-600 rounded-full px-1.5 py-0.5">
+                              {resolveLanguageLabel(s.language as any)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {s.words.map((w, i) => (
+                            <span key={i} className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                              {w}
+                            </span>
+                          ))}
+                        </div>
+                        {expandedStoryId === s.id ? (
+                          <div
+                            className="prose prose-sm prose-indigo max-w-none text-gray-700 leading-relaxed mt-2"
+                            dangerouslySetInnerHTML={{
+                              __html: s.content.replace(
+                                /\*\*(.*?)\*\*/g,
+                                '<span class="text-indigo-700 bg-indigo-100 px-1 py-0.5 rounded font-bold">$1</span>'
+                              ),
+                            }}
+                          />
+                        ) : (
+                          <p className="text-sm text-gray-500 line-clamp-2">
+                            {s.content.replace(/\*\*/g, '').slice(0, 150)}
+                            {s.content.length > 150 ? '…' : ''}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteStory(s.id)}
+                        className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        title="Delete story"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              <div className="mt-4 flex items-center text-sm font-semibold text-blue-600 gap-1 group-hover:gap-2 transition-all">
-                View <ArrowRight size={14} />
-              </div>
-            </Link>
-          ))}
+                ))
+              )}
+            </div>
+          )}
         </section>
 
         {/* ── Quick Links ── */}

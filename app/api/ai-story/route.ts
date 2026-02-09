@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { detectLanguageHint, resolveLanguageLabel, normalizeLanguageCode } from '@/lib/language';
+import { addStory } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
 
     const userPrompt = `Write a short story strictly in ${langLabel} using these words: ${wordsString}.
   Highlight the used words by wrapping them in **bold** (markdown).
-  Keep the story short, engaging, and entirely in ${langLabel}.`;
+  Keep the story simple, engaging, and entirely in ${langLabel}.`;
 
     const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -35,7 +36,13 @@ export async function POST(request: Request) {
       maxTokens: 1000 // Allow enough length for a story
     });
 
-    return NextResponse.json({ story });
+    const saved = await addStory({
+      content: story || '',
+      words,
+      language: langCode === 'auto' ? undefined : langCode,
+    });
+
+    return NextResponse.json({ story, saved });
 
   } catch (error: any) {
     console.error('Story Generation Error:', error);

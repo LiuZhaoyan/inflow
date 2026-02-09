@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getVocabulary, getBooks, getProgress } from '@/lib/db';
+import { getVocabulary, getBooks, getProgress, getStories } from '@/lib/db';
 
 export async function GET() {
   try {
-    const [vocabulary, books, progress] = await Promise.all([
+    const [vocabulary, books, progress, stories] = await Promise.all([
       getVocabulary(),
       getBooks(),
       getProgress(),
+      getStories(),
     ]);
 
     const vocabByLanguage: Record<string, number> = {};
@@ -32,6 +33,9 @@ export async function GET() {
       },
       books: {
         total: books.length,
+      },
+      stories: {
+        total: stories.length,
       },
     });
   } catch (error) {

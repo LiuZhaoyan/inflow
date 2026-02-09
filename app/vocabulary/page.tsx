@@ -34,6 +34,7 @@ export default function VocabularyPage() {
     selectionMode,
     selectedIds,
     story,
+    stories,
     isGeneratingStory,
     isStorySidebarOpen,
     setSelectionMode,
@@ -41,6 +42,8 @@ export default function VocabularyPage() {
     toggleSelection,
     generateStory,
     resetStory,
+    selectStory,
+    deleteStory,
   } = useStoryMode({ words });
   const { flippedIds, toggleFlip } = useCardFlip();
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
@@ -102,9 +105,12 @@ export default function VocabularyPage() {
              <StorySidebar
                isOpen={isStorySidebarOpen}
                story={story}
+               stories={stories}
                isGeneratingStory={isGeneratingStory}
                onToggle={() => setIsStorySidebarOpen(prev => !prev)}
                onClose={() => setIsStorySidebarOpen(false)}
+               onSelectStory={selectStory}
+               onDeleteStory={deleteStory}
              />
 
              <WordGrid
