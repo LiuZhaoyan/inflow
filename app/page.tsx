@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BookOpen, Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
+import Header from '@/components/Header';
 import { LANGUAGE_OPTIONS } from '@/lib/language';
 import type { UserProfile } from '@/lib/types/user';
 
@@ -156,19 +157,7 @@ export default function Home() {
         </div>
       )}
       
-      {/* 1. Header: 极其简单，只保留 Logo */}
-      <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
-          <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900">
-            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
-            Inflow
-          </div>
-          <nav className="text-sm text-gray-500 font-medium">
-            {/* 这里预留位置，暂时不放复杂菜单 */}
-            <span>Beta v0.1</span>
-          </nav>
-        </div>
-      </header>
+      <Header homeLink={false} />
 
       <main className="w-full px-6 lg:px-12 pb-20">
         <section className="pt-16 md:pt-24 pb-12">

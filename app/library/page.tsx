@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Brain, ArrowRight, BarChart } from "lucide-react";
 import { getBooks } from "@/lib/db";
+import Header from "@/components/Header";
 import BooksManager from "@/components/user/BooksManager";
 
 export default async function UserPage() {
@@ -8,20 +9,7 @@ export default async function UserPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans selection:bg-blue-100">
-      <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
-        <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 font-bold text-xl tracking-tight text-blue-900 hover:text-blue-700 transition-colors"
-          >
-            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
-            Inflow
-          </Link>
-          <nav className="text-sm text-gray-500 font-medium">
-            <span>Beta v0.1</span>
-          </nav>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-5xl mx-auto px-6 pb-20">
         <section className="py-10">

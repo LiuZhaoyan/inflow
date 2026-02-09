@@ -8,8 +8,7 @@ import useCardFlip from '@/hooks/vocabulary/useCardFlip';
 import AddWordForm from '@/components/vocabulary/AddWordForm';
 import LanguageFilterRail from '@/components/vocabulary/LanguageFilterRail';
 import StorySidebar from '@/components/vocabulary/StorySidebar';
-import VocabularyHeader from '@/components/vocabulary/VocabularyHeader';
-import VocabularyLayout from '@/components/vocabulary/VocabularyLayout';
+import Header from '@/components/Header';
 import VocabularyTitle from '@/components/vocabulary/VocabularyTitle';
 import VocabularyToolbar from '@/components/vocabulary/VocabularyToolbar';
 import WordGrid from '@/components/vocabulary/WordGrid';
@@ -55,8 +54,8 @@ export default function VocabularyPage() {
     : words.filter(w => w.language === selectedLanguage);
 
   return (
-    <VocabularyLayout>
-      <VocabularyHeader />
+    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
+      <Header />
 
       <main className="w-full px-6 lg:px-12 pb-20 pt-10">
          
@@ -119,6 +118,6 @@ export default function VocabularyPage() {
              />
          </div>
       </main>
-    </VocabularyLayout>
+    </div>
   );
 }
