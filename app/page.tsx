@@ -157,7 +157,7 @@ export default function Home() {
         </div>
       )}
       
-      <Header homeLink={false} />
+      <Header homeLink={false} showProfile={false} />
 
       <main className="w-full px-6 lg:px-12 pb-20">
         <section className="pt-16 md:pt-24 pb-12">

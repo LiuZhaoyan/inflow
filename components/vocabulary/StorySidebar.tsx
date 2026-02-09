@@ -1,4 +1,5 @@
-import { Loader2, Wand2, X } from 'lucide-react';
+import { Loader2, Wand2, X, GripHorizontal } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
 
 interface StorySidebarProps {
   isOpen: boolean;
@@ -15,6 +16,37 @@ export default function StorySidebar({
   onToggle,
   onClose,
 }: StorySidebarProps) {
+  const [height, setHeight] = useState(200);
+  const isDragging = useRef(false);
+  const startY = useRef(0);
+  const startHeight = useRef(0);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isDragging.current = true;
+    startY.current = e.clientY;
+    startHeight.current = height;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = startY.current - e.clientY;
+      const newHeight = Math.max(90, Math.min(window.innerHeight - 100, startHeight.current + delta));
+      setHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [height]);
+
   return (
     <>
       <button
@@ -29,43 +61,53 @@ export default function StorySidebar({
       </button>
 
       <aside
-        className={`fixed right-0 top-24 z-40 bg-white border-l border-gray-200 shadow-lg rounded-l-2xl p-4 sm:w-[290px] w-[80vw] h-[calc(100vh-7rem)] overflow-y-auto transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed inset-x-0 bottom-0 z-40 bg-white border-t border-gray-200 shadow-lg rounded-t-2xl m-0 overflow-hidden transition-transform duration-300 ${
+          isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
+        style={{ height }}
         aria-hidden={!isOpen}
       >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 font-semibold text-indigo-900">
-            <Wand2 className="text-indigo-600" size={18} />
-            Generated Story
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-700 rounded-lg p-1"
-            title="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center hover:bg-gray-100 transition-colors"
+        >
+          <GripHorizontal className="w-5 h-5 text-gray-400" />
         </div>
 
-        {isGeneratingStory ? (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Generating...
+        <div className="px-6 pt-5 pb-4 h-full overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 font-semibold text-indigo-900">
+              Generated Story
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-700 rounded-lg p-1"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        ) : story ? (
-          <div
-            className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
-            dangerouslySetInnerHTML={{
-              __html: story.replace(
-                /\*\*(.*?)\*\*/g,
-                '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>'
-              ),
-            }}
-          />
-        ) : (
-          <div className="text-sm text-gray-500">No story yet. Select words and click Generate Story.</div>
-        )}
+
+          {isGeneratingStory ? (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Generating...
+            </div>
+          ) : story ? (
+            <div
+              className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
+              dangerouslySetInnerHTML={{
+                __html: story.replace(
+                  /\*\*(.*?)\*\*/g,
+                  '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>'
+                ),
+              }}
+            />
+          ) : (
+            <div className="text-sm text-gray-500">No story yet. Select words and click Generate Story.</div>
+          )}
+        </div>
       </aside>
     </>
   );

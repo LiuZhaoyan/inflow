@@ -57,7 +57,7 @@ export default function VocabularyPage() {
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
       <Header />
 
-      <main className="w-full px-6 lg:px-12 pb-20 pt-10">
+      <main className="w-full px-6 lg:px-12 pb-20">
          
          {/* Title Section */}
          <div className="mb-8 max-w-4xl mx-auto">
