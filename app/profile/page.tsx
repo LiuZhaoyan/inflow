@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   BookOpen,
   MessageCircle,
-  Library,
   ArrowRight,
   Pencil,
   X,
@@ -128,15 +127,6 @@ export default function ProfilePage() {
           href: '/learn',
           color: 'text-emerald-600',
           bgColor: 'bg-emerald-50',
-        },
-        {
-          key: 'books',
-          icon: <Library size={22} />,
-          label: 'Books',
-          total: stats.books.total,
-          href: '/library',
-          color: 'text-amber-600',
-          bgColor: 'bg-amber-50',
         },
         {
           key: 'stories',

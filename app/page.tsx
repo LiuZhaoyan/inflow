@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { BookOpen, Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
+import { Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { LANGUAGE_OPTIONS } from '@/lib/language';
 import type { UserProfile } from '@/lib/types/user';
@@ -160,10 +160,9 @@ export default function Home() {
       <Header homeLink={false} showProfile={false} />
 
       <main className="w-full px-6 lg:px-12 pb-20">
-        <section className="pt-16 md:pt-24 pb-12">
+        <section className="pb-12">
           <div className="mx-auto max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-600">Inflow AI Studio</p>
               <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 mt-4 mb-6 leading-tight">
                 Acquire language, <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
@@ -171,8 +170,8 @@ export default function Home() {
                 </span>
               </h1>
               <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
-                Immerse yourself in your personal library, then sharpen every sentence with your AI tutor. Inflow keeps
-                input, feedback, and vocabulary in one continuous learning loop.
+                Immerse yourself in rich input, then sharpen every sentence with your AI tutor. Inflow keeps input,
+                feedback, and vocabulary in one continuous learning loop.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
@@ -181,13 +180,6 @@ export default function Home() {
                 >
                   Start AI Tutor
                   <MessageCircle size={20} />
-                </Link>
-                <Link
-                  href="/library"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-300 shadow-sm text-lg"
-                >
-                  Open your library
-                  <BookOpen size={20} />
                 </Link>
               </div>
               <div className="mt-5">
@@ -230,33 +222,6 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-6 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full bg-blue-600/10 flex items-center justify-center">
-                    <BookOpen className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Library</h3>
-                    <p className="text-sm text-gray-600">Curate stories and track what you read.</p>
-                  </div>
-                </div>
-                <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                    Organize input by level and topic.
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-                    Jump into any story with instant translations.
-                  </li>
-                </ul>
-                <Link
-                  href="/library"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-800"
-                >
-                  Visit your library <ArrowRight size={16} />
-                </Link>
-              </div>
             </div>
           </div>
         </section>
@@ -266,20 +231,7 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-gray-900">Your learning loop</h2>
             <p className="text-sm text-gray-500">Build input, practice daily, retain vocabulary.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Link
-              href="/library"
-              className="group flex flex-col p-6 rounded-2xl bg-white border border-blue-200 hover:border-blue-300 hover:shadow-lg transition-all duration-300"
-            >
-              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <BookOpen className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Reading Library</h3>
-                <p className="text-sm text-gray-500">Collect stories and reading goals.</p>
-              </div>
-            </Link>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link
               href="/learn"
               className="group flex flex-col p-6 rounded-2xl bg-white border border-indigo-200 hover:border-indigo-300 hover:shadow-lg transition-all duration-300"
