@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateTTS, fetchAudioBuffer } from '@/lib/ttsService';
+import { generateTTS, fetchAudioUrl } from '@/lib/ttsService';
 
 export async function POST(request: Request) {
   try {
@@ -13,19 +13,12 @@ export async function POST(request: Request) {
       : 'mp3';
 
     if (stream) {
-      const { buffer, ext } = await fetchAudioBuffer(text, {
-          voiceId,
-          format,
-          speed: 0.9
+      const url = await fetchAudioUrl(text, {
+        voiceId,
+        format,
+        speed: 0.9
       });
-      // Simple mime type mapping
-      const mimeType = ext === '.mp3' ? 'audio/mpeg' : 
-                       ext === '.wav' ? 'audio/wav' : 
-                       ext === '.flac' ? 'audio/flac' : 'application/octet-stream';
-
-      return new Response(Buffer.from(buffer), {
-        headers: { 'Content-Type': mimeType }
-      });
+      return NextResponse.json({ url });
     }
 
     try {

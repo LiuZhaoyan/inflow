@@ -39,6 +39,15 @@ export async function addStory(
   return newStory;
 }
 
+async function safeUnlink(filePath: string) {
+  try {
+    await fs.unlink(filePath);
+  } catch (err: any) {
+    if (err?.code === 'ENOENT') return;
+    throw err;
+  }
+}
+
 export async function getStoryById(id: string): Promise<Story | undefined> {
   const stories = await getStories();
   return stories.find(s => s.id === id);
@@ -46,6 +55,33 @@ export async function getStoryById(id: string): Promise<Story | undefined> {
 
 export async function deleteStory(id: string): Promise<void> {
   const stories = await getStories();
+  const existing = stories.find(s => s.id === id);
+  if (existing?.audioPath) {
+    const rel = existing.audioPath.startsWith('/') ? existing.audioPath.slice(1) : existing.audioPath;
+    if (rel.startsWith('uploads/')) {
+      const full = path.join(process.cwd(), 'public', rel);
+      await safeUnlink(full);
+    }
+  }
   const filtered = stories.filter(s => s.id !== id);
   await fs.writeFile(STORIES_PATH, JSON.stringify(filtered, null, 2), 'utf-8');
+}
+
+export async function updateStory(id: string, updates: Partial<Story>): Promise<Story | null> {
+  const stories = await getStories();
+  const index = stories.findIndex(s => s.id === id);
+  if (index === -1) return null;
+
+  const prev = stories[index];
+  if (updates.audioPath && prev.audioPath && updates.audioPath !== prev.audioPath) {
+    const rel = prev.audioPath.startsWith('/') ? prev.audioPath.slice(1) : prev.audioPath;
+    if (rel.startsWith('uploads/')) {
+      const full = path.join(process.cwd(), 'public', rel);
+      await safeUnlink(full);
+    }
+  }
+
+  stories[index] = { ...prev, ...updates };
+  await fs.writeFile(STORIES_PATH, JSON.stringify(stories, null, 2), 'utf-8');
+  return stories[index];
 }

@@ -12,6 +12,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [story, setStory] = useState<string | null>(null);
+  const [translation, setTranslation] = useState<string | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
   const [activeStoryId, setActiveStoryId] = useState<string | null>(null);
   const [isGeneratingStory, setIsGeneratingStory] = useState(false);
@@ -38,6 +39,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
     setSelectionMode(false);
     setSelectedIds(new Set());
     setStory(null);
+    setTranslation(null);
     setActiveStoryId(null);
   };
 
@@ -45,6 +47,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
     if (selectedIds.size === 0) return;
     setIsGeneratingStory(true);
     setStory(null);
+    setTranslation(null);
     try {
       const selectedWords = words.filter(w => selectedIds.has(w.id)).map(w => w.word);
       const res = await fetch('/api/ai-story', {
@@ -54,6 +57,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
       });
       const data = await res.json();
       setStory(data.story);
+      setTranslation(data.translation || null);
       if (data.saved) {
         setStories(prev => [data.saved, ...prev]);
         setActiveStoryId(data.saved.id);
@@ -69,6 +73,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
 
   const selectStory = (s: Story) => {
     setStory(s.content);
+    setTranslation(s.translation || null);
     setActiveStoryId(s.id);
     setIsStorySidebarOpen(true);
   };
@@ -91,10 +96,15 @@ export default function useStoryMode({ words }: StoryModeOptions) {
     }
   };
 
+  const updateStoryAudioPath = (id: string, audioPath: string) => {
+    setStories(prev => prev.map(s => (s.id === id ? { ...s, audioPath } : s)));
+  };
+
   return {
     selectionMode,
     selectedIds,
     story,
+    translation,
     stories,
     activeStoryId,
     isGeneratingStory,
@@ -106,5 +116,6 @@ export default function useStoryMode({ words }: StoryModeOptions) {
     resetStory,
     selectStory,
     deleteStory: handleDeleteStory,
+    updateStoryAudioPath,
   };
 }

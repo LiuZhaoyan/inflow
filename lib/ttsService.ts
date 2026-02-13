@@ -98,6 +98,48 @@ export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): 
   return { buffer, ext };
 }
 
+export async function fetchAudioUrl(text: string, options: TTSOptions = {}): Promise<string> {
+  const { voiceId = 'audiobook_female_1', format = 'mp3', speed = 0.8 } = options;
+
+  const api_key = process.env.API_KEY;
+  if (!api_key) {
+    throw new Error('Missing API key for TTS service');
+  }
+
+  const ttsRes = await fetch(process.env.TTS_API_URL || '', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${api_key}`
+    },
+    body: JSON.stringify({
+      text: text,
+      voice_setting: {
+        voice_id: voiceId,
+        speed: speed,
+      },
+    })
+  });
+
+  if (!ttsRes.ok) {
+    const errTxt = await ttsRes.text().catch(() => '');
+    throw new Error(`TTS request failed: ${ttsRes.status} ${errTxt}`);
+  }
+
+  const ct = ttsRes.headers.get('content-type') || '';
+  if (ct.includes('audio')) {
+    throw new Error('TTS response returned audio content without URL');
+  }
+
+  const data: any = await ttsRes.json().catch(() => ({}));
+  const audioUrl: string | undefined = data?.audio_url || data?.url || data?.data?.audio_url;
+  if (!audioUrl) {
+    throw new Error('TTS response did not include audio URL');
+  }
+
+  return audioUrl;
+}
+
 export async function saveAudioFile(buffer: Buffer, ext: string): Promise<string> {
   const timestamp = Date.now();
   const filename = `${timestamp}${ext}`;

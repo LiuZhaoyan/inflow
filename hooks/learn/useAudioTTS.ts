@@ -14,12 +14,15 @@ export default function useAudioTTS() {
             });
             if (!res.ok) throw new Error('TTS failed');
 
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
+            const data = await res.json();
+            const url = data?.url;
+            if (!url) throw new Error('TTS missing url');
             const audio = new Audio(url);
             audio.onended = () => {
                 setPlaying(false);
-                URL.revokeObjectURL(url);
+            };
+            audio.onerror = () => {
+                setPlaying(false);
             };
             await audio.play();
         } catch (error) {

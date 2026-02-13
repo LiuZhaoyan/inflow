@@ -300,15 +300,36 @@ export default function ProfilePage() {
                           ))}
                         </div>
                         {expandedStoryId === s.id ? (
-                          <div
-                            className="prose prose-sm prose-indigo max-w-none text-gray-700 leading-relaxed mt-2"
-                            dangerouslySetInnerHTML={{
-                              __html: s.content.replace(
-                                /\*\*(.*?)\*\*/g,
-                                '<span class="text-indigo-700 bg-indigo-100 px-1 py-0.5 rounded font-bold">$1</span>'
-                              ),
-                            }}
-                          />
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Story</p>
+                              <div
+                                className="prose prose-sm prose-indigo max-w-none text-gray-700 leading-relaxed"
+                                dangerouslySetInnerHTML={{
+                                  __html: s.content.replace(
+                                    /\*\*(.*?)\*\*/g,
+                                    '<span class="text-indigo-700 bg-indigo-100 px-1 py-0.5 rounded font-bold">$1</span>'
+                                  ),
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Translation</p>
+                              {s.translation ? (
+                                <div
+                                  className="prose prose-sm prose-indigo max-w-none text-gray-700 leading-relaxed"
+                                  dangerouslySetInnerHTML={{
+                                    __html: s.translation.replace(
+                                      /\*\*(.*?)\*\*/g,
+                                      '<span class="text-indigo-700 bg-indigo-100 px-1 py-0.5 rounded font-bold">$1</span>'
+                                    ),
+                                  }}
+                                />
+                              ) : (
+                                <p className="text-xs text-gray-400">No translation yet.</p>
+                              )}
+                            </div>
+                          </div>
                         ) : (
                           <p className="text-sm text-gray-500 line-clamp-2">
                             {s.content.replace(/\*\*/g, '').slice(0, 150)}

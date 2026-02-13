@@ -1,4 +1,4 @@
-import { Loader2, Wand2, X, GripHorizontal, Trash2, Clock } from 'lucide-react';
+import { Loader2, Wand2, X, GripHorizontal, Trash2, Clock, Volume2 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
 import { resolveLanguageLabel } from '@/lib/language';
 import type { Story } from '@/lib/types/story';
@@ -6,29 +6,82 @@ import type { Story } from '@/lib/types/story';
 interface StorySidebarProps {
   isOpen: boolean;
   story: string | null;
+  translation: string | null;
   stories: Story[];
+  activeStoryId: string | null;
   isGeneratingStory: boolean;
   onToggle: () => void;
   onClose: () => void;
   onSelectStory: (story: Story) => void;
   onDeleteStory: (id: string) => void;
+  onUpdateStoryAudio?: (id: string, audioPath: string) => void;
 }
 
 export default function StorySidebar({
   isOpen,
   story,
+  translation,
   stories,
+  activeStoryId,
   isGeneratingStory,
   onToggle,
   onClose,
   onSelectStory,
   onDeleteStory,
+  onUpdateStoryAudio,
 }: StorySidebarProps) {
   const [height, setHeight] = useState(280);
   const [tab, setTab] = useState<'current' | 'history'>('current');
+  const [playing, setPlaying] = useState(false);
   const isDragging = useRef(false);
   const startY = useRef(0);
   const startHeight = useRef(0);
+
+  const activeStory = activeStoryId
+    ? stories.find(s => s.id === activeStoryId)
+    : (story ? stories.find(s => s.content === story) : undefined);
+
+  const handlePlayStoryAudio = useCallback(async () => {
+    if (playing || !story) return;
+    const storyText = story.replace(/\*\*/g, '').trim();
+    if (!storyText) return;
+    const storyId = activeStory?.id;
+    if (!storyId) return;
+
+    let url = activeStory?.audioPath;
+    setPlaying(true);
+    try {
+      if (!url) {
+        const res = await fetch('/api/ai-tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: storyText, stream: false })
+        });
+        if (!res.ok) throw new Error('TTS failed');
+        const data = await res.json();
+        url = data.url || '';
+        if (url) {
+          const putRes = await fetch('/api/stories', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: storyId, audioPath: url })
+          });
+          if (putRes.ok) {
+            onUpdateStoryAudio?.(storyId, url);
+          }
+        }
+      }
+
+      if (!url) throw new Error('Missing audio url');
+      const audio = new Audio(url);
+      audio.onended = () => setPlaying(false);
+      audio.onerror = () => setPlaying(false);
+      await audio.play();
+    } catch (err) {
+      console.error('Play story audio failed', err);
+      setPlaying(false);
+    }
+  }, [activeStory?.audioPath, activeStory?.id, onUpdateStoryAudio, playing, story]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isDragging.current = true;
@@ -113,6 +166,14 @@ export default function StorySidebar({
                   </span>
                 )}
               </button>
+              <button
+                onClick={handlePlayStoryAudio}
+                disabled={!story || isGeneratingStory || !activeStory?.id}
+                className={`p-2 rounded-full hover:bg-blue-100/50 text-blue-600 transition-all ${playing ? 'animate-pulse opacity-50' : 'opacity-80 hover:opacity-100'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                title="Play story audio"
+              >
+                <Volume2 size={18} />
+              </button>
             </div>
             <button
               onClick={onClose}
@@ -131,15 +192,36 @@ export default function StorySidebar({
                   Generating...
                 </div>
               ) : story ? (
-                <div
-                  className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
-                  dangerouslySetInnerHTML={{
-                    __html: story.replace(
-                      /\*\*(.*?)\*\*/g,
-                      '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>'
-                    ),
-                  }}
-                />
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Story</p>
+                    <div
+                      className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
+                      dangerouslySetInnerHTML={{
+                        __html: story.replace(
+                          /\*\*(.*?)\*\*/g,
+                          '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>'
+                        ),
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-2">Translation</p>
+                    {translation ? (
+                      <div
+                        className="prose prose-indigo max-w-none text-gray-800 leading-relaxed font-medium"
+                        dangerouslySetInnerHTML={{
+                          __html: translation.replace(
+                            /\*\*(.*?)\*\*/g,
+                            '<span class="text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded font-bold mx-0.5 shadow-sm border border-indigo-200">$1</span>'
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <div className="text-sm text-gray-500">No translation yet.</div>
+                    )}
+                  </div>
+                </div>
               ) : (
                 <div className="text-sm text-gray-500">No story yet. Select words and click Generate Story.</div>
               )}
