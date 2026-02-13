@@ -136,14 +136,14 @@ export default function LearnPage() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 h-full">
                 {/* Header */}
-                <header className="bg-white border-b border-gray-200 px-6 py-3 sticky top-0 z-10 flex-shrink-0">
-                    <div className="max-w-3xl mx-auto flex items-center justify-between w-full">
+                <header className="sticky top-0 z-10 flex-shrink-0 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
+                    <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
                         <Link href="/" className="text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-colors">
                             <ArrowLeft size={20} />
                             <span className="font-medium">Back</span>
                         </Link>
-                        <h1 className="text-lg font-bold text-gray-900">AI Tutor</h1>
-                        <div className="flex items-center gap-2">
+                        <h1 className="text-lg font-bold text-blue-700">AI Tutor</h1>
+                        <div className="flex items-center gap-3">
                             <DifficultyIndicator
                                 level={difficultyLevel}
                                 direction={difficultyDirection}
@@ -179,8 +179,8 @@ export default function LearnPage() {
                 />
 
                 {/* Control Area */}
-                <div className="bg-white border-t border-gray-200 p-4 pb-8 flex-shrink-0 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
-                    <div className="max-w-3xl mx-auto flex flex-col gap-4">
+                <div className="bg-white border-t border-gray-100 flex-shrink-0 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+                    <div className="mx-auto w-full px-6 lg:px-12 py-4 flex flex-col gap-4 max-w-6xl">
                         {/* Current Sentence Display Area */}
                         <CurrentSentenceCard
                             currentSentence={currentSentence}

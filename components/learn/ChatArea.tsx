@@ -19,8 +19,8 @@ export default function ChatArea({
     messagesEndRef,
 }: ChatAreaProps) {
     return (
-        <main className="flex-1 overflow-y-auto p-4 scroll-smooth">
-            <div className="max-w-3xl mx-auto space-y-6 pb-4">
+        <main className="flex-1 overflow-y-auto px-6 py-4 scroll-smooth">
+            <div className="max-w-5xl mx-auto space-y-6 pb-4">
                 {(messages.length === 0 && !loading) && (
                     <div className="flex flex-col items-center justify-center py-10 space-y-6">
                         <div className="text-center space-y-2">

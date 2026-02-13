@@ -56,7 +56,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
       >
         {/* Toggle & Header */}
         <div className={`flex items-center flex-shrink-0 mb-4 ${isOpen ? 'justify-between px-4' : 'justify-center'}`}>
-           {isOpen && <h2 className="font-bold text-gray-800 tracking-tight">Mastered Sentences <span className="text-xs font-normal text-gray-500 ml-2">({sentences.length})</span></h2>}
+           {isOpen && <h2 className="font-bold text-blue-800 tracking-tight">Mastered Sentences <span className="text-xs font-normal text-gray-500 ml-2">({sentences.length})</span></h2>}
            <button 
              onClick={() => setIsOpen(!isOpen)}
              className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-colors"
@@ -68,7 +68,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
 
         {/* Content List */}
         {isOpen && (
-          <div className="flex-1 overflow-y-auto px-4 space-y-3 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar">
             {sentences.length === 0 ? (
                  <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-center p-4 border-2 border-dashed border-gray-100 rounded-xl">
                     <Book size={24} className="mb-2 opacity-50"/>
@@ -80,11 +80,11 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
                     <div
                       key={s.id}
                       onClick={() => onSelect?.(s)}
-                      className="group p-3 bg-gray-50 rounded-xl text-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer"
+                      className="group p-2.5 bg-gray-50 rounded-xl text-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer"
                     >
-                      <div className="flex justify-between items-start gap-2">
-                         <p className="text-gray-800 font-medium leading-relaxed flex-1">{s.content}</p>
-                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div className="flex justify-between items-start gap-1.5">
+                         <p className="text-gray-800 font-medium leading-normal flex-1">{s.content}</p>
+                         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                            <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -109,7 +109,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
                            )}
                          </div>
                       </div>
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-1.5 mt-1">
                             <span className="text-[10px] text-gray-400 font-mono bg-white px-1.5 py-0.5 rounded border border-gray-100">
                                 {new Date(s.masteredAt).toLocaleDateString()}
                             </span>

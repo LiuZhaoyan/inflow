@@ -1,4 +1,5 @@
 import { LANGUAGE_OPTIONS, resolveLanguageLabel, type LanguageCode } from '@/lib/language';
+import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 
 interface LanguageSwitcherProps {
     selectedLanguage: LanguageCode;
@@ -13,8 +14,10 @@ export default function LanguageSwitcher({
     setShowLanguageMenu,
     onSelectLanguage,
 }: LanguageSwitcherProps) {
+    const menuRef = useClickOutsideClose(showLanguageMenu, () => setShowLanguageMenu(false));
+
     return (
-        <div className="min-w-[120px] flex justify-end relative">
+        <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setShowLanguageMenu(prev => !prev)}
                 className="text-xs md:text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full hover:bg-emerald-100 transition-colors"

@@ -2,6 +2,7 @@
 
 import { TrendingDown, TrendingUp, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 import { LEVEL_LABELS } from '@/lib/difficultyEngine';
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -25,6 +26,7 @@ export default function DifficultyIndicator({
     onManualAdjust,
 }: DifficultyIndicatorProps) {
     const [showAdjust, setShowAdjust] = useState(false);
+    const menuRef = useClickOutsideClose(showAdjust, () => setShowAdjust(false));
     const label = LEVEL_LABELS[Math.max(1, Math.min(10, level))] ?? 'Intermediate';
     const colorClass = LEVEL_COLORS[performance] ?? LEVEL_COLORS.learning;
 
@@ -32,7 +34,7 @@ export default function DifficultyIndicator({
     const directionColor = direction === 'increase' ? 'text-green-500' : direction === 'decrease' ? 'text-orange-500' : 'text-gray-400';
 
     return (
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setShowAdjust(prev => !prev)}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${colorClass}`}

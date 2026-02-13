@@ -1,4 +1,5 @@
 import { CONTEXT_OPTIONS } from '@/lib/types/learnTypes';
+import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 
 interface ContextSwitcherProps {
     selectedContext: string | null;
@@ -13,8 +14,10 @@ export default function ContextSwitcher({
     setShowContextMenu,
     onSelectContext,
 }: ContextSwitcherProps) {
+    const menuRef = useClickOutsideClose(showContextMenu, () => setShowContextMenu(false));
+
     return (
-        <div className="min-w-[120px] flex justify-end relative">
+        <div className="relative" ref={menuRef}>
             {selectedContext ? (
                 <button
                     onClick={() => setShowContextMenu(prev => !prev)}
