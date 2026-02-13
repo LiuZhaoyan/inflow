@@ -66,7 +66,7 @@ export default function VocabularyPage() {
       <main className="w-full px-6 lg:px-12 pb-20">
          
          {/* Title Section */}
-         <div className="mb-8 max-w-4xl mx-auto">
+         <div className="mb-4 max-w-4xl mx-auto">
             <div className="flex flex-col">
               <SectionTitle
                 eyebrow="Your space"
@@ -74,19 +74,24 @@ export default function VocabularyPage() {
                 highlight="Flashcards"
                 description="Browse your collection, open a story, or upload fresh input."
               />
-              <VocabularyToolbar
-                selectionMode={selectionMode}
-                selectedCount={selectedIds.size}
-                isGeneratingStory={isGeneratingStory}
-                onGenerateStory={generateStory}
-                onCancelSelection={resetStory}
-                onStartSelection={() => setSelectionMode(true)}
-                onAddWord={() => setIsAdding(true)}
-              />
             </div>
          </div>
 
-         <div className="max-w-4xl mx-auto space-y-8">
+         <div className="sticky top-[var(--header-height)] z-40 bg-[#FDFDFD]/90 backdrop-blur-md">
+           <div className="max-w-4xl mx-auto">
+             <VocabularyToolbar
+               selectionMode={selectionMode}
+               selectedCount={selectedIds.size}
+               isGeneratingStory={isGeneratingStory}
+               onGenerateStory={generateStory}
+               onCancelSelection={resetStory}
+               onStartSelection={() => setSelectionMode(true)}
+               onAddWord={() => setIsAdding(true)}
+             />
+           </div>
+         </div>
+
+         <div className="max-w-4xl mx-auto space-y-8 pt-6">
              
              <AddWordForm
               isOpen={isAdding}
