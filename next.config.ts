@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   // When bundled into `.next/dev/server/chunks`, Turbopack may not emit that worker file,
   // leading to: "Setting up fake worker failed: Cannot find module ... pdf.worker.mjs".
   // Keep these packages external on the server so Node can resolve their real files.
-  serverExternalPackages: ["pdfjs-dist", "pdf-parse"],
+  serverExternalPackages: ["pdfjs-dist", "pdf-parse", "better-sqlite3"],
 };
 
 export default nextConfig;
