@@ -1,151 +1,367 @@
-import fs from 'fs/promises';
-import path from 'path';
+import { and, desc, eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
+import { db } from './connection';
+import { learningProgress, masteredSentences } from './schema';
+import { getUserProfile } from './user';
 import { DEFAULT_PROGRESS, type MasteredSentence, type UserProgress } from '@/lib/types/progress';
 
-const PROGRESS_FILE = path.join(process.cwd(), 'data', 'learn_progress.json');
+const LEGACY_SINGLE_USER_ID = 'single-user';
 
+function toMillis(value: Date | number | null | undefined): number {
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  return Date.now();
+}
+
+function mergeProfile(raw: unknown) {
+  const safeRaw = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    ...DEFAULT_PROGRESS.learningProfile,
+    ...safeRaw,
+  };
+}
+
+function mergeMetrics(raw: unknown) {
+  const safeRaw = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  return {
+    ...DEFAULT_PROGRESS.performanceMetrics,
+    ...safeRaw,
+  };
+}
+
+function mapMasteredSentence(row: typeof masteredSentences.$inferSelect): MasteredSentence {
+  return {
+    id: row.id,
+    content: row.content,
+    translation: row.translation || undefined,
+    masteredAt: toMillis(row.masteredAt),
+    difficultyLevel: row.difficultyLevel ?? 3,
+    audioPath: row.audioPath || undefined,
+    context: row.context || undefined,
+    messageId: row.messageId || undefined,
+    languageCode: row.languageCode || undefined,
+    reviewCount: row.reviewCount ?? 0,
+    lastReviewedAt: row.lastReviewedAt ? toMillis(row.lastReviewedAt) : undefined,
+  };
+}
+
+function buildRecentContext(sentences: MasteredSentence[]) {
+  const recentContext: string[] = [];
+  const seen = new Set<string>();
+
+  for (const sentence of sentences) {
+    const key = `${sentence.languageCode || 'default'}:${sentence.content}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    recentContext.push(key);
+    if (recentContext.length >= 10) break;
+  }
+
+  return recentContext;
+}
+
+async function resolveLanguageCode(languageCode?: string): Promise<string> {
+  if (languageCode && languageCode.trim()) return languageCode.trim();
+  const profile = await getUserProfile();
+  return profile.currentLanguageCode || profile.targetLanguage || DEFAULT_PROGRESS.targetLanguage;
+}
+
+async function ensureProgressRow(userId: string, languageCode: string) {
+  const [existing] = await db
+    .select()
+    .from(learningProgress)
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)))
+    .limit(1);
+
+  if (existing) return existing;
+
+  const now = new Date();
+  const [created] = await db
+    .insert(learningProgress)
+    .values({
+      id: uuidv4(),
+      userId,
+      languageCode,
+      currentDifficultyLevel: DEFAULT_PROGRESS.currentDifficultyLevel,
+      initialDifficultyLevel: DEFAULT_PROGRESS.initialDifficultyLevel,
+      placementCompleted: DEFAULT_PROGRESS.placementCompleted,
+      learningProfile: DEFAULT_PROGRESS.learningProfile,
+      performanceMetrics: DEFAULT_PROGRESS.performanceMetrics,
+      lastUpdated: now,
+    })
+    .returning();
+
+  return created;
+}
 
 export async function initProgressDb() {
-  try {
-    await fs.access(PROGRESS_FILE);
-  } catch {
-    // Ensure data directory exists
-    const dataDir = path.dirname(PROGRESS_FILE);
-    try {
-       await fs.access(dataDir);
-    } catch {
-       await fs.mkdir(dataDir, { recursive: true });
-    }
-    await fs.writeFile(PROGRESS_FILE, JSON.stringify(DEFAULT_PROGRESS, null, 2), 'utf-8');
-  }
+  const profile = await getUserProfile(LEGACY_SINGLE_USER_ID);
+  const languageCode = profile.currentLanguageCode || profile.targetLanguage || DEFAULT_PROGRESS.targetLanguage;
+  await ensureProgressRow(LEGACY_SINGLE_USER_ID, languageCode);
 }
 
-export async function getProgress(): Promise<UserProgress> {
+export async function getProgressByUser(userId: string, languageCode: string): Promise<UserProgress> {
+  const row = await ensureProgressRow(userId, languageCode);
+
+  const sentenceRows = await db
+    .select()
+    .from(masteredSentences)
+    .where(and(eq(masteredSentences.userId, userId), eq(masteredSentences.languageCode, languageCode)))
+    .orderBy(desc(masteredSentences.masteredAt));
+
+  const mastered = sentenceRows.map(mapMasteredSentence);
+
+  return {
+    targetLanguage: languageCode,
+    currentDifficultyLevel: row.currentDifficultyLevel ?? DEFAULT_PROGRESS.currentDifficultyLevel,
+    initialDifficultyLevel: row.initialDifficultyLevel ?? DEFAULT_PROGRESS.initialDifficultyLevel,
+    masteredSentences: mastered,
+    recentContext: buildRecentContext(mastered),
+    performanceMetrics: mergeMetrics(row.performanceMetrics),
+    learningProfile: mergeProfile(row.learningProfile),
+    placementCompleted: Boolean(row.placementCompleted),
+    lastUpdated: toMillis(row.lastUpdated),
+  };
+}
+
+export async function getProgress(languageCode?: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProgress> {
   await initProgressDb();
-  const data = await fs.readFile(PROGRESS_FILE, 'utf-8');
-  try {
-    const parsed = JSON.parse(data);
-    // Migrate old data: fill in new fields with defaults if missing
-    return {
-      ...DEFAULT_PROGRESS,
-      ...parsed,
-      performanceMetrics: {
-        ...DEFAULT_PROGRESS.performanceMetrics,
-        ...(parsed.performanceMetrics || {}),
-      },
-      learningProfile: {
-        ...DEFAULT_PROGRESS.learningProfile,
-        ...(parsed.learningProfile || {}),
-      },
-    };
-  } catch (e) {
-    return DEFAULT_PROGRESS;
-  }
+  const resolvedLanguageCode = await resolveLanguageCode(languageCode);
+  return getProgressByUser(userId, resolvedLanguageCode);
 }
 
-export async function updateProgress(newProgress: Partial<UserProgress>) {
-  const current = await getProgress();
-  const updated = { ...current, ...newProgress };
-  await fs.writeFile(PROGRESS_FILE, JSON.stringify(updated, null, 2), 'utf-8');
+export async function updateProgressByUser(
+  userId: string,
+  languageCode: string,
+  newProgress: Partial<UserProgress>,
+) {
+  const current = await getProgressByUser(userId, languageCode);
+  const now = Date.now();
+  const updated: UserProgress = {
+    ...current,
+    ...newProgress,
+    targetLanguage: languageCode,
+    performanceMetrics: {
+      ...current.performanceMetrics,
+      ...(newProgress.performanceMetrics || {}),
+    },
+    learningProfile: {
+      ...current.learningProfile,
+      ...(newProgress.learningProfile || {}),
+    },
+    masteredSentences: newProgress.masteredSentences ?? current.masteredSentences,
+    recentContext: newProgress.recentContext ?? current.recentContext,
+    lastUpdated: now,
+  };
+
+  await db
+    .update(learningProgress)
+    .set({
+      currentDifficultyLevel: updated.currentDifficultyLevel,
+      initialDifficultyLevel: updated.initialDifficultyLevel,
+      placementCompleted: updated.placementCompleted,
+      learningProfile: updated.learningProfile,
+      performanceMetrics: updated.performanceMetrics,
+      lastUpdated: new Date(updated.lastUpdated),
+    })
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)));
+
   return updated;
 }
 
-export async function saveMasteredSentence(sentence: MasteredSentence) {
-  const progress = await getProgress();
-  
-  // Create a new array if it doesn't exist
-  if (!progress.masteredSentences) progress.masteredSentences = [];
-  if (!progress.recentContext) progress.recentContext = [];
-
-  // Check if sentence already exists
-  const exists = progress.masteredSentences.some(s =>
-    s.content === sentence.content &&
-    s.context === sentence.context &&
-    (s.languageCode || '') === (sentence.languageCode || '')
-  );
-  if (!exists) {
-    progress.masteredSentences.push(sentence);
-  }
-  
-  // Update recent context
-  const recentKey = `${sentence.languageCode || 'default'}:${sentence.content}`;
-  if (!progress.recentContext.includes(recentKey)) {
-    progress.recentContext.push(recentKey);
-    if (progress.recentContext.length > 10) {
-      progress.recentContext.shift();
-    }
-  }
-  
-  await updateProgress(progress);
+export async function updateProgress(
+  newProgress: Partial<UserProgress>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = newProgress.targetLanguage || languageCode || await resolveLanguageCode();
+  return updateProgressByUser(userId, resolvedLanguageCode, newProgress);
 }
 
-export async function deleteMasteredSentence(id: string) {
-  const progress = await getProgress();
-  const existing = progress.masteredSentences || [];
-  const toDelete = existing.find(s => s.id === id);
+export async function saveMasteredSentenceByUser(
+  userId: string,
+  sentence: MasteredSentence,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = languageCode || sentence.languageCode || await resolveLanguageCode();
+  await ensureProgressRow(userId, resolvedLanguageCode);
 
-  progress.masteredSentences = existing.filter(s => s.id !== id);
+  const [exists] = await db
+    .select({ id: masteredSentences.id })
+    .from(masteredSentences)
+    .where(
+      and(
+        eq(masteredSentences.userId, userId),
+        eq(masteredSentences.content, sentence.content),
+        eq(masteredSentences.context, sentence.context || null),
+        eq(masteredSentences.languageCode, resolvedLanguageCode),
+      ),
+    )
+    .limit(1);
 
-  if (toDelete?.content && progress.recentContext) {
-    const recentKey = `${toDelete.languageCode || 'default'}:${toDelete.content}`;
-    progress.recentContext = progress.recentContext.filter(c => c !== recentKey);
+  if (exists) return;
+
+  await db.insert(masteredSentences).values({
+    id: sentence.id || uuidv4(),
+    userId,
+    content: sentence.content,
+    translation: sentence.translation,
+    context: sentence.context,
+    languageCode: resolvedLanguageCode,
+    difficultyLevel: sentence.difficultyLevel,
+    audioPath: sentence.audioPath,
+    messageId: sentence.messageId,
+    masteredAt: new Date(sentence.masteredAt || Date.now()),
+    reviewCount: sentence.reviewCount || 0,
+    lastReviewedAt: sentence.lastReviewedAt ? new Date(sentence.lastReviewedAt) : null,
+  });
+
+  await db
+    .update(learningProgress)
+    .set({ lastUpdated: new Date() })
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, resolvedLanguageCode)));
+}
+
+export async function saveMasteredSentence(
+  sentence: MasteredSentence,
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  return saveMasteredSentenceByUser(userId, sentence, languageCode);
+}
+
+export async function deleteMasteredSentenceByUser(
+  userId: string,
+  id: string,
+  languageCode?: string,
+) {
+  if (languageCode) {
+    await db
+      .delete(masteredSentences)
+      .where(
+        and(
+          eq(masteredSentences.id, id),
+          eq(masteredSentences.userId, userId),
+          eq(masteredSentences.languageCode, languageCode),
+        ),
+      );
+    await db
+      .update(learningProgress)
+      .set({ lastUpdated: new Date() })
+      .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)));
+    return getProgressByUser(userId, languageCode);
   }
 
-  await updateProgress(progress);
-  return progress;
+  const [sentence] = await db
+    .select({ languageCode: masteredSentences.languageCode })
+    .from(masteredSentences)
+    .where(and(eq(masteredSentences.id, id), eq(masteredSentences.userId, userId)))
+    .limit(1);
+
+  if (!sentence?.languageCode) {
+    const resolvedLanguageCode = await resolveLanguageCode();
+    return getProgressByUser(userId, resolvedLanguageCode);
+  }
+
+  await db
+    .delete(masteredSentences)
+    .where(and(eq(masteredSentences.id, id), eq(masteredSentences.userId, userId)));
+
+  await db
+    .update(learningProgress)
+    .set({ lastUpdated: new Date() })
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, sentence.languageCode)));
+
+  return getProgressByUser(userId, sentence.languageCode);
 }
 
-export async function resetProgress() {
-    await fs.writeFile(PROGRESS_FILE, JSON.stringify(DEFAULT_PROGRESS, null, 2), 'utf-8');
-    return DEFAULT_PROGRESS;
+export async function deleteMasteredSentence(
+  id: string,
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  return deleteMasteredSentenceByUser(userId, id, languageCode);
 }
 
-// ── Learning Profile helpers ────────────────────────────────────────────
+export async function resetProgress(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
 
-export async function getLearningProfile() {
-  const progress = await getProgress();
+  await db
+    .delete(masteredSentences)
+    .where(and(eq(masteredSentences.userId, userId), eq(masteredSentences.languageCode, resolvedLanguageCode)));
+
+  await db
+    .update(learningProgress)
+    .set({
+      currentDifficultyLevel: DEFAULT_PROGRESS.currentDifficultyLevel,
+      initialDifficultyLevel: DEFAULT_PROGRESS.initialDifficultyLevel,
+      placementCompleted: DEFAULT_PROGRESS.placementCompleted,
+      learningProfile: DEFAULT_PROGRESS.learningProfile,
+      performanceMetrics: DEFAULT_PROGRESS.performanceMetrics,
+      lastUpdated: new Date(),
+    })
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, resolvedLanguageCode)));
+
+  return getProgressByUser(userId, resolvedLanguageCode);
+}
+
+export async function getLearningProfile(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
+  const progress = await getProgress(languageCode, userId);
   return progress.learningProfile ?? DEFAULT_PROGRESS.learningProfile;
 }
 
-export async function updateLearningProfile(profile: UserProgress['learningProfile']) {
-  const progress = await getProgress();
-  progress.learningProfile = profile;
-  progress.lastUpdated = Date.now();
-  await updateProgress(progress);
-  return profile;
+export async function updateLearningProfile(
+  profile: UserProgress['learningProfile'],
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const progress = await updateProgressByUser(userId, resolvedLanguageCode, {
+    learningProfile: profile,
+  });
+  return progress.learningProfile;
 }
 
-export async function getDifficultyLevel(): Promise<number> {
-  const progress = await getProgress();
+export async function getDifficultyLevel(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string): Promise<number> {
+  const progress = await getProgress(languageCode, userId);
   return progress.currentDifficultyLevel ?? DEFAULT_PROGRESS.currentDifficultyLevel;
 }
 
-export async function setDifficultyLevel(level: number) {
-  const progress = await getProgress();
-  progress.currentDifficultyLevel = Math.max(1, Math.min(10, level));
-  progress.lastUpdated = Date.now();
-  await updateProgress(progress);
+export async function setDifficultyLevel(level: number, userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const progress = await updateProgressByUser(userId, resolvedLanguageCode, {
+    currentDifficultyLevel: Math.max(1, Math.min(10, level)),
+  });
   return progress.currentDifficultyLevel;
 }
 
-export async function setPlacementResult(level: number) {
+export async function setPlacementResult(
+  level: number,
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
   const clamped = Math.max(1, Math.min(10, level));
-  const progress = await getProgress();
-  progress.currentDifficultyLevel = clamped;
-  progress.initialDifficultyLevel = clamped;
-  progress.placementCompleted = true;
-  progress.lastUpdated = Date.now();
-  await updateProgress(progress);
-  return progress;
+
+  return updateProgressByUser(userId, resolvedLanguageCode, {
+    currentDifficultyLevel: clamped,
+    initialDifficultyLevel: clamped,
+    placementCompleted: true,
+  });
 }
 
-export async function updatePerformanceMetrics(metrics: Partial<UserProgress['performanceMetrics']>) {
-  const progress = await getProgress();
-  progress.performanceMetrics = {
-    ...(progress.performanceMetrics ?? DEFAULT_PROGRESS.performanceMetrics),
-    ...metrics,
-  };
-  progress.lastUpdated = Date.now();
-  await updateProgress(progress);
-  return progress.performanceMetrics;
+export async function updatePerformanceMetrics(
+  metrics: Partial<UserProgress['performanceMetrics']>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const progress = await getProgressByUser(userId, resolvedLanguageCode);
+  const updated = await updateProgressByUser(userId, resolvedLanguageCode, {
+    performanceMetrics: {
+      ...progress.performanceMetrics,
+      ...metrics,
+    },
+  });
+  return updated.performanceMetrics;
 }

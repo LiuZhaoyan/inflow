@@ -9,6 +9,7 @@ export * from './vocabulary';
 export * from './progress';
 export * from './user';
 export * from './stories';
+export * from './chatHistory';
 
 export async function initializeDatabase() {
   await Promise.all([

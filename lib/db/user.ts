@@ -1,57 +1,174 @@
-import fs from 'fs/promises';
-import path from 'path';
+import { eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
+import { db } from './connection';
+import { users } from './schema';
 import { normalizeLanguageCode } from '@/lib/language';
 import { DEFAULT_USER, type UserProfile } from '@/lib/types/user';
 
-const USER_FILE = path.join(process.cwd(), 'data', 'user_profile.json');
+const LEGACY_SINGLE_USER_ID = DEFAULT_USER.id;
+const LEGACY_SINGLE_USER_EMAIL = 'single-user@local';
 
+type DbUser = typeof users.$inferSelect;
+
+function toMillis(value: Date | number | null | undefined): number {
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  return Date.now();
+}
+
+function sanitizeLanguage(value: string | null | undefined, fallback: string): string {
+  const normalized = normalizeLanguageCode(value || fallback);
+  return normalized === 'auto' ? fallback : normalized;
+}
+
+function mapDbUserToProfile(user: DbUser): UserProfile {
+  const nativeLanguage = sanitizeLanguage(user.nativeLanguage, DEFAULT_USER.nativeLanguage);
+  const targetLanguage = sanitizeLanguage(user.targetLanguage, DEFAULT_USER.targetLanguage);
+  const currentLanguageCode = sanitizeLanguage(
+    user.currentLanguageCode || targetLanguage,
+    targetLanguage,
+  );
+
+  return {
+    id: user.id,
+    username: typeof user.username === 'string' ? user.username.trim() : DEFAULT_USER.username,
+    nativeLanguage,
+    targetLanguage,
+    currentLanguageCode,
+    isOnboarded: Boolean(user.isOnboarded),
+    createdAt: toMillis(user.createdAt),
+    updatedAt: toMillis(user.updatedAt),
+  };
+}
 
 function sanitizeProfile(input: Partial<UserProfile> | null | undefined): UserProfile {
   const now = Date.now();
   const base = input || {};
-  const native = normalizeLanguageCode(base.nativeLanguage || DEFAULT_USER.nativeLanguage);
-  const target = normalizeLanguageCode(base.targetLanguage || DEFAULT_USER.targetLanguage);
-  const currentLanguage = normalizeLanguageCode(base.currentLanguageCode || base.targetLanguage || DEFAULT_USER.currentLanguageCode);
+  const nativeLanguage = sanitizeLanguage(base.nativeLanguage, DEFAULT_USER.nativeLanguage);
+  const targetLanguage = sanitizeLanguage(base.targetLanguage, DEFAULT_USER.targetLanguage);
+  const currentLanguageCode = sanitizeLanguage(
+    base.currentLanguageCode || targetLanguage,
+    targetLanguage,
+  );
 
   return {
-    id: base.id || DEFAULT_USER.id,
+    id: base.id || LEGACY_SINGLE_USER_ID,
     username: typeof base.username === 'string' ? base.username.trim() : DEFAULT_USER.username,
-    nativeLanguage: native === 'auto' ? DEFAULT_USER.nativeLanguage : native,
-    targetLanguage: target === 'auto' ? DEFAULT_USER.targetLanguage : target,
-    currentLanguageCode: currentLanguage === 'auto' ? (target === 'auto' ? DEFAULT_USER.currentLanguageCode : target) : currentLanguage,
+    nativeLanguage,
+    targetLanguage,
+    currentLanguageCode,
     isOnboarded: typeof base.isOnboarded === 'boolean' ? base.isOnboarded : DEFAULT_USER.isOnboarded,
     createdAt: typeof base.createdAt === 'number' ? base.createdAt : now,
     updatedAt: typeof base.updatedAt === 'number' ? base.updatedAt : now,
   };
 }
 
+function profileToDbInsert(profile: UserProfile) {
+  return {
+    id: profile.id,
+    email: LEGACY_SINGLE_USER_EMAIL,
+    passwordHash: '',
+    username: profile.username,
+    nativeLanguage: profile.nativeLanguage,
+    targetLanguage: profile.targetLanguage,
+    currentLanguageCode: profile.currentLanguageCode || profile.targetLanguage,
+    isOnboarded: profile.isOnboarded,
+    createdAt: new Date(profile.createdAt),
+    updatedAt: new Date(profile.updatedAt),
+  };
+}
+
 export async function initUserDb() {
-  try {
-    await fs.access(USER_FILE);
-  } catch {
-    const dataDir = path.dirname(USER_FILE);
-    try {
-      await fs.access(dataDir);
-    } catch {
-      await fs.mkdir(dataDir, { recursive: true });
-    }
-    await fs.writeFile(USER_FILE, JSON.stringify(DEFAULT_USER, null, 2), 'utf-8');
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, LEGACY_SINGLE_USER_ID))
+    .limit(1);
+
+  if (!existing) {
+    const profile = sanitizeProfile(DEFAULT_USER);
+    await db.insert(users).values(profileToDbInsert(profile));
   }
 }
 
-export async function getUserProfile(): Promise<UserProfile> {
+export async function getUserById(userId: string): Promise<UserProfile | null> {
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!existing) return null;
+  return mapDbUserToProfile(existing);
+}
+
+export async function getUserByEmail(email: string) {
+  const trimmedEmail = email.toLowerCase().trim();
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, trimmedEmail))
+    .limit(1);
+
+  return existing || null;
+}
+
+export async function createUser(input: {
+  email: string;
+  password: string;
+  username?: string;
+  nativeLanguage?: string;
+  targetLanguage?: string;
+  currentLanguageCode?: string;
+}) {
+  const now = new Date();
+  const email = input.email.toLowerCase().trim();
+  const targetLanguage = sanitizeLanguage(input.targetLanguage, DEFAULT_USER.targetLanguage);
+  const currentLanguageCode = sanitizeLanguage(
+    input.currentLanguageCode || targetLanguage,
+    targetLanguage,
+  );
+
+  const passwordHash = await bcrypt.hash(input.password, 12);
+
+  const [created] = await db
+    .insert(users)
+    .values({
+      id: uuidv4(),
+      email,
+      passwordHash,
+      username: (input.username || '').trim(),
+      nativeLanguage: sanitizeLanguage(input.nativeLanguage, DEFAULT_USER.nativeLanguage),
+      targetLanguage,
+      currentLanguageCode,
+      isOnboarded: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+
+  return mapDbUserToProfile(created);
+}
+
+export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProfile> {
   await initUserDb();
-  const data = await fs.readFile(USER_FILE, 'utf-8');
-  try {
-    const parsed = JSON.parse(data) as Partial<UserProfile>;
-    return sanitizeProfile(parsed);
-  } catch {
-    return sanitizeProfile(DEFAULT_USER);
+
+  const existing = await getUserById(userId);
+  if (existing) {
+    return sanitizeProfile(existing);
   }
+
+  const fallback = sanitizeProfile({ ...DEFAULT_USER, id: userId });
+  await db.insert(users).values(profileToDbInsert(fallback));
+  return fallback;
 }
 
-export async function updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
-  const current = await getUserProfile();
+export async function updateUserProfile(
+  updates: Partial<UserProfile>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+): Promise<UserProfile> {
+  const current = await getUserProfile(userId);
   const merged = sanitizeProfile({
     ...current,
     ...updates,
@@ -59,6 +176,18 @@ export async function updateUserProfile(updates: Partial<UserProfile>): Promise<
     createdAt: current.createdAt,
     updatedAt: Date.now(),
   });
-  await fs.writeFile(USER_FILE, JSON.stringify(merged, null, 2), 'utf-8');
+
+  await db
+    .update(users)
+    .set({
+      username: merged.username,
+      nativeLanguage: merged.nativeLanguage,
+      targetLanguage: merged.targetLanguage,
+      currentLanguageCode: merged.currentLanguageCode || merged.targetLanguage,
+      isOnboarded: merged.isOnboarded,
+      updatedAt: new Date(merged.updatedAt),
+    })
+    .where(eq(users.id, merged.id));
+
   return merged;
 }

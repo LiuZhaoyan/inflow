@@ -1,61 +1,107 @@
-import fs from 'fs/promises';
+import { and, desc, eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { db } from './connection';
+import { stories } from './schema';
 import type { Story } from '@/lib/types/story';
 
-const STORIES_PATH = path.join(process.cwd(), 'data', 'stories.json');
+const LEGACY_SINGLE_USER_ID = 'single-user';
 
 export async function initStoriesDb() {
-  try {
-    await fs.access(STORIES_PATH);
-  } catch {
-    const dataDir = path.dirname(STORIES_PATH);
-    try {
-      await fs.access(dataDir);
-    } catch {
-      await fs.mkdir(dataDir, { recursive: true });
-    }
-    await fs.writeFile(STORIES_PATH, '[]', 'utf-8');
-  }
+  return;
 }
 
-export async function getStories(): Promise<Story[]> {
+function toMillis(value: Date | number | null | undefined): number {
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  return Date.now();
+}
+
+function mapRowToStory(row: typeof stories.$inferSelect): Story {
+  return {
+    id: row.id,
+    content: row.content,
+    translation: row.translation || undefined,
+    words: Array.isArray(row.words) ? row.words : [],
+    language: row.language || undefined,
+    translationLanguage: row.translationLanguage || undefined,
+    audioPath: row.audioPath || undefined,
+    createdAt: toMillis(row.createdAt),
+  };
+}
+
+export async function getStoriesByUser(userId: string): Promise<Story[]> {
+  const rows = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.userId, userId))
+    .orderBy(desc(stories.createdAt));
+
+  return rows.map(mapRowToStory);
+}
+
+export async function getStories(userId: string = LEGACY_SINGLE_USER_ID): Promise<Story[]> {
   await initStoriesDb();
-  const data = await fs.readFile(STORIES_PATH, 'utf-8');
-  const stories: Story[] = JSON.parse(data);
-  return stories.sort((a, b) => b.createdAt - a.createdAt);
+  return getStoriesByUser(userId);
+}
+
+export async function addStoryByUser(
+  userId: string,
+  story: Omit<Story, 'id' | 'createdAt'>,
+): Promise<Story> {
+  const [created] = await db
+    .insert(stories)
+    .values({
+      id: uuidv4(),
+      userId,
+      content: story.content,
+      translation: story.translation,
+      words: story.words,
+      language: story.language,
+      translationLanguage: story.translationLanguage,
+      audioPath: story.audioPath,
+      createdAt: new Date(),
+    })
+    .returning();
+
+  return mapRowToStory(created);
 }
 
 export async function addStory(
-  story: Omit<Story, 'id' | 'createdAt'>
+  story: Omit<Story, 'id' | 'createdAt'>,
+  userId: string = LEGACY_SINGLE_USER_ID,
 ): Promise<Story> {
-  const stories = await getStories();
-  const newStory: Story = {
-    ...story,
-    id: Date.now().toString(),
-    createdAt: Date.now(),
-  };
-  stories.push(newStory);
-  await fs.writeFile(STORIES_PATH, JSON.stringify(stories, null, 2), 'utf-8');
-  return newStory;
+  return addStoryByUser(userId, story);
 }
 
 async function safeUnlink(filePath: string) {
+  const fs = await import('fs/promises');
   try {
     await fs.unlink(filePath);
-  } catch (err: any) {
-    if (err?.code === 'ENOENT') return;
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return;
     throw err;
   }
 }
 
 export async function getStoryById(id: string): Promise<Story | undefined> {
-  const stories = await getStories();
-  return stories.find(s => s.id === id);
+  const [story] = await db
+    .select()
+    .from(stories)
+    .where(eq(stories.id, id))
+    .limit(1);
+
+  if (!story) return undefined;
+  return mapRowToStory(story);
 }
 
-export async function deleteStory(id: string): Promise<void> {
-  const stories = await getStories();
-  const existing = stories.find(s => s.id === id);
+export async function deleteStoryByUser(userId: string, id: string): Promise<void> {
+  const [existing] = await db
+    .select()
+    .from(stories)
+    .where(and(eq(stories.id, id), eq(stories.userId, userId)))
+    .limit(1);
+
   if (existing?.audioPath) {
     const rel = existing.audioPath.startsWith('/') ? existing.audioPath.slice(1) : existing.audioPath;
     if (rel.startsWith('uploads/')) {
@@ -63,16 +109,29 @@ export async function deleteStory(id: string): Promise<void> {
       await safeUnlink(full);
     }
   }
-  const filtered = stories.filter(s => s.id !== id);
-  await fs.writeFile(STORIES_PATH, JSON.stringify(filtered, null, 2), 'utf-8');
+
+  await db
+    .delete(stories)
+    .where(and(eq(stories.id, id), eq(stories.userId, userId)));
 }
 
-export async function updateStory(id: string, updates: Partial<Story>): Promise<Story | null> {
-  const stories = await getStories();
-  const index = stories.findIndex(s => s.id === id);
-  if (index === -1) return null;
+export async function deleteStory(id: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<void> {
+  return deleteStoryByUser(userId, id);
+}
 
-  const prev = stories[index];
+export async function updateStoryByUser(
+  userId: string,
+  id: string,
+  updates: Partial<Story>,
+): Promise<Story | null> {
+  const [prev] = await db
+    .select()
+    .from(stories)
+    .where(and(eq(stories.id, id), eq(stories.userId, userId)))
+    .limit(1);
+
+  if (!prev) return null;
+
   if (updates.audioPath && prev.audioPath && updates.audioPath !== prev.audioPath) {
     const rel = prev.audioPath.startsWith('/') ? prev.audioPath.slice(1) : prev.audioPath;
     if (rel.startsWith('uploads/')) {
@@ -81,7 +140,26 @@ export async function updateStory(id: string, updates: Partial<Story>): Promise<
     }
   }
 
-  stories[index] = { ...prev, ...updates };
-  await fs.writeFile(STORIES_PATH, JSON.stringify(stories, null, 2), 'utf-8');
-  return stories[index];
+  const [updated] = await db
+    .update(stories)
+    .set({
+      content: updates.content ?? prev.content,
+      translation: updates.translation ?? prev.translation,
+      words: updates.words ?? prev.words,
+      language: updates.language ?? prev.language,
+      translationLanguage: updates.translationLanguage ?? prev.translationLanguage,
+      audioPath: updates.audioPath ?? prev.audioPath,
+    })
+    .where(and(eq(stories.id, id), eq(stories.userId, userId)))
+    .returning();
+
+  return mapRowToStory(updated);
+}
+
+export async function updateStory(
+  id: string,
+  updates: Partial<Story>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+): Promise<Story | null> {
+  return updateStoryByUser(userId, id, updates);
 }

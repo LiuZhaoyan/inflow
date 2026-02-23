@@ -1,88 +1,101 @@
-import fs from 'fs/promises';
+import { and, desc, eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { db } from './connection';
+import { vocabulary } from './schema';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
 
-const VOCAB_PATH = path.join(process.cwd(), 'data', 'vocabulary.json');
+const LEGACY_SINGLE_USER_ID = 'single-user';
 
 export async function initVocabularyDb() {
-  try {
-    await fs.access(VOCAB_PATH);
-  } catch {
-    // If file doesn't exist, try creating it
-    const dataDir = path.dirname(VOCAB_PATH);
-    try {
-        await fs.access(dataDir);
-    } catch {
-        await fs.mkdir(dataDir, { recursive: true });
-    }
-    await fs.writeFile(VOCAB_PATH, '[]', 'utf-8');
-  }
+  return;
 }
 
-export async function getVocabulary(): Promise<VocabularyWord[]> {
-  await initVocabularyDb();
-  const data = await fs.readFile(VOCAB_PATH, 'utf-8');
-  let vocab: VocabularyWord[] = JSON.parse(data);
-
-  // Migration (方案A): backfill missing language based on word/contextSentence
-  const { detectLanguageFromSentences } = await import('../language');
-  let changed = false;
-  vocab = vocab.map((item) => {
-    if (!item.language) {
-      const hint = detectLanguageFromSentences([
-        item.word || '',
-        item.contextSentence || '',
-      ]);
-      const language = hint.code === 'auto' ? undefined : hint.code;
-      if (language) {
-        changed = true;
-        return { ...item, language };
-      }
-    }
-    return item;
-  });
-
-  if (changed) {
-    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-  }
-
-  return vocab;
+function toMillis(value: Date | number | null | undefined): number {
+  if (typeof value === 'number') return value;
+  if (value instanceof Date) return value.getTime();
+  return Date.now();
 }
 
-export async function addWord(word: Omit<VocabularyWord, 'id' | 'createdAt'>): Promise<VocabularyWord> {
-  // Ensure the file exists
-  let vocab: VocabularyWord[] = [];
-  try {
-    vocab = await getVocabulary();
-  } catch (err) {
-    vocab = [];
-  }
-
-  const newWord: VocabularyWord = {
-    ...word,
-    id: Date.now().toString(),
-    createdAt: Date.now(),
+function mapRowToWord(row: typeof vocabulary.$inferSelect): VocabularyWord {
+  return {
+    id: row.id,
+    word: row.word,
+    definition: row.definition,
+    contextSentence: row.contextSentence || undefined,
+    translation: row.translation || undefined,
+    imagePath: row.imagePath || undefined,
+    audioPath: row.audioPath || undefined,
+    language: row.language || undefined,
+    createdAt: toMillis(row.createdAt),
   };
+}
 
-  vocab.push(newWord);
-  await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-  return newWord;
+export async function getVocabularyByUser(userId: string): Promise<VocabularyWord[]> {
+  const rows = await db
+    .select()
+    .from(vocabulary)
+    .where(eq(vocabulary.userId, userId))
+    .orderBy(desc(vocabulary.createdAt));
+
+  return rows.map(mapRowToWord);
+}
+
+export async function getVocabulary(userId: string = LEGACY_SINGLE_USER_ID): Promise<VocabularyWord[]> {
+  await initVocabularyDb();
+  return getVocabularyByUser(userId);
+}
+
+export async function addWordByUser(
+  userId: string,
+  word: Omit<VocabularyWord, 'id' | 'createdAt'>,
+): Promise<VocabularyWord> {
+  const now = new Date();
+  const [created] = await db
+    .insert(vocabulary)
+    .values({
+      id: uuidv4(),
+      userId,
+      word: word.word,
+      definition: word.definition,
+      contextSentence: word.contextSentence,
+      translation: word.translation,
+      imagePath: word.imagePath,
+      audioPath: word.audioPath,
+      language: word.language,
+      createdAt: now,
+    })
+    .returning();
+
+  return mapRowToWord(created);
+}
+
+export async function addWord(
+  word: Omit<VocabularyWord, 'id' | 'createdAt'>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+): Promise<VocabularyWord> {
+  return addWordByUser(userId, word);
 }
 
 async function safeUnlink(filePath: string) {
+  const fs = await import('fs/promises');
   try {
     await fs.unlink(filePath);
-  } catch (err: any) {
+  } catch (err: unknown) {
     // ignore missing file
-    if (err?.code === 'ENOENT') return;
+    if ((err as NodeJS.ErrnoException)?.code === 'ENOENT') return;
     throw err;
   }
 }
 
-export async function deleteWord(id: string): Promise<void> {
+export async function deleteWordByUser(userId: string, id: string): Promise<void> {
     // Also delete any associated media files (image/audio)
-    let vocab = await getVocabulary();
-    const existing = vocab.find(w => w.id === id);
+    const [existing] = await db
+      .select()
+      .from(vocabulary)
+      .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)))
+      .limit(1);
+
     if (existing) {
       // Best-effort cleanup of media files referenced by this word
       const delPaths: Array<string | undefined> = [existing.imagePath, existing.audioPath];
@@ -101,16 +114,27 @@ export async function deleteWord(id: string): Promise<void> {
       }
     }
 
-    vocab = vocab.filter(w => w.id !== id);
-    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
+    await db
+      .delete(vocabulary)
+      .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)));
 }
 
-export async function updateWord(id: string, updates: Partial<VocabularyWord>): Promise<VocabularyWord | null> {
-    let vocab = await getVocabulary();
-    const index = vocab.findIndex(w => w.id === id);
-    if (index === -1) return null;
+export async function deleteWord(id: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<void> {
+  return deleteWordByUser(userId, id);
+}
 
-    const prev = vocab[index];
+export async function updateWordByUser(
+  userId: string,
+  id: string,
+  updates: Partial<VocabularyWord>,
+): Promise<VocabularyWord | null> {
+    const [prev] = await db
+      .select()
+      .from(vocabulary)
+      .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)))
+      .limit(1);
+
+    if (!prev) return null;
 
     // If image/audio path is being updated, remove the old file
     const maybeDeleteOld = async (oldPath?: string, newPath?: string) => {
@@ -125,7 +149,27 @@ export async function updateWord(id: string, updates: Partial<VocabularyWord>): 
     await maybeDeleteOld(prev.imagePath, updates.imagePath);
     await maybeDeleteOld(prev.audioPath, updates.audioPath);
 
-    vocab[index] = { ...prev, ...updates };
-    await fs.writeFile(VOCAB_PATH, JSON.stringify(vocab, null, 2), 'utf-8');
-    return vocab[index];
+    const [updated] = await db
+      .update(vocabulary)
+      .set({
+        word: updates.word ?? prev.word,
+        definition: updates.definition ?? prev.definition,
+        contextSentence: updates.contextSentence ?? prev.contextSentence,
+        translation: updates.translation ?? prev.translation,
+        imagePath: updates.imagePath ?? prev.imagePath,
+        audioPath: updates.audioPath ?? prev.audioPath,
+        language: updates.language ?? prev.language,
+      })
+      .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)))
+      .returning();
+
+    return mapRowToWord(updated);
+}
+
+export async function updateWord(
+  id: string,
+  updates: Partial<VocabularyWord>,
+  userId: string = LEGACY_SINGLE_USER_ID,
+): Promise<VocabularyWord | null> {
+  return updateWordByUser(userId, id, updates);
 }
