@@ -98,7 +98,7 @@ export async function deleteWordByUser(userId: string, id: string): Promise<void
 
     if (existing) {
       // Best-effort cleanup of media files referenced by this word
-      const delPaths: Array<string | undefined> = [existing.imagePath, existing.audioPath];
+      const delPaths: Array<string | null> = [existing.imagePath, existing.audioPath];
       for (const p of delPaths) {
         if (p && typeof p === 'string') {
           try {
@@ -137,7 +137,7 @@ export async function updateWordByUser(
     if (!prev) return null;
 
     // If image/audio path is being updated, remove the old file
-    const maybeDeleteOld = async (oldPath?: string, newPath?: string) => {
+    const maybeDeleteOld = async (oldPath?: string | null, newPath?: string | null) => {
       if (!oldPath || !newPath || oldPath === newPath) return;
       const rel = oldPath.startsWith('/') ? oldPath.slice(1) : oldPath;
       if (rel.startsWith('uploads/')) {

@@ -88,7 +88,10 @@ export async function initUserDb() {
 
   if (!existing) {
     const profile = sanitizeProfile(DEFAULT_USER);
-    await db.insert(users).values(profileToDbInsert(profile));
+    await db
+      .insert(users)
+      .values(profileToDbInsert(profile))
+      .onConflictDoNothing({ target: users.email });
   }
 }
 
@@ -159,8 +162,27 @@ export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Pr
     return sanitizeProfile(existing);
   }
 
+  if (userId === LEGACY_SINGLE_USER_ID) {
+    const existingLegacyUser = await getUserByEmail(LEGACY_SINGLE_USER_EMAIL);
+    if (existingLegacyUser) {
+      return sanitizeProfile(mapDbUserToProfile(existingLegacyUser));
+    }
+  }
+
   const fallback = sanitizeProfile({ ...DEFAULT_USER, id: userId });
-  await db.insert(users).values(profileToDbInsert(fallback));
+  await db
+    .insert(users)
+    .values(profileToDbInsert(fallback))
+    .onConflictDoNothing({ target: users.email });
+
+  const created = await getUserById(userId);
+  if (created) return sanitizeProfile(created);
+
+  const existingLegacyUser = await getUserByEmail(LEGACY_SINGLE_USER_EMAIL);
+  if (existingLegacyUser) {
+    return sanitizeProfile(mapDbUserToProfile(existingLegacyUser));
+  }
+
   return fallback;
 }
 

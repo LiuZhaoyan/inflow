@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './connection';
 import { learningProgress, masteredSentences } from './schema';
@@ -193,7 +193,7 @@ export async function saveMasteredSentenceByUser(
       and(
         eq(masteredSentences.userId, userId),
         eq(masteredSentences.content, sentence.content),
-        eq(masteredSentences.context, sentence.context || null),
+        sentence.context ? eq(masteredSentences.context, sentence.context) : isNull(masteredSentences.context),
         eq(masteredSentences.languageCode, resolvedLanguageCode),
       ),
     )
