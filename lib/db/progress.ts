@@ -60,23 +60,19 @@ function buildRecentContext(sentences: MasteredSentence[]) {
   return recentContext;
 }
 
-async function resolveLanguageCode(languageCode?: string): Promise<string> {
+async function resolveLanguageCode(userId: string, languageCode?: string): Promise<string> {
   if (languageCode && languageCode.trim()) return languageCode.trim();
-  const profile = await getUserProfile();
-  return profile.currentLanguageCode || profile.targetLanguage || DEFAULT_PROGRESS.targetLanguage;
+  const profile = await getUserProfile(userId);
+  return (
+    profile?.currentLanguageCode
+    || profile?.targetLanguage
+    || DEFAULT_PROGRESS.targetLanguage
+  );
 }
 
 async function ensureProgressRow(userId: string, languageCode: string) {
-  const [existing] = await db
-    .select()
-    .from(learningProgress)
-    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)))
-    .limit(1);
-
-  if (existing) return existing;
-
   const now = new Date();
-  const [created] = await db
+  await db
     .insert(learningProgress)
     .values({
       id: uuidv4(),
@@ -89,13 +85,23 @@ async function ensureProgressRow(userId: string, languageCode: string) {
       performanceMetrics: DEFAULT_PROGRESS.performanceMetrics,
       lastUpdated: now,
     })
-    .returning();
+    .onConflictDoNothing({
+      target: [learningProgress.userId, learningProgress.languageCode],
+    });
 
-  return created;
+  const [row] = await db
+    .select()
+    .from(learningProgress)
+    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)))
+    .limit(1);
+
+  if (row) return row;
+
+  throw new Error(`Failed to ensure progress row: ${userId}/${languageCode}`);
 }
 
 export async function initProgressDb() {
-  const profile = await getUserProfile(LEGACY_SINGLE_USER_ID);
+  const profile = await getUserProfile();
   const languageCode = profile.currentLanguageCode || profile.targetLanguage || DEFAULT_PROGRESS.targetLanguage;
   await ensureProgressRow(LEGACY_SINGLE_USER_ID, languageCode);
 }
@@ -126,7 +132,7 @@ export async function getProgressByUser(userId: string, languageCode: string): P
 
 export async function getProgress(languageCode?: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProgress> {
   await initProgressDb();
-  const resolvedLanguageCode = await resolveLanguageCode(languageCode);
+  const resolvedLanguageCode = await resolveLanguageCode(userId, languageCode);
   return getProgressByUser(userId, resolvedLanguageCode);
 }
 
@@ -174,7 +180,10 @@ export async function updateProgress(
   userId: string = LEGACY_SINGLE_USER_ID,
   languageCode?: string,
 ) {
-  const resolvedLanguageCode = newProgress.targetLanguage || languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode =
+    newProgress.targetLanguage
+    || languageCode
+    || await resolveLanguageCode(userId);
   return updateProgressByUser(userId, resolvedLanguageCode, newProgress);
 }
 
@@ -183,7 +192,10 @@ export async function saveMasteredSentenceByUser(
   sentence: MasteredSentence,
   languageCode?: string,
 ) {
-  const resolvedLanguageCode = languageCode || sentence.languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode =
+    languageCode
+    || sentence.languageCode
+    || await resolveLanguageCode(userId);
   await ensureProgressRow(userId, resolvedLanguageCode);
 
   const [exists] = await db
@@ -259,7 +271,7 @@ export async function deleteMasteredSentenceByUser(
     .limit(1);
 
   if (!sentence?.languageCode) {
-    const resolvedLanguageCode = await resolveLanguageCode();
+    const resolvedLanguageCode = await resolveLanguageCode(userId);
     return getProgressByUser(userId, resolvedLanguageCode);
   }
 
@@ -284,7 +296,7 @@ export async function deleteMasteredSentence(
 }
 
 export async function resetProgress(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
 
   await db
     .delete(masteredSentences)
@@ -315,7 +327,7 @@ export async function updateLearningProfile(
   userId: string = LEGACY_SINGLE_USER_ID,
   languageCode?: string,
 ) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
   const progress = await updateProgressByUser(userId, resolvedLanguageCode, {
     learningProfile: profile,
   });
@@ -328,7 +340,7 @@ export async function getDifficultyLevel(userId: string = LEGACY_SINGLE_USER_ID,
 }
 
 export async function setDifficultyLevel(level: number, userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
   const progress = await updateProgressByUser(userId, resolvedLanguageCode, {
     currentDifficultyLevel: Math.max(1, Math.min(10, level)),
   });
@@ -340,7 +352,7 @@ export async function setPlacementResult(
   userId: string = LEGACY_SINGLE_USER_ID,
   languageCode?: string,
 ) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
   const clamped = Math.max(1, Math.min(10, level));
 
   return updateProgressByUser(userId, resolvedLanguageCode, {
@@ -355,7 +367,7 @@ export async function updatePerformanceMetrics(
   userId: string = LEGACY_SINGLE_USER_ID,
   languageCode?: string,
 ) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode();
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
   const progress = await getProgressByUser(userId, resolvedLanguageCode);
   const updated = await updateProgressByUser(userId, resolvedLanguageCode, {
     performanceMetrics: {

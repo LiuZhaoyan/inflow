@@ -154,7 +154,9 @@ export async function createUser(input: {
   return mapDbUserToProfile(created);
 }
 
-export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProfile> {
+export async function getUserProfile(): Promise<UserProfile>;
+export async function getUserProfile(userId: string): Promise<UserProfile | null>;
+export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProfile | null> {
   await initUserDb();
 
   const existing = await getUserById(userId);
@@ -167,23 +169,25 @@ export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Pr
     if (existingLegacyUser) {
       return sanitizeProfile(mapDbUserToProfile(existingLegacyUser));
     }
+
+    const fallback = sanitizeProfile(DEFAULT_USER);
+    await db
+      .insert(users)
+      .values(profileToDbInsert(fallback))
+      .onConflictDoNothing({ target: users.email });
+
+    const created = await getUserById(LEGACY_SINGLE_USER_ID);
+    if (created) return sanitizeProfile(created);
+
+    const afterConflictLegacy = await getUserByEmail(LEGACY_SINGLE_USER_EMAIL);
+    if (afterConflictLegacy) {
+      return sanitizeProfile(mapDbUserToProfile(afterConflictLegacy));
+    }
+
+    return fallback;
   }
 
-  const fallback = sanitizeProfile({ ...DEFAULT_USER, id: userId });
-  await db
-    .insert(users)
-    .values(profileToDbInsert(fallback))
-    .onConflictDoNothing({ target: users.email });
-
-  const created = await getUserById(userId);
-  if (created) return sanitizeProfile(created);
-
-  const existingLegacyUser = await getUserByEmail(LEGACY_SINGLE_USER_EMAIL);
-  if (existingLegacyUser) {
-    return sanitizeProfile(mapDbUserToProfile(existingLegacyUser));
-  }
-
-  return fallback;
+  return null;
 }
 
 export async function updateUserProfile(
@@ -191,6 +195,10 @@ export async function updateUserProfile(
   userId: string = LEGACY_SINGLE_USER_ID,
 ): Promise<UserProfile> {
   const current = await getUserProfile(userId);
+  if (!current) {
+    throw new Error(`User not found: ${userId}`);
+  }
+
   const merged = sanitizeProfile({
     ...current,
     ...updates,

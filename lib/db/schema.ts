@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // ───────── 用户表 ─────────
 export const users = sqliteTable('users', {
@@ -29,17 +29,26 @@ export const vocabulary = sqliteTable('vocabulary', {
 });
 
 // ───────── 学习进度（每用户每语言一条） ─────────
-export const learningProgress = sqliteTable('learning_progress', {
-  id:                     text('id').primaryKey(),
-  userId:                 text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  languageCode:           text('language_code').notNull(),
-  currentDifficultyLevel: integer('current_difficulty_level').default(3),
-  initialDifficultyLevel: integer('initial_difficulty_level').default(3),
-  placementCompleted:     integer('placement_completed', { mode: 'boolean' }).default(false),
-  learningProfile:        text('learning_profile', { mode: 'json' }),
-  performanceMetrics:     text('performance_metrics', { mode: 'json' }),
-  lastUpdated:            integer('last_updated', { mode: 'timestamp' }),
-});
+export const learningProgress = sqliteTable(
+  'learning_progress',
+  {
+    id:                     text('id').primaryKey(),
+    userId:                 text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    languageCode:           text('language_code').notNull(),
+    currentDifficultyLevel: integer('current_difficulty_level').default(3),
+    initialDifficultyLevel: integer('initial_difficulty_level').default(3),
+    placementCompleted:     integer('placement_completed', { mode: 'boolean' }).default(false),
+    learningProfile:        text('learning_profile', { mode: 'json' }),
+    performanceMetrics:     text('performance_metrics', { mode: 'json' }),
+    lastUpdated:            integer('last_updated', { mode: 'timestamp' }),
+  },
+  (table) => ({
+    userLanguageUnique: uniqueIndex('learning_progress_user_id_language_code_unique').on(
+      table.userId,
+      table.languageCode,
+    ),
+  }),
+);
 
 // ───────── 掌握句子 ─────────
 export const masteredSentences = sqliteTable('mastered_sentences', {
