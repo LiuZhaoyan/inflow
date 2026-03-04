@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
-import { getVocabulary, getBooks, getProgress, getStories } from '@/lib/db';
+import { getVocabularyByUser, getBooksByUser, getProgress, getStoriesByUser } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 export async function GET() {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const [vocabulary, books, progress, stories] = await Promise.all([
-      getVocabulary(),
-      getBooks(),
-      getProgress(),
-      getStories(),
+      getVocabularyByUser(user.id),
+      getBooksByUser(user.id),
+      getProgress(undefined, user.id),
+      getStoriesByUser(user.id),
     ]);
 
     const vocabByLanguage: Record<string, number> = {};

@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
-import { addBook } from '@/lib/db';
+import { addBookByUser } from '@/lib/db';
 import fs from 'fs';
 import path from 'path';
 import { processDocument } from '@/lib/textProcessor';
 import { detectLanguageFromSentences, normalizeLanguageCode } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const formData = await req.formData();
     const files: File[] = [];
     for (const entry of formData.entries()) {
@@ -49,7 +53,7 @@ export async function POST(req: Request) {
       if (score < 30) level = 'Beginner';
       if (score > 70) level = 'Advanced';
 
-      const newBook = await addBook({
+      const newBook = await addBookByUser(user.id, {
         title: processed.title,
         level,
         language: normalizedLanguage !== 'auto' ? normalizedLanguage : undefined,
@@ -65,7 +69,7 @@ export async function POST(req: Request) {
 
       // Save extracted images
       if (processed.images) {
-        const imagesDir = path.join(process.cwd(), 'public', 'uploads', 'images', newBook.id);
+        const imagesDir = path.join(process.cwd(), 'public', 'uploads', user.id, 'images', newBook.id);
         await fs.promises.mkdir(imagesDir, { recursive: true });
         for (const [key, imgBuffer] of Object.entries(processed.images)) {
           await fs.promises.writeFile(path.join(imagesDir, key), imgBuffer);

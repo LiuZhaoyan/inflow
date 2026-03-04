@@ -1,14 +1,21 @@
 import { NextResponse } from 'next/server';
 import { getProgress, setDifficultyLevel } from '@/lib/db';
 import { getLevelLabel } from '@/lib/difficultyEngine';
+import { normalizeLanguageCode } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 /**
  * GET /api/difficulty
  * Returns current difficulty level, label, user level, and learning stats
  */
-export async function GET() {
+export async function GET(req: Request) {
     try {
-        const progress = await getProgress();
+        const { user, errorResponse } = await getAuthenticatedUser();
+        if (errorResponse) return errorResponse;
+
+        const url = new URL(req.url);
+        const requested = normalizeLanguageCode(url.searchParams.get('languageCode') || undefined);
+        const progress = await getProgress(requested === 'auto' ? undefined : requested, user.id);
         const level = progress.currentDifficultyLevel ?? 3;
 
         return NextResponse.json({
@@ -22,7 +29,7 @@ export async function GET() {
                 learningPace: progress.learningProfile?.learningPace ?? 'normal',
             },
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -34,17 +41,23 @@ export async function GET() {
  */
 export async function PUT(req: Request) {
     try {
+        const { user, errorResponse } = await getAuthenticatedUser();
+        if (errorResponse) return errorResponse;
+
         const { level } = await req.json();
         if (typeof level !== 'number' || level < 1 || level > 10) {
             return NextResponse.json({ error: 'Level must be between 1 and 10' }, { status: 400 });
         }
 
-        const newLevel = await setDifficultyLevel(level);
+        const url = new URL(req.url);
+        const requested = normalizeLanguageCode(url.searchParams.get('languageCode') || undefined);
+
+        const newLevel = await setDifficultyLevel(level, user.id, requested === 'auto' ? undefined : requested);
         return NextResponse.json({
             level: newLevel,
             label: getLevelLabel(newLevel),
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

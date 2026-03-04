@@ -27,7 +27,7 @@ function guessExtensionFromUrl(url: string): string | null {
   }
 }
 
-export async function saveImageFromUrl(url: string): Promise<string> {
+export async function saveImageFromUrl(url: string, userId: string = 'single-user'): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -42,12 +42,12 @@ export async function saveImageFromUrl(url: string): Promise<string> {
 
   const timestamp = Date.now();
   const filename = `${timestamp}${ext}`;
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'images');
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', userId, 'images');
 
   await fs.mkdir(uploadDir, { recursive: true });
   const filePath = path.join(uploadDir, filename);
   await fs.writeFile(filePath, buffer);
 
-  const publicUrl = `/uploads/images/${filename}`;
+  const publicUrl = `/uploads/${userId}/images/${filename}`;
   return publicUrl;
 }

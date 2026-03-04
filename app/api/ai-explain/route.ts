@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 interface RequestBody {
   text: string;
@@ -12,8 +13,19 @@ interface RequestBody {
   debug?: boolean;
 }
 
+function getErrorStatus(error: unknown): number | undefined {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status?: unknown }).status;
+    return typeof status === 'number' ? status : undefined;
+  }
+  return undefined;
+}
+
 export async function POST(request: Request) {
   try {
+    const { errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const { text, context, difficulty, targetLanguage, debug } = await request.json() as RequestBody;
 
     if (!text) {
@@ -96,7 +108,7 @@ export async function POST(request: Request) {
 
     console.log('[ai-explain] outputPreview', String(explanation).slice(0, 200));
 
-    const payload: any = { explanation };
+    const payload: { explanation: string; debug?: Record<string, unknown> } = { explanation };
     if (debug) {
       payload.debug = {
         forcedLanguage: forced,
@@ -113,10 +125,10 @@ export async function POST(request: Request) {
       },
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('AI API Error:', error);
 
-    if (error?.status === 429) {
+    if (getErrorStatus(error) === 429) {
       return NextResponse.json(
         { error: 'AI Service is busy (Rate Limit). Please try again later.' },
         { status: 429, headers: { 'Retry-After': '10' } }

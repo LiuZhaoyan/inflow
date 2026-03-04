@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
-import { deleteAllBooks } from '@/lib/db';
+import { deleteAllBooksByUser } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 export const runtime = 'nodejs';
 
 export async function DELETE() {
-  const result = await deleteAllBooks();
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (errorResponse) return errorResponse;
+
+  const result = await deleteAllBooksByUser(user.id);
   return NextResponse.json(result);
 }
 

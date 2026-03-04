@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getStories, deleteStory, updateStory } from '@/lib/db';
+import { getStoriesByUser, deleteStoryByUser, updateStoryByUser } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 export async function GET() {
   try {
-    const stories = await getStories();
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
+    const stories = await getStoriesByUser(user.id);
     return NextResponse.json({ stories });
   } catch (error) {
     console.error('Failed to fetch stories:', error);
@@ -13,11 +17,14 @@ export async function GET() {
 
 export async function DELETE(req: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const { id } = await req.json();
     if (!id) {
       return NextResponse.json({ error: 'Missing story id' }, { status: 400 });
     }
-    await deleteStory(id);
+    await deleteStoryByUser(user.id, id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to delete story:', error);
@@ -27,11 +34,14 @@ export async function DELETE(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const { id, ...updates } = await req.json();
     if (!id) {
       return NextResponse.json({ error: 'Missing story id' }, { status: 400 });
     }
-    const updated = await updateStory(id, updates);
+    const updated = await updateStoryByUser(user.id, id, updates);
     if (!updated) {
       return NextResponse.json({ error: 'Story not found' }, { status: 404 });
     }

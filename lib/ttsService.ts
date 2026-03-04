@@ -20,6 +20,17 @@ export interface TTSOptions {
   speed?: number;
 }
 
+interface TtsJsonResponse {
+  audio_url?: string;
+  url?: string;
+  audio?: string;
+  audioBase64?: string;
+  data?: {
+    audio_url?: string;
+    audioBase64?: string;
+  };
+}
+
 export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): Promise<{ buffer: Buffer, ext: string }> {
   const { voiceId = 'audiobook_female_1', format = 'mp3', speed = 0.8 } = options;
   
@@ -56,9 +67,9 @@ export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): 
     buffer = Buffer.from(await ttsRes.arrayBuffer());
   } else {
     // Some providers return JSON with base64 or a URL
-    const data: any = await ttsRes.json().catch(() => ({}));
-    let audioUrl: string | undefined = data?.audio_url || data?.url || data?.data?.audio_url;
-    let audioHex: string | undefined = data?.audio; // per API: hex-encoded audio string
+    const data = await ttsRes.json().catch(() => ({})) as TtsJsonResponse;
+    const audioUrl: string | undefined = data?.audio_url || data?.url || data?.data?.audio_url;
+    const audioHex: string | undefined = data?.audio; // per API: hex-encoded audio string
     let audioB64: string | undefined = data?.audioBase64 || data?.data?.audioBase64;
 
     if (audioUrl) {
@@ -99,7 +110,7 @@ export async function fetchAudioBuffer(text: string, options: TTSOptions = {}): 
 }
 
 export async function fetchAudioUrl(text: string, options: TTSOptions = {}): Promise<string> {
-  const { voiceId = 'audiobook_female_1', format = 'mp3', speed = 0.8 } = options;
+  const { voiceId = 'audiobook_female_1', speed = 0.8 } = options;
 
   const api_key = process.env.API_KEY;
   if (!api_key) {
@@ -131,7 +142,7 @@ export async function fetchAudioUrl(text: string, options: TTSOptions = {}): Pro
     throw new Error('TTS response returned audio content without URL');
   }
 
-  const data: any = await ttsRes.json().catch(() => ({}));
+  const data = await ttsRes.json().catch(() => ({})) as TtsJsonResponse;
   const audioUrl: string | undefined = data?.audio_url || data?.url || data?.data?.audio_url;
   if (!audioUrl) {
     throw new Error('TTS response did not include audio URL');
@@ -140,20 +151,20 @@ export async function fetchAudioUrl(text: string, options: TTSOptions = {}): Pro
   return audioUrl;
 }
 
-export async function saveAudioFile(buffer: Buffer, ext: string): Promise<string> {
+export async function saveAudioFile(buffer: Buffer, ext: string, userId: string): Promise<string> {
   const timestamp = Date.now();
   const filename = `${timestamp}${ext}`;
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'audio');
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', userId, 'audio');
   
   await fs.mkdir(uploadDir, { recursive: true });
 
   const filePath = path.join(uploadDir, filename);
   await fs.writeFile(filePath, buffer);
 
-  return `/uploads/audio/${filename}`;
+  return `/uploads/${userId}/audio/${filename}`;
 }
 
-export async function generateTTS(text: string, options: TTSOptions = {}): Promise<string> {
+export async function generateTTS(text: string, options: TTSOptions = {}, userId: string = 'single-user'): Promise<string> {
   const { buffer, ext } = await fetchAudioBuffer(text, options);
-  return await saveAudioFile(buffer, ext);
+  return await saveAudioFile(buffer, ext, userId);
 }

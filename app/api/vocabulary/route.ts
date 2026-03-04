@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
-import { getVocabulary, addWord, deleteWord, updateWord, getUserProfile } from '@/lib/db';
+import {
+  getVocabularyByUser,
+  addWordByUser,
+  deleteWordByUser,
+  updateWordByUser,
+  getUserProfile,
+} from '@/lib/db';
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageFromSentences } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return 'Internal Server Error';
+}
 
 async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
   try {
@@ -34,7 +46,10 @@ async function generateDefinition(word: string, nativeLanguage: string): Promise
 }
 
 export async function GET(request: Request) {
-  const vocab = await getVocabulary();
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (errorResponse) return errorResponse;
+
+  const vocab = await getVocabularyByUser(user.id);
   const url = new URL(request.url);
   const languageCode = (url.searchParams.get('languageCode') || '').trim().toLowerCase();
   if (!languageCode || languageCode === 'all') {
@@ -45,6 +60,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const wordData = await request.json();
     if (!wordData.word) {
        return NextResponse.json({ error: 'Word is required' }, { status: 400 });
@@ -61,41 +79,47 @@ export async function POST(request: Request) {
     }
 
     if (!wordData.definition || String(wordData.definition).trim() === '') {
-      const profile = await getUserProfile();
+      const profile = await getUserProfile(user.id);
       const nativeLanguage = profile?.nativeLanguage || 'en';
       const generated = await generateDefinition(wordData.word, nativeLanguage);
       if (generated) {
         wordData.definition = generated;
       }
     }
-    const newWord = await addWord(wordData);
+    const newWord = await addWordByUser(user.id, wordData);
     return NextResponse.json(newWord);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const { id, ...updates } = await request.json();
     if (!id) {
        return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
-    const updatedWord = await updateWord(id, updates);
+    const updatedWord = await updateWordByUser(user.id, id, updates);
     if (!updatedWord) {
        return NextResponse.json({ error: 'Word not found' }, { status: 404 });
     }
     return NextResponse.json(updatedWord);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
+  const { user, errorResponse } = await getAuthenticatedUser();
+  if (errorResponse) return errorResponse;
+
   const url = new URL(request.url);
   const id = url.searchParams.get('id');
   if (id) {
-    await deleteWord(id);
+    await deleteWordByUser(user.id, id);
     return NextResponse.json({ ok: true });
   }
   return NextResponse.json({ error: 'Missing ID' }, { status: 400 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getUserProfile, updateUserProfile, updateProgress } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 function normalizeRequiredLanguage(input: string | undefined | null, fallback: string) {
   const normalized = normalizeLanguageCode(input || fallback);
@@ -9,7 +10,10 @@ function normalizeRequiredLanguage(input: string | undefined | null, fallback: s
 
 export async function GET() {
   try {
-    const profile = await getUserProfile();
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
+    const profile = await getUserProfile(user.id);
     return NextResponse.json({ profile });
   } catch (error) {
     console.error('Get user profile failed:', error);
@@ -19,6 +23,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const body = await req.json();
     const username = typeof body?.username === 'string' ? body.username.trim() : '';
     const nativeLanguage = normalizeRequiredLanguage(body?.nativeLanguage, 'en');
@@ -33,9 +40,9 @@ export async function POST(req: Request) {
       targetLanguage,
       currentLanguageCode,
       isOnboarded: true,
-    });
+    }, user.id);
 
-    await updateProgress({ targetLanguage: profile.targetLanguage });
+    await updateProgress({ targetLanguage: profile.targetLanguage }, user.id);
 
     return NextResponse.json({ profile });
   } catch (error) {
@@ -46,8 +53,14 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const body = await req.json();
-    const current = await getUserProfile();
+    const current = await getUserProfile(user.id);
+    if (!current) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
     const username = typeof body?.username === 'string' ? body.username.trim() : current.username;
 
     const nativeLanguage = body?.nativeLanguage
@@ -68,9 +81,9 @@ export async function PUT(req: Request) {
       targetLanguage,
       currentLanguageCode,
       isOnboarded: true,
-    });
+    }, user.id);
 
-    await updateProgress({ targetLanguage: profile.targetLanguage });
+    await updateProgress({ targetLanguage: profile.targetLanguage }, user.id);
 
     return NextResponse.json({ profile });
   } catch (error) {

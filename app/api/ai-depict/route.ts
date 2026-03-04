@@ -1,15 +1,22 @@
 // app/api/ai-depict/route.ts
 import { NextResponse } from 'next/server';
 import {
-  generateImage,
   createTask,
   getTask,
   executeImageGenerationTask,
-  type TaskInfo,
 } from '@/lib/aiClient';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return 'Failed to generate image';
+}
 
 export async function POST(request: Request) {
   try {
+    const { errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     // Check if AI-depict feature is enabled
     const isEnabled = process.env.ENABLE_AI_DEPICT === 'true';
     if (!isEnabled) {
@@ -41,7 +48,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('AI Depict Route Error:', error);
     return NextResponse.json(
-      { error: (error as any).message || 'Failed to generate image' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }
@@ -52,6 +59,9 @@ export async function POST(request: Request) {
 // 参数: taskId - 任务 ID
 // ============================================
 export async function GET(request: Request) {
+  const { errorResponse } = await getAuthenticatedUser();
+  if (errorResponse) return errorResponse;
+
   const { searchParams } = new URL(request.url);
   const taskId = searchParams.get('taskId');
 

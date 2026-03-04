@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { getProgress, setPlacementResult, getUserProfile } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
 /**
  * POST /api/placement-test
@@ -18,10 +19,14 @@ const PLACEMENT_LEVELS = [1, 3, 5, 7, 9]; // difficulties to test
 
 export async function POST(req: Request) {
     try {
+        const { user, errorResponse } = await getAuthenticatedUser();
+        if (errorResponse) return errorResponse;
+
         const body = await req.json();
         const { action, languageCode, answers } = body;
+        const userId = user.id;
 
-        const userProfile = await getUserProfile();
+        const userProfile = await getUserProfile(userId);
         const requestedLanguage = normalizeLanguageCode(languageCode);
         const fallback = userProfile?.currentLanguageCode || userProfile?.targetLanguage || 'ko';
         const targetLanguage = requestedLanguage === 'auto' ? fallback : requestedLanguage;
@@ -97,7 +102,7 @@ Make sure:
                 computedLevel = Math.min(10, maxUnderstood + 1);
             }
 
-            const progress = await setPlacementResult(computedLevel);
+            await setPlacementResult(computedLevel, userId, targetLanguage);
 
             return NextResponse.json({
                 level: computedLevel,
@@ -119,12 +124,15 @@ Make sure:
  */
 export async function GET() {
     try {
-        const progress = await getProgress();
+        const { user, errorResponse } = await getAuthenticatedUser();
+        if (errorResponse) return errorResponse;
+
+        const progress = await getProgress(undefined, user.id);
         return NextResponse.json({
             completed: progress.placementCompleted ?? false,
             level: progress.currentDifficultyLevel ?? 3,
         });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

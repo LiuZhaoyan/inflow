@@ -1,11 +1,20 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { detectLanguageHint, resolveLanguageLabel, normalizeLanguageCode } from '@/lib/language';
-import { addStory } from '@/lib/db';
+import { addStoryByUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/user';
+import { getAuthenticatedUser } from '@/lib/auth/helpers';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return 'Failed to generate story';
+}
 
 export async function POST(request: Request) {
   try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+
     const { words } = await request.json();
 
     if (!words || !Array.isArray(words) || words.length === 0) {
@@ -18,7 +27,7 @@ export async function POST(request: Request) {
     const { code } = detectLanguageHint(wordsString);
     const langCode = normalizeLanguageCode(code);
     const langLabel = resolveLanguageLabel(langCode);
-    const userProfile = await getUserProfile();
+    const userProfile = await getUserProfile(user.id);
     const translationLangCode = normalizeLanguageCode(userProfile.nativeLanguage);
     const translationLangLabel = resolveLanguageLabel(translationLangCode);
 
@@ -78,7 +87,7 @@ Ensure the story and translation follow the constraints and response format exac
       );
     }
 
-    const saved = await addStory({
+    const saved = await addStoryByUser(user.id, {
       content: story || '',
       translation: translation || '',
       words,
@@ -88,10 +97,10 @@ Ensure the story and translation follow the constraints and response format exac
 
     return NextResponse.json({ story, translation, saved });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Story Generation Error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to generate story' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }
