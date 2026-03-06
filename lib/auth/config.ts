@@ -20,6 +20,10 @@ export const authConfig: NextAuthConfig = {
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
+      if (isAuthBypassEnabled() && (nextUrl.pathname === '/login' || nextUrl.pathname === '/register')) {
+        return Response.redirect(new URL('/', nextUrl));
+      }
+
       if (isAuthBypassEnabled()) {
         return true;
       }

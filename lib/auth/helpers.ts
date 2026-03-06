@@ -1,6 +1,7 @@
 import { auth } from './index';
 import { NextResponse } from 'next/server';
 import { getBypassUser, isAuthBypassEnabled } from './mode';
+import { ensureUserExistsById } from '@/lib/db';
 
 /**
  * Get the authenticated user from the current session.
@@ -8,7 +9,13 @@ import { getBypassUser, isAuthBypassEnabled } from './mode';
  */
 export async function getAuthenticatedUser() {
   if (isAuthBypassEnabled()) {
-    return { user: getBypassUser(), errorResponse: null };
+    const bypassUser = getBypassUser();
+    await ensureUserExistsById({
+      id: bypassUser.id,
+      email: bypassUser.email,
+      name: bypassUser.name,
+    });
+    return { user: bypassUser, errorResponse: null };
   }
 
   const session = await auth();

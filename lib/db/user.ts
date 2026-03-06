@@ -117,6 +117,40 @@ export async function getUserByEmail(email: string) {
   return existing || null;
 }
 
+export async function ensureUserExistsById(input: {
+  id: string;
+  email?: string;
+  name?: string | null;
+}) {
+  const existing = await getUserById(input.id);
+  if (existing) return existing;
+
+  const now = new Date();
+  const email = (input.email || `${input.id}@local.dev`).toLowerCase().trim();
+
+  await db
+    .insert(users)
+    .values({
+      id: input.id,
+      email,
+      passwordHash: '',
+      username: (input.name || DEFAULT_USER.username || '').trim(),
+      nativeLanguage: DEFAULT_USER.nativeLanguage,
+      targetLanguage: DEFAULT_USER.targetLanguage,
+      currentLanguageCode: DEFAULT_USER.currentLanguageCode || DEFAULT_USER.targetLanguage,
+      isOnboarded: true,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoNothing({ target: users.id });
+
+  const created = await getUserById(input.id);
+  if (created) return created;
+
+  const byEmail = await getUserByEmail(email);
+  return byEmail ? sanitizeProfile(mapDbUserToProfile(byEmail)) : null;
+}
+
 export async function createUser(input: {
   email: string;
   password: string;
