@@ -133,7 +133,7 @@ export default function ProfilePage() {
           icon: <ScrollText size={22} />,
           label: 'Stories',
           total: stats.stories.total,
-          href: '#stories',
+          href: '/vocabulary',
           color: 'text-indigo-600',
           bgColor: 'bg-indigo-50',
         },
@@ -155,13 +155,16 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
       <Header showProfile={false} />
 
-      <main className="max-w-3xl mx-auto px-6 pb-20 pt-10">
+      <main className="max-w-5xl mx-auto px-4 md:px-5 pb-20 pt-10">
         {/* Page heading */}
-        <div className="mb-10">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <p className="text-sm font-semibold uppercase text-blue-600 tracking-wider mb-1">Profile</p>
-          <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">
-            Your Learning&nbsp;<span className="text-blue-600">Profile</span>
-          </h1>
+          <Link
+            href="/docs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            Docs <ArrowRight size={12} />
+          </Link>
         </div>
 
         {/* ── Profile Card ── */}
@@ -358,7 +361,6 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
               { label: 'Vocabulary', href: '/vocabulary', desc: 'Review flashcards' },
-              { label: 'Library', href: '/library', desc: 'Browse your books' },
               { label: 'Learn', href: '/learn', desc: 'Practice sentences' },
             ].map(link => (
               <Link

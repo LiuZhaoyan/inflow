@@ -138,7 +138,7 @@ export default function LearnPage() {
                 {/* Header */}
                 <header className="sticky top-0 z-10 flex-shrink-0 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
                     <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
-                        <Link href="/" className="text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-colors">
+                        <Link href="/profile" className="text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-colors">
                             <ArrowLeft size={20} />
                             <span className="font-medium">Back</span>
                         </Link>

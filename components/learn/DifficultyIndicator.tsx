@@ -37,7 +37,7 @@ export default function DifficultyIndicator({
         <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setShowAdjust(prev => !prev)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${colorClass}`}
+                className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${colorClass}`}
                 title={`Level ${level}/10 — ${label}. Click to adjust.`}
             >
                 <span>Lv.{level}</span>
@@ -74,7 +74,7 @@ export default function DifficultyIndicator({
                                 setShowAdjust(false);
                             }}
                             disabled={level <= 1}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
+                            className="cursor-pointer disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
                         >
                             <ChevronDown size={12} /> Easier
                         </button>
@@ -84,7 +84,7 @@ export default function DifficultyIndicator({
                                 setShowAdjust(false);
                             }}
                             disabled={level >= 10}
-                            className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
+                            className="cursor-pointer disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
                         >
                             <ChevronUp size={12} /> Harder
                         </button>

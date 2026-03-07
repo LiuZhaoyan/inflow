@@ -270,15 +270,15 @@ export default function DocsHome() {
         </div>
       </header>
 
-      <main className="w-full px-6 lg:px-12 pb-20 pt-10">
-        <div className="mb-12 max-w-3xl">
+      <main className="w-full px-6 lg:px-12 pb-20 pt-4 lg:pt-5">
+        <div className="mb-6 max-w-3xl">
           <Link href="/" className="group mb-6 inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">
             <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
             Back to Home
           </Link>
           
-          <h1 className="mb-6 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-            Documentation & <br/>
+          <h1 className="mb-4 text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
+            Documentation & 
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
               Learning Guide
             </span>
@@ -286,7 +286,7 @@ export default function DocsHome() {
         </div>
 
         {/* Mobile TOC */}
-        <details className="lg:hidden mb-10 rounded-xl border border-gray-200 bg-white p-4 shadow-sm group">
+        <details className="lg:hidden mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm group">
           <summary className="cursor-pointer select-none font-semibold text-gray-900 flex items-center justify-between">
             Table of contents
             <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
@@ -313,7 +313,7 @@ export default function DocsHome() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[250px_1fr] gap-8 items-start">
           {/* Desktop Sidebar */}
-          <aside className="hidden lg:block sticky top-24 h-[calc(100vh-6rem)] overflow-y-auto pr-2">
+          <aside className="hidden lg:block sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pr-2">
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4 pl-3">
                 On this page
