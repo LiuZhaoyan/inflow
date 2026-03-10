@@ -142,7 +142,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans">
+      <div className="page-surface page-surface-operation text-gray-900 font-sans">
         <Header showProfile={false} />
         <main className="flex items-center justify-center pt-40">
           <Loader2 className="animate-spin text-blue-500" size={32} />
@@ -152,7 +152,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
+    <div className="page-surface page-surface-operation text-gray-900 font-sans selection:bg-blue-100">
       <Header showProfile={false} />
 
       <main className="max-w-5xl mx-auto px-4 md:px-5 pb-20 pt-10">

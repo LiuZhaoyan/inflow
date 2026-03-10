@@ -1,16 +1,34 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Alegreya, Alegreya_Sans, Caveat, JetBrains_Mono } from "next/font/google";
 import Providers from "@/components/Providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const paperBody = Alegreya_Sans({
+  variable: "--font-paper-body",
   subsets: ["latin"],
+  weight: ["400", "500", "700", "800"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const paperDisplay = Alegreya({
+  variable: "--font-paper-display",
   subsets: ["latin"],
+  weight: ["500", "700", "800"],
+  display: "swap",
+});
+
+const paperScript = Caveat({
+  variable: "--font-paper-script",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
+});
+
+const paperMono = JetBrains_Mono({
+  variable: "--font-paper-mono",
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +44,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${paperBody.variable} ${paperDisplay.variable} ${paperScript.variable} ${paperMono.variable} antialiased`}
       >
         <Providers>{children}</Providers>
       </body>

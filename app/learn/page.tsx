@@ -86,7 +86,7 @@ export default function LearnPage() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="page-surface page-surface-reading flex h-screen overflow-hidden text-[var(--foreground)]">
             {!profileLoading && !userProfile?.isOnboarded && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                     <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 text-center">

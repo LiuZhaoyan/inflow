@@ -60,13 +60,13 @@ export default function VocabularyPage() {
     : words.filter(w => w.language === selectedLanguage);
 
   return (
-    <div className="min-h-screen bg-[#FDFDFD] text-gray-900 font-sans selection:bg-blue-100">
+    <div className="page-surface page-surface-reading text-[var(--foreground)] selection:bg-[#f1d6bd] selection:text-[#2d231c]">
       <Header />
 
       <main className="w-full px-6 lg:px-12 pb-20">
          
          {/* Title Section */}
-         <div className="mb-4 max-w-4xl mx-auto">
+        <div className="mb-4 max-w-4xl mx-auto reveal-up">
             <div className="flex flex-col">
               <SectionTitle
                 eyebrow="Your space"
@@ -77,7 +77,7 @@ export default function VocabularyPage() {
             </div>
          </div>
 
-         <div className="sticky top-[var(--header-height)] z-40 bg-[#FDFDFD]/90 backdrop-blur-md">
+         <div className="sticky top-[var(--header-height)] z-40">
            <div className="max-w-4xl mx-auto">
              <VocabularyToolbar
                selectionMode={selectionMode}

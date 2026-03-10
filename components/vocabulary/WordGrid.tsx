@@ -34,19 +34,16 @@ export default function WordGrid({
   if (loading) {
     return (
       <div className="flex justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--ink-2)]" />
       </div>
     );
   }
 
   if (words.length === 0) {
     return (
-      <div className="text-center py-20 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 mb-4">
-          <BookOpen className="text-gray-400" size={24} />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900">No words</h3>
-        <p className="text-gray-500 max-w-sm mx-auto mt-2">Add a word or switch language filters.</p>
+      <div className="text-center py-20 bg-[#fdf7ec] rounded-2xl border border-dashed border-[var(--line-1)]">
+        <h3 className="paper-title text-2xl">No words</h3>
+        <p className="paper-subtitle max-w-sm mx-auto mt-2">Add a word or switch language filters.</p>
       </div>
     );
   }

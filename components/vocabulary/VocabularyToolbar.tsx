@@ -23,20 +23,20 @@ export default function VocabularyToolbar({
     <div className="flex w-full items-center justify-end gap-3 mt-4">
       {selectionMode ? (
         <>
-          <span className="text-sm font-medium text-blue-900 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
+          <span className="paper-chip">
             {selectedCount} selected
           </span>
           <button
             onClick={onGenerateStory}
             disabled={selectedCount === 0 || isGeneratingStory}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-200"
+            className="paper-btn-primary text-sm"
           >
             {isGeneratingStory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             Generate Story
           </button>
           <button
             onClick={onCancelSelection}
-            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#fbf4e8] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -45,13 +45,13 @@ export default function VocabularyToolbar({
         <>
           <button
             onClick={onStartSelection}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-200 font-medium rounded-lg text-sm hover:bg-gray-50 hover:text-blue-600 transition-colors"
+            className="paper-btn-ghost text-sm"
           >
             Select to Practice
           </button>
           <button
             onClick={onAddWord}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white font-medium rounded-lg text-sm hover:bg-gray-800 transition-colors shadow-sm"
+            className="paper-btn-primary text-sm"
           >
             <Plus className="w-4 h-4" />
             Add Word

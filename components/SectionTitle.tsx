@@ -13,16 +13,16 @@ export default function SectionTitle({
 }: SectionTitleProps) {
   return (
     <section className="py-10">
-      <p className="text-sm font-semibold uppercase text-blue-600 tracking-wider mb-2">{eyebrow}</p>
-      <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-3 leading-tight">
+      <p className="paper-chip mb-3">{eyebrow}</p>
+      <h1 className="paper-title text-3xl md:text-4xl mb-3 leading-tight">
         {title}
         {highlight ? (
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+          <span className="ml-1 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-0)] to-[#8b4a2a]">
             {highlight}
           </span>
         ) : null}
       </h1>
-      <p className="text-base text-gray-600 max-w-2xl">{description}</p>
+      <p className="paper-subtitle text-base max-w-2xl">{description}</p>
     </section>
   );
 }

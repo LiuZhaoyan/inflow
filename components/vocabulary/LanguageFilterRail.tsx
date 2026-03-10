@@ -15,8 +15,8 @@ export default function LanguageFilterRail({
     <div className="fixed left-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
       <button
         onClick={() => onSelect('all')}
-        className={`bg-white border border-gray-200 shadow-sm rounded-r-full px-3 py-2 text-sm text-gray-700 cursor-pointer hover:text-blue-700 hover:border-blue-300 ${
-          selectedLanguage === 'all' ? 'text-blue-700 border-blue-300' : ''
+        className={`bg-[#fffaf2] border border-[var(--line-0)] shadow-sm rounded-r-full px-3 py-2 text-sm text-[var(--ink-2)] cursor-pointer hover:text-[var(--accent-1)] hover:border-[var(--line-1)] ${
+          selectedLanguage === 'all' ? 'text-[var(--accent-1)] border-[var(--line-1)]' : ''
         }`}
         title="All"
       >
@@ -26,8 +26,8 @@ export default function LanguageFilterRail({
         <button
           key={code}
           onClick={() => onSelect(code)}
-          className={`bg-white border border-gray-200 shadow-sm rounded-r-full px-3 py-2 text-sm text-gray-700 cursor-pointer hover:text-blue-700 hover:border-blue-300 ${
-            selectedLanguage === code ? 'text-blue-700 border-blue-300' : ''
+          className={`bg-[#fffaf2] border border-[var(--line-0)] shadow-sm rounded-r-full px-3 py-2 text-sm text-[var(--ink-2)] cursor-pointer hover:text-[var(--accent-1)] hover:border-[var(--line-1)] ${
+            selectedLanguage === code ? 'text-[var(--accent-1)] border-[var(--line-1)]' : ''
           }`}
           title={resolveLanguageLabel(code)}
         >
