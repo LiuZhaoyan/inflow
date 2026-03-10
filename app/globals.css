@@ -199,12 +199,10 @@ body {
   }
 
   .paper-card {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 250, 241, 0.4)),
-      var(--card);
+    background: var(--card);
     border: 1px solid var(--line-0);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    box-shadow: none;
     position: relative;
     overflow: clip;
     transition:
@@ -214,13 +212,10 @@ body {
   }
 
   .paper-card-soft {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 48%),
-      linear-gradient(180deg, rgba(211, 187, 158, 0.08) 0, rgba(211, 187, 158, 0.08) 1px, transparent 1px, transparent 32px),
-      var(--card-strong);
+    background: var(--card-strong);
     border: 1px solid #e1d1ba;
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-soft), var(--shadow-inset);
+    box-shadow: none;
     position: relative;
     overflow: clip;
     transition:
