@@ -11,7 +11,7 @@ export default function ProfileSummaryCard({ profile, onEdit }: ProfileSummaryCa
   const initials = (profile?.username || '?').slice(0, 2).toUpperCase();
 
   return (
-    <section className="relative mb-8 rounded-[var(--radius-xl)] bg-[var(--paper-note)] p-6 md:p-8">
+    <section className="paper-panel-flat relative mb-8 p-6 md:p-8">
       <button
         onClick={onEdit}
         className="paper-btn-ghost absolute top-5 right-5 min-h-0 p-2 text-[var(--ink-2)] hover:text-[var(--accent-1)]"
@@ -21,7 +21,7 @@ export default function ProfileSummaryCard({ profile, onEdit }: ProfileSummaryCa
       </button>
 
       <div className="flex items-center gap-5">
-        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-[var(--paper-1)] text-xl font-bold text-[var(--accent-1)] select-none">
+        <div className="paper-icon-well flex h-16 w-16 flex-shrink-0 rounded-full text-xl font-bold text-[var(--accent-1)] select-none">
           {initials}
         </div>
 

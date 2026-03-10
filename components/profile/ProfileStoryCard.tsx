@@ -18,7 +18,7 @@ function highlightStoryText(content: string) {
 
 export default function ProfileStoryCard({ story, isExpanded, onToggle, onDelete }: ProfileStoryCardProps) {
   return (
-    <div className="group rounded-[var(--radius-md)] bg-[var(--paper-note-strong)] p-4 transition-colors">
+    <div className="paper-panel-soft group p-4 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 cursor-pointer" onClick={onToggle}>
           <div className="mb-1.5 flex items-center gap-2">
@@ -26,7 +26,7 @@ export default function ProfileStoryCard({ story, isExpanded, onToggle, onDelete
               {new Date(story.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
             {story.language && (
-              <span className="rounded-full bg-[rgba(67,52,43,0.08)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-1)]">
+              <span className="paper-pill-soft paper-pill-ink text-[10px] font-medium">
                 {resolveLanguageLabel(story.language as never)}
               </span>
             )}
@@ -36,7 +36,7 @@ export default function ProfileStoryCard({ story, isExpanded, onToggle, onDelete
             {story.words.map((word, index) => (
               <span
                 key={`${story.id}-${index}`}
-                className="rounded-full bg-[rgba(188,106,64,0.12)] px-2 py-0.5 text-xs font-medium text-[var(--accent-1)]"
+                className="paper-pill-soft paper-pill-accent text-xs font-medium"
               >
                 {word}
               </span>

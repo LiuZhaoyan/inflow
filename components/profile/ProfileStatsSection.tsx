@@ -17,10 +17,10 @@ export default function ProfileStatsSection({ statCards }: ProfileStatsSectionPr
           <CardWrapper
             key={card.key}
             href={card.href}
-            className="group flex flex-col justify-between rounded-[var(--radius-md)] bg-[var(--paper-note-strong)] p-5 hover:-translate-y-0.5"
+            className="paper-panel-soft group flex flex-col justify-between p-5 hover:-translate-y-0.5"
           >
             <div>
-              <div className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--paper-1)] ${card.iconClassName}`}>
+              <div className={`paper-icon-well mb-4 h-10 w-10 ${card.iconClassName}`}>
                 {card.icon}
               </div>
 
@@ -34,7 +34,7 @@ export default function ProfileStatsSection({ statCards }: ProfileStatsSectionPr
                     .map(([lang, count]) => (
                       <span
                         key={lang}
-                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${card.chipClassName}`}
+                        className={`paper-pill-soft ${card.chipClassName}`}
                       >
                         {resolveLanguageLabel(lang as never)} {count}
                       </span>

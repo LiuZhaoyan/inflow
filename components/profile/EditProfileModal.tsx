@@ -21,7 +21,7 @@ export default function EditProfileModal({
 }: EditProfileModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-lg rounded-[var(--radius-lg)] bg-[var(--paper-note)] p-6">
+      <div className="paper-panel-flat mx-4 w-full max-w-lg rounded-[var(--radius-lg)] p-6">
         <div className="mb-5 flex items-start justify-between">
           <div>
             <p className="paper-chip text-[var(--accent-1)]">Profile</p>
@@ -83,7 +83,7 @@ export default function EditProfileModal({
           </div>
 
           {saveError && (
-            <div className="rounded-lg bg-[rgba(180,88,79,0.08)] px-3 py-2 text-sm text-[var(--danger)]">
+            <div className="paper-alert-soft-danger px-3 py-2 text-sm">
               {saveError}
             </div>
           )}

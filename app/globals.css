@@ -370,6 +370,55 @@ body {
     max-width: 68ch;
   }
 
+  .paper-panel-flat {
+    background: var(--paper-note);
+    border-radius: var(--radius-xl);
+  }
+
+  .paper-panel-soft {
+    background: var(--paper-note-strong);
+    border-radius: var(--radius-md);
+  }
+
+  .paper-icon-well {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper-1);
+    border-radius: var(--radius-md);
+  }
+
+  .paper-pill-soft {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .paper-pill-accent {
+    background: rgba(188, 106, 64, 0.12);
+    color: var(--accent-1);
+  }
+
+  .paper-pill-success {
+    background: rgba(95, 125, 98, 0.12);
+    color: var(--success);
+  }
+
+  .paper-pill-ink {
+    background: rgba(67, 52, 43, 0.08);
+    color: var(--ink-1);
+  }
+
+  .paper-alert-soft-danger {
+    border-radius: var(--radius-sm);
+    background: rgba(180, 88, 79, 0.08);
+    color: var(--danger);
+  }
+
   .page-surface {
     min-height: 100vh;
     position: relative;
