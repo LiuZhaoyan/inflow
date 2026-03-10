@@ -24,18 +24,18 @@ export default function ChatArea({
                 {(messages.length === 0 && !loading) && (
                     <div className="flex flex-col items-center justify-center py-10 space-y-6">
                         <div className="text-center space-y-2">
-                            <h2 className="text-2xl font-bold text-gray-800">Choose a Context</h2>
-                            <p className="text-gray-500">Select a topic to start your personalized lesson.</p>
+                            <h2 className="paper-title text-2xl">Choose a Context</h2>
+                            <p className="paper-subtitle text-center">Select a topic to start your personalized lesson.</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
                             {CONTEXT_OPTIONS.map(ctx => (
                                 <button
                                     key={ctx}
                                     onClick={() => onSelectContext(ctx)}
-                                    className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm text-left flex items-center justify-between group"
+                                    className="paper-panel-soft p-4 text-left flex items-center justify-between group"
                                 >
-                                    <span className="font-medium text-gray-700 group-hover:text-blue-700">{ctx}</span>
-                                    <ArrowLeft className="rotate-180 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" size={16} />
+                                    <span className="font-medium text-[var(--ink-1)] group-hover:text-[var(--accent-1)]">{ctx}</span>
+                                    <ArrowLeft className="rotate-180 opacity-0 group-hover:opacity-100 transition-opacity text-[var(--accent-1)]" size={16} />
                                 </button>
                             ))}
                         </div>
@@ -52,10 +52,10 @@ export default function ChatArea({
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
                         <div className={`
-                            max-w-[85%] rounded-2xl px-6 py-4 text-base md:text-lg leading-relaxed shadow-sm
+                            max-w-[85%] rounded-2xl px-6 py-4 text-base md:text-lg leading-relaxed
                             ${msg.role === 'user'
-                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                    : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'}
+                                    ? 'bg-[var(--accent-0)] text-[#fff9f3] rounded-tr-none'
+                                    : 'paper-panel-soft text-[var(--ink-1)] rounded-tl-none'}
                         `}>
                             {msg.content}
                         </div>
@@ -63,11 +63,11 @@ export default function ChatArea({
                 ))}
                 {loading && (
                     <div className="flex justify-start">
-                        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-6 py-4 shadow-sm">
+                        <div className="paper-panel-soft rounded-2xl rounded-tl-none px-6 py-4">
                             <div className="flex gap-2">
-                                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" />
-                                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:0.2s]" />
-                                <span className="w-2 h-2 bg-gray-300 rounded-full animate-bounce [animation-delay:0.4s]" />
+                                <span className="w-2 h-2 bg-[var(--accent-2)] rounded-full animate-bounce" />
+                                <span className="w-2 h-2 bg-[var(--accent-2)] rounded-full animate-bounce [animation-delay:0.2s]" />
+                                <span className="w-2 h-2 bg-[var(--accent-2)] rounded-full animate-bounce [animation-delay:0.4s]" />
                             </div>
                         </div>
                     </div>

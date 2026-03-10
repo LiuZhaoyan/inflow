@@ -81,32 +81,32 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
     if (phase === 'intro') {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
-                        <GraduationCap className="text-blue-600" size={24} />
+                <div className="paper-panel-flat w-full max-w-md mx-4 p-6 text-center">
+                    <div className="paper-icon-well mx-auto w-12 h-12 rounded-full mb-4 text-[var(--accent-1)]">
+                        <GraduationCap size={24} />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Placement Test</h2>
-                    <p className="text-sm text-gray-500 mt-2 mb-1">
+                    <h2 className="paper-title text-2xl">Placement Test</h2>
+                    <p className="paper-subtitle text-sm mt-2 mb-1 mx-auto">
                         We&apos;ll show you 5 sentences of increasing difficulty.
                     </p>
-                    <p className="text-sm text-gray-500 mb-6">
+                    <p className="paper-subtitle text-sm mb-6 mx-auto">
                         For each one, tell us if you can understand it — this helps us set the right starting level.
                     </p>
                     {error && (
-                        <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-4">
+                        <div className="paper-alert-soft-danger text-sm px-3 py-2 mb-4">
                             {error}
                         </div>
                     )}
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={startTest}
-                            className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                            className="paper-btn-primary w-full"
                         >
                             Start Test <ArrowRight size={16} />
                         </button>
                         <button
                             onClick={onSkip}
-                            className="w-full px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                            className="paper-btn-flat w-full text-sm"
                         >
                             Skip — start as beginner
                         </button>
@@ -120,9 +120,9 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
     if (phase === 'loading' || phase === 'submitting') {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
-                    <Loader2 className="mx-auto animate-spin text-blue-600 mb-4" size={32} />
-                    <p className="text-sm text-gray-500">
+                <div className="paper-panel-flat w-full max-w-md mx-4 p-8 text-center">
+                    <Loader2 className="mx-auto animate-spin text-[var(--accent-1)] mb-4" size={32} />
+                    <p className="text-sm text-[var(--ink-2)]">
                         {phase === 'loading' ? 'Generating test sentences...' : 'Analyzing your results...'}
                     </p>
                 </div>
@@ -135,13 +135,13 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
         const sentence = sentences[currentIndex];
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <div className="w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+                <div className="paper-panel-flat w-full max-w-lg mx-4 p-6">
                     {/* Progress */}
                     <div className="flex items-center justify-between mb-4">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-[var(--ink-3)] uppercase tracking-wider">
                             Question {currentIndex + 1} of {sentences.length}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-[var(--ink-3)]">
                             Difficulty: {sentence.level}/10
                         </span>
                     </div>
@@ -152,15 +152,15 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                             <div
                                 key={i}
                                 className={`flex-1 h-1.5 rounded-full transition-colors ${
-                                    i < currentIndex ? 'bg-blue-500' : i === currentIndex ? 'bg-blue-300' : 'bg-gray-200'
+                                    i < currentIndex ? 'bg-[var(--accent-0)]' : i === currentIndex ? 'bg-[var(--accent-2)]' : 'bg-[var(--paper-2)]'
                                 }`}
                             />
                         ))}
                     </div>
 
                     {/* Sentence */}
-                    <div className="bg-gray-50 border border-gray-100 rounded-xl p-6 mb-4 text-center">
-                        <p className="text-xl font-medium text-gray-900 leading-relaxed">
+                    <div className="paper-panel-soft p-6 mb-4 text-center">
+                        <p className="text-xl font-medium text-[var(--ink-0)] leading-relaxed">
                             {sentence.sentence}
                         </p>
                     </div>
@@ -169,17 +169,17 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                     {!showTranslation ? (
                         <button
                             onClick={() => setShowTranslation(true)}
-                            className="w-full text-xs text-gray-400 hover:text-gray-600 mb-4 transition-colors"
+                            className="w-full text-xs text-[var(--ink-3)] hover:text-[var(--ink-1)] mb-4 transition-colors"
                         >
                             Show translation (peek)
                         </button>
                     ) : (
-                        <div className="text-center text-sm text-gray-500 mb-4 bg-amber-50 border border-amber-100 rounded-lg p-2">
+                        <div className="paper-panel-soft text-center text-sm text-[var(--ink-2)] mb-4 p-2">
                             {sentence.translation}
                         </div>
                     )}
 
-                    <p className="text-sm text-gray-500 text-center mb-4">
+                    <p className="text-sm text-[var(--ink-2)] text-center mb-4">
                         Can you understand this sentence?
                     </p>
 
@@ -187,13 +187,13 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                     <div className="grid grid-cols-2 gap-3">
                         <button
                             onClick={() => handleAnswer(false)}
-                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-700 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all font-medium"
+                            className="paper-btn-flat font-medium"
                         >
                             <XCircle size={18} /> Not yet
                         </button>
                         <button
                             onClick={() => handleAnswer(true)}
-                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-all font-medium"
+                            className="paper-btn-primary font-medium"
                         >
                             <CheckCircle size={18} /> I understand
                         </button>
@@ -207,27 +207,27 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
     if (phase === 'result') {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 text-center">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                        <GraduationCap className="text-green-600" size={28} />
+                <div className="paper-panel-flat w-full max-w-md mx-4 p-6 text-center">
+                    <div className="paper-icon-well mx-auto w-16 h-16 rounded-full mb-4 text-[var(--success)] bg-[rgba(95,125,98,0.14)]">
+                        <GraduationCap size={28} />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Assessment Complete!</h2>
-                    <p className="text-sm text-gray-500 mt-2">Your starting level has been set to:</p>
+                    <h2 className="paper-title text-2xl">Assessment Complete!</h2>
+                    <p className="text-sm text-[var(--ink-2)] mt-2">Your starting level has been set to:</p>
 
                     <div className="mt-4 mb-2">
-                        <span className="text-5xl font-extrabold text-blue-600">{resultLevel}</span>
-                        <span className="text-lg text-gray-400 ml-1">/10</span>
+                        <span className="text-5xl font-extrabold text-[var(--accent-1)]">{resultLevel}</span>
+                        <span className="text-lg text-[var(--ink-3)] ml-1">/10</span>
                     </div>
-                    <p className="text-sm font-semibold text-gray-700 mb-1">
+                    <p className="text-sm font-semibold text-[var(--ink-1)] mb-1">
                         {LEVEL_LABELS[resultLevel] ?? 'Intermediate'}
                     </p>
-                    <p className="text-xs text-gray-400 mb-6">
+                    <p className="text-xs text-[var(--ink-3)] mb-6">
                         This will automatically adjust as you learn.
                     </p>
 
                     <button
                         onClick={() => onComplete(resultLevel)}
-                        className="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                        className="paper-btn-primary w-full"
                     >
                         Start Learning <ArrowRight size={16} />
                     </button>

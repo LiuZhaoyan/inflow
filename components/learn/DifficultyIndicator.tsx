@@ -6,10 +6,10 @@ import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 import { LEVEL_LABELS } from '@/lib/difficultyEngine';
 
 const LEVEL_COLORS: Record<string, string> = {
-    struggling: 'text-orange-600 bg-orange-50 border-orange-200',
-    learning: 'text-blue-600 bg-blue-50 border-blue-200',
-    comfortable: 'text-green-600 bg-green-50 border-green-200',
-    excellent: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+    struggling: 'paper-pill-soft text-[var(--accent-1)] bg-[rgba(188,106,64,0.12)]',
+    learning: 'paper-pill-soft text-[var(--ink-1)] bg-[rgba(67,52,43,0.08)]',
+    comfortable: 'paper-pill-soft text-[var(--success)] bg-[rgba(95,125,98,0.12)]',
+    excellent: 'paper-pill-soft text-[var(--success)] bg-[rgba(95,125,98,0.18)]',
 };
 
 interface DifficultyIndicatorProps {
@@ -31,13 +31,13 @@ export default function DifficultyIndicator({
     const colorClass = LEVEL_COLORS[performance] ?? LEVEL_COLORS.learning;
 
     const DirectionIcon = direction === 'increase' ? TrendingUp : direction === 'decrease' ? TrendingDown : Minus;
-    const directionColor = direction === 'increase' ? 'text-green-500' : direction === 'decrease' ? 'text-orange-500' : 'text-gray-400';
+    const directionColor = direction === 'increase' ? 'text-[var(--success)]' : direction === 'decrease' ? 'text-[var(--accent-1)]' : 'text-[var(--ink-3)]';
 
     return (
         <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setShowAdjust(prev => !prev)}
-                className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors ${colorClass}`}
+                className={`cursor-pointer inline-flex items-center gap-1.5 transition-colors ${colorClass}`}
                 title={`Level ${level}/10 — ${label}. Click to adjust.`}
             >
                 <span>Lv.{level}</span>
@@ -45,10 +45,10 @@ export default function DifficultyIndicator({
             </button>
 
             {showAdjust && onManualAdjust && (
-                <div className="absolute right-0 top-9 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-30">
-                    <div className="text-xs text-gray-500 mb-2">Adjust Difficulty</div>
-                    <div className="text-sm font-semibold text-gray-800 mb-1">{label}</div>
-                    <div className="text-[10px] text-gray-400 mb-3">Level {level}/10</div>
+                <div className="paper-popover absolute right-0 top-9 w-56 p-3 z-30">
+                    <div className="text-xs text-[var(--ink-3)] mb-2">Adjust Difficulty</div>
+                    <div className="text-sm font-semibold text-[var(--ink-1)] mb-1">{label}</div>
+                    <div className="text-[10px] text-[var(--ink-3)] mb-3">Level {level}/10</div>
 
                     {/* Level bar */}
                     <div className="flex items-center gap-1 mb-3">
@@ -60,7 +60,7 @@ export default function DifficultyIndicator({
                                     setShowAdjust(false);
                                 }}
                                 className={`flex-1 h-2 rounded-full transition-all cursor-pointer hover:scale-y-150 ${
-                                    i + 1 <= level ? 'bg-blue-500' : 'bg-gray-200'
+                                    i + 1 <= level ? 'bg-[var(--accent-0)]' : 'bg-[var(--paper-2)]'
                                 }`}
                                 title={`Set to level ${i + 1}`}
                             />
@@ -74,7 +74,7 @@ export default function DifficultyIndicator({
                                 setShowAdjust(false);
                             }}
                             disabled={level <= 1}
-                            className="cursor-pointer disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
+                            className="paper-btn-flat cursor-pointer disabled:cursor-not-allowed flex-1 px-2 py-1.5 text-xs font-medium"
                         >
                             <ChevronDown size={12} /> Easier
                         </button>
@@ -84,7 +84,7 @@ export default function DifficultyIndicator({
                                 setShowAdjust(false);
                             }}
                             disabled={level >= 10}
-                            className="cursor-pointer disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-30 border border-gray-200"
+                            className="paper-btn-flat cursor-pointer disabled:cursor-not-allowed flex-1 px-2 py-1.5 text-xs font-medium"
                         >
                             <ChevronUp size={12} /> Harder
                         </button>

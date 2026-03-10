@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import MasteredSentencesSidebar from '@/components/learn/MasteredSentencesSidebar';
 import ChatArea from '@/components/learn/ChatArea';
 import ContextSwitcher from '@/components/learn/ContextSwitcher';
@@ -11,11 +12,14 @@ import ControlButtons from '@/components/learn/ControlButtons';
 import CurrentSentenceCard from '@/components/learn/CurrentSentenceCard';
 import DifficultyIndicator from '@/components/learn/DifficultyIndicator';
 import PlacementTest from '@/components/learn/PlacementTest';
+import UserMenu from '@/components/auth/UserMenu';
 import useAudioTTS from '@/hooks/learn/useAudioTTS';
 import useLearnChat from '@/hooks/learn/useLearnChat';
 import useSelectionPopover from '@/hooks/learn/useSelectionPopover';
 
 export default function LearnPage() {
+    const { data: session } = useSession();
+
     const {
         messages,
         currentSentence,
@@ -89,13 +93,13 @@ export default function LearnPage() {
         <div className="page-surface page-surface-reading flex h-screen overflow-hidden text-[var(--foreground)]">
             {!profileLoading && !userProfile?.isOnboarded && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                    <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-xl border border-gray-100 p-6 text-center">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">Profile Required</p>
-                        <h2 className="text-xl font-bold text-gray-900 mt-2">Complete your learning profile</h2>
-                        <p className="text-sm text-gray-500 mt-2">Finish setup on the home page to start lessons.</p>
+                    <div className="paper-panel-flat w-full max-w-md mx-4 p-6 text-center">
+                        <p className="paper-chip justify-center text-[var(--accent-1)]">Profile Required</p>
+                        <h2 className="paper-title text-2xl mt-2">Complete your learning profile</h2>
+                        <p className="paper-subtitle text-sm mt-2 mx-auto">Finish setup on the home page to start lessons.</p>
                         <Link
                             href="/"
-                            className="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                            className="paper-btn-primary mt-4 inline-flex"
                         >
                             Go to home
                         </Link>
@@ -136,13 +140,13 @@ export default function LearnPage() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 h-full">
                 {/* Header */}
-                <header className="sticky top-0 z-10 flex-shrink-0 w-full border-b border-gray-100 bg-white/80 backdrop-blur-md">
+                <header className="sticky top-0 z-10 flex-shrink-0 w-full bg-[rgba(255,250,241,0.86)] backdrop-blur-md">
                     <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
-                        <Link href="/profile" className="text-gray-500 hover:text-gray-900 flex items-center gap-2 transition-colors">
+                        <Link href="/profile" className="paper-btn-flat min-h-0 px-3 py-2 text-sm">
                             <ArrowLeft size={20} />
                             <span className="font-medium">Back</span>
                         </Link>
-                        <h1 className="text-lg font-bold text-blue-700">AI Tutor</h1>
+                        <h1 className="paper-title text-lg text-[var(--accent-1)]">AI Tutor</h1>
                         <div className="flex items-center gap-3">
                             <DifficultyIndicator
                                 level={difficultyLevel}
@@ -165,6 +169,17 @@ export default function LearnPage() {
                                 setShowContextMenu={setShowContextMenu}
                                 onSelectContext={switchContext}
                             />
+                            {session?.user ? (
+                                <UserMenu name={session.user.name} email={session.user.email} />
+                            ) : (
+                                <Link
+                                    href="/profile"
+                                    className="flex items-center justify-center w-8 h-8 rounded-full bg-[#f3e8d7] text-[var(--ink-2)] border border-[var(--line-0)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)] transition-colors"
+                                    title="Profile"
+                                >
+                                    <User size={16} />
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -179,7 +194,7 @@ export default function LearnPage() {
                 />
 
                 {/* Control Area */}
-                <div className="bg-white border-t border-gray-100 flex-shrink-0 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+                <div className="paper-panel-flat bg-transparent flex-shrink-0 z-20 rounded-none">
                     <div className="mx-auto w-full px-6 lg:px-12 py-4 flex flex-col gap-4 max-w-6xl">
                         {/* Current Sentence Display Area */}
                         <CurrentSentenceCard

@@ -21,7 +21,7 @@ export default function ContextSwitcher({
             {selectedContext ? (
                 <button
                     onClick={() => setShowContextMenu(prev => !prev)}
-                    className="cursor-pointer text-xs md:text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full hover:bg-blue-100 transition-colors"
+                    className="paper-pill-soft paper-pill-accent cursor-pointer text-xs md:text-sm font-semibold px-2.5 py-1"
                     title="Switch context"
                 >
                     {selectedContext}
@@ -29,7 +29,7 @@ export default function ContextSwitcher({
             ) : (
                 <button
                     onClick={() => setShowContextMenu(true)}
-                    className="cursor-pointer text-xs md:text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full hover:bg-gray-100 transition-colors"
+                    className="paper-pill-soft paper-pill-ink cursor-pointer text-xs md:text-sm font-semibold px-2.5 py-1"
                     title="Choose context"
                 >
                     Choose
@@ -37,16 +37,16 @@ export default function ContextSwitcher({
             )}
 
             {showContextMenu && (
-                <div className="absolute right-0 top-9 w-56 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-20">
-                    <div className="text-xs text-gray-400 px-2 py-1">Switch context</div>
+                <div className="paper-popover absolute right-0 top-9 w-56 p-2 z-20">
+                    <div className="text-xs text-[var(--ink-3)] px-2 py-1">Switch context</div>
                     <div className="max-h-64 overflow-auto">
                         {CONTEXT_OPTIONS.map(ctx => (
                             <button
                                 key={ctx}
                                 onClick={() => onSelectContext(ctx)}
                                 className={`cursor-pointer w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${ctx === selectedContext
-                                        ? 'bg-blue-50 text-blue-700'
-                                        : 'text-gray-700 hover:bg-gray-50'
+                                        ? 'bg-[rgba(188,106,64,0.12)] text-[var(--accent-1)]'
+                                        : 'text-[var(--ink-1)] hover:bg-[var(--paper-1)]'
                                     }`}
                             >
                                 {ctx}
