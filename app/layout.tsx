@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Alegreya, Alegreya_Sans, Caveat, JetBrains_Mono } from "next/font/google";
+import type { Session } from 'next-auth';
 import Providers from "@/components/Providers";
 import "./globals.css";
 
@@ -41,12 +42,24 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isBypass = process.env.AUTH_BYPASS === 'true';
+  const session: Session | null = isBypass
+    ? {
+        user: {
+          id: process.env.AUTH_BYPASS_USER_ID || 'test-user',
+          email: process.env.AUTH_BYPASS_USER_EMAIL || 'test-user@local.dev',
+          name: process.env.AUTH_BYPASS_USER_NAME || 'Test User',
+        },
+        expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      }
+    : null;
+
   return (
     <html lang="en">
       <body
         className={`${paperBody.variable} ${paperDisplay.variable} ${paperScript.variable} ${paperMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers session={session} isBypass={isBypass}>{children}</Providers>
       </body>
     </html>
   );

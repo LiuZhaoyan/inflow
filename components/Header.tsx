@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { User } from "lucide-react";
+import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import UserMenu from '@/components/auth/UserMenu';
 
@@ -12,7 +13,14 @@ export type HeaderProps = {
 };
 
 export default function Header({ homeLink = true, rightText = "Beta v0.1", showProfile = true }: HeaderProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    console.log('[Header] useSession', {
+      status,
+      user: session?.user ?? null,
+    });
+  }, [status, session]);
 
   const logo = (
     <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-[var(--ink-1)]">

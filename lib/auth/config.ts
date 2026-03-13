@@ -1,5 +1,5 @@
 import type { NextAuthConfig } from 'next-auth';
-import { isAuthBypassEnabled } from './mode';
+import { getBypassUser, isAuthBypassEnabled } from './mode';
 
 /** Routes that don't require authentication */
 const PUBLIC_PATHS = ['/login', '/register', '/api/auth'];
@@ -43,12 +43,32 @@ export const authConfig: NextAuthConfig = {
       return isLoggedIn;
     },
     jwt({ token, user }) {
+      if (isAuthBypassEnabled()) {
+        const bypassUser = getBypassUser();
+        token.userId = bypassUser.id;
+        token.sub = bypassUser.id;
+        token.email = bypassUser.email;
+        token.name = bypassUser.name;
+        return token;
+      }
+
       if (user) {
         token.userId = user.id;
       }
       return token;
     },
     session({ session, token }) {
+      if (isAuthBypassEnabled()) {
+        const bypassUser = getBypassUser();
+        session.user = {
+          ...session.user,
+          id: bypassUser.id,
+          email: bypassUser.email,
+          name: bypassUser.name,
+        };
+        return session;
+      }
+
       if (session.user && token.userId) {
         session.user.id = token.userId as string;
       }
