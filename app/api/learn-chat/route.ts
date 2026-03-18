@@ -10,7 +10,7 @@ import {
     saveChatMessage,
 } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
-import { generateTTS } from '@/lib/ttsService';
+import { requestTtsPersistent } from '@/lib/ttsService';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import {
     calculateDifficultyContext,
@@ -201,7 +201,7 @@ Structure:
         if (currentSentence) {
             let audioPath: string | undefined;
             try {
-                audioPath = await generateTTS(currentSentence, {
+                audioPath = await requestTtsPersistent(currentSentence, {
                     voiceId: 'audiobook_female_1',
                     speed: 1.0
                 }, userId);

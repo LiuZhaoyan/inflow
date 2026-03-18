@@ -155,7 +155,7 @@ export default function LearnPage() {
                                 performance={difficultyPerformance}
                                 onManualAdjust={handleManualDifficultyAdjust}
                             />
-                            <LanguageSwitcher
+                            {/* <LanguageSwitcher
                                 selectedLanguage={selectedLanguage}
                                 showLanguageMenu={showLanguageMenu}
                                 setShowLanguageMenu={setShowLanguageMenu}
@@ -163,7 +163,7 @@ export default function LearnPage() {
                                     setShowLanguageMenu(false);
                                     switchLanguage(lang);
                                 }}
-                            />
+                            /> */}
                             <ContextSwitcher
                                 selectedContext={selectedContext}
                                 showContextMenu={showContextMenu}

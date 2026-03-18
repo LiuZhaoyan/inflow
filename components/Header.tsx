@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import UserMenu from '@/components/auth/UserMenu';
 import ProfileAvatarLink from '@/components/auth/ProfileAvatarLink';
@@ -13,14 +12,7 @@ export type HeaderProps = {
 };
 
 export default function Header({ homeLink = true, rightText = "Beta v0.1", showProfile = true }: HeaderProps) {
-  const { data: session, status } = useSession();
-
-  useEffect(() => {
-    console.log('[Header] useSession', {
-      status,
-      user: session?.user ?? null,
-    });
-  }, [status, session]);
+  const { data: session } = useSession();
 
   const logo = (
     <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-[var(--ink-1)]">
