@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, User } from 'lucide-react';
+import { BookOpen, LogOut, Sparkles, User } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
@@ -38,6 +38,21 @@ export default function UserMenu({ name, email }: UserMenuProps) {
           <div className="px-2 py-2 border-b border-[var(--line-0)]">
             <p className="text-sm font-semibold text-[var(--ink-1)] truncate">{name || 'User'}</p>
             <p className="text-xs text-[var(--ink-2)] truncate">{email || '—'}</p>
+          </div>
+
+          <div className="py-1 border-b border-[var(--line-0)]">
+            <Link
+              href="/vocabulary"
+              className="w-full flex items-center gap-2 px-2 py-2 text-sm text-[var(--ink-2)] rounded-lg hover:bg-[var(--paper-1)]"
+            >
+              Vocabulary
+            </Link>
+            <Link
+              href="/learn"
+              className="w-full flex items-center gap-2 px-2 py-2 text-sm text-[var(--ink-2)] rounded-lg hover:bg-[var(--paper-1)]"
+            >
+              AI Tutor
+            </Link>
           </div>
 
           <button

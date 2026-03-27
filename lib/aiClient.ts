@@ -25,7 +25,6 @@ const DEFAULT_CONFIG: AIRequestConfig = {
   model: 'deepseek/deepseek-v3.2',
   temperature: 0.7,
   maxTokens: 300,
-  timeout: 30000,
 };
 
 // Chat

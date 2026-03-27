@@ -36,6 +36,9 @@ export default function LearnPage() {
         difficultyLevel,
         difficultyDirection,
         difficultyPerformance,
+        isCooldownActive,
+        cooldownRemainingMs,
+        hasQueuedAction,
         placementCompleted,
         placementLoading,
         setPlacementCompleted,
@@ -208,6 +211,9 @@ export default function LearnPage() {
 
                         <ControlButtons
                             loading={loading}
+                            cooldownActive={isCooldownActive}
+                            cooldownRemainingMs={cooldownRemainingMs}
+                            hasQueuedAction={hasQueuedAction}
                             currentSentence={currentSentence}
                             onExplain={() => handleAction('explain')}
                             onTranslate={() => handleAction('translate')}

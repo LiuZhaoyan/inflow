@@ -73,12 +73,17 @@ export const chatMessages = sqliteTable('chat_messages', {
   languageCode:       text('language_code').notNull(),
   context:            text('context').notNull(),
   role:               text('role').notNull(),
+  requestId:          text('request_id'),
   content:            text('content').notNull(),
   messageType:        text('message_type'),
   originalSentence:   text('original_sentence'),
   difficultyEstimate: integer('difficulty_estimate'),
   createdAt:          integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+},
+  (table) => ({
+    userRequestUnique: uniqueIndex('chat_messages_user_id_request_id_unique').on(table.userId, table.requestId),
+  }),
+);
 
 // ───────── 故事 ─────────
 export const stories = sqliteTable('stories', {

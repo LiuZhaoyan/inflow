@@ -5,6 +5,20 @@ import type { UserProfile } from '@/lib/types/user';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
 
+type LearnAction = 'init' | 'explain' | 'translate' | 'understand';
+
+interface ActionPayload {
+    action: LearnAction;
+    context?: string;
+    queuedAt?: number;
+}
+
+const BASE_COOLDOWN_MS = 4000;
+const MAX_COOLDOWN_MS = 12000;
+const RETRY_AFTER_FALLBACK_MS = 10000;
+const SUCCESS_WINDOW_FOR_DECAY = 3;
+const COOLDOWN_FEATURE_FLAG_KEY = 'learnChatCooldownEnabled';
+
 interface ChatHistoryRow {
     id: string;
     role: 'user' | 'ai';
@@ -27,6 +41,13 @@ function deriveCurrentSentence(rows: ChatHistoryRow[]) {
     return { sentence: '', messageId: null as string | null };
 }
 
+function generateRequestId() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function useLearnChat() {
     const [messages, setMessages] = useState<Msg[]>([]);
     const [currentSentence, setCurrentSentence] = useState('');
@@ -45,10 +66,114 @@ export default function useLearnChat() {
     const [difficultyPerformance, setDifficultyPerformance] = useState<string>('learning');
     const [placementCompleted, setPlacementCompleted] = useState(false);
     const [placementLoading, setPlacementLoading] = useState(true);
+    const [cooldownRemainingMs, setCooldownRemainingMs] = useState(0);
+    const [hasQueuedAction, setHasQueuedAction] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const languageInitializedRef = useRef(false);
+    const loadingRef = useRef(false);
+    const nextAllowedAtRef = useRef(0);
+    const cooldownTimerRef = useRef<number | null>(null);
+    const countdownTimerRef = useRef<number | null>(null);
+    const pendingActionRef = useRef<ActionPayload | null>(null);
+    const cooldownMsRef = useRef(BASE_COOLDOWN_MS);
+    const successSince429Ref = useRef(0);
+    const cooldownEnabledRef = useRef(true);
+    const metricsRef = useRef({
+        cooldown_blocked_count: 0,
+        cooldown_wait_ms: 0,
+        pending_action_replaced_count: 0,
+        send_after_cooldown_count: 0,
+        cooldown_429_event_count: 0,
+    });
+
+    const isCooldownActive = cooldownRemainingMs > 0;
+
+    const logCooldownMetric = (event: string, value?: number) => {
+        console.info('[learn-chat-cooldown]', event, value ?? '');
+    };
+
+    const clearCooldownTimers = () => {
+        if (cooldownTimerRef.current !== null) {
+            window.clearTimeout(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+        }
+        if (countdownTimerRef.current !== null) {
+            window.clearInterval(countdownTimerRef.current);
+            countdownTimerRef.current = null;
+        }
+    };
+
+    const clearCooldownGate = () => {
+        clearCooldownTimers();
+        pendingActionRef.current = null;
+        nextAllowedAtRef.current = 0;
+        setHasQueuedAction(false);
+        setCooldownRemainingMs(0);
+    };
+
+    const parseRetryAfterMs = (headerValue: string | null) => {
+        const seconds = Number(headerValue);
+        if (Number.isFinite(seconds) && seconds > 0) {
+            return seconds * 1000;
+        }
+        return RETRY_AFTER_FALLBACK_MS;
+    };
+
+    const startCountdownTicker = () => {
+        if (countdownTimerRef.current !== null) {
+            window.clearInterval(countdownTimerRef.current);
+        }
+
+        countdownTimerRef.current = window.setInterval(() => {
+            const remaining = Math.max(0, nextAllowedAtRef.current - Date.now());
+            setCooldownRemainingMs(remaining);
+            if (remaining <= 0 && countdownTimerRef.current !== null) {
+                window.clearInterval(countdownTimerRef.current);
+                countdownTimerRef.current = null;
+            }
+        }, 100);
+    };
+
+    const applyAdaptiveCooldownOn429 = (retryAfterMs: number) => {
+        successSince429Ref.current = 0;
+        cooldownMsRef.current = Math.min(
+            MAX_COOLDOWN_MS,
+            Math.max(cooldownMsRef.current, retryAfterMs, BASE_COOLDOWN_MS),
+        );
+        metricsRef.current.cooldown_429_event_count += 1;
+        logCooldownMetric('429_after_cooldown_count', metricsRef.current.cooldown_429_event_count);
+    };
+
+    const applyAdaptiveCooldownOnSuccess = () => {
+        successSince429Ref.current += 1;
+        if (successSince429Ref.current >= SUCCESS_WINDOW_FOR_DECAY) {
+            cooldownMsRef.current = Math.max(BASE_COOLDOWN_MS, cooldownMsRef.current - 1000);
+            successSince429Ref.current = 0;
+        }
+    };
+
+    const startCooldownWindow = (windowMs: number, onExpire: () => void) => {
+        if (!cooldownEnabledRef.current) {
+            return;
+        }
+
+        const waitMs = Math.max(0, Math.min(windowMs, MAX_COOLDOWN_MS));
+        nextAllowedAtRef.current = Date.now() + waitMs;
+        setCooldownRemainingMs(waitMs);
+        metricsRef.current.cooldown_wait_ms = waitMs;
+        logCooldownMetric('cooldown_wait_ms', waitMs);
+
+        clearCooldownTimers();
+        if (waitMs <= 0) {
+            setCooldownRemainingMs(0);
+            return;
+        }
+
+        cooldownTimerRef.current = window.setTimeout(onExpire, waitMs);
+        startCountdownTicker();
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,6 +182,16 @@ export default function useLearnChat() {
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    useEffect(() => {
+        loadingRef.current = loading;
+    }, [loading]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const value = localStorage.getItem(COOLDOWN_FEATURE_FLAG_KEY);
+        cooldownEnabledRef.current = value !== 'false';
+    }, []);
 
     const loadMasteredSentences = useCallback(async (language: string) => {
         try {
@@ -189,12 +324,16 @@ export default function useLearnChat() {
         }
     }, [masteredSentences, selectedLanguage]);
 
-    const handleAction = useCallback(async (action: 'init' | 'explain' | 'translate' | 'understand', context?: string) => {
-        if (loading) return;
+    const runActionNow = useCallback(async (payload: ActionPayload) => {
+        const { action, context } = payload;
+
+        if (loadingRef.current) return;
         if (!userProfile?.isOnboarded) {
             return;
         }
+
         setLoading(true);
+        loadingRef.current = true;
 
         const effectiveContext = context ?? selectedContext ?? undefined;
 
@@ -215,19 +354,27 @@ export default function useLearnChat() {
         }
 
         try {
+            const requestId = generateRequestId();
             const res = await fetchWithRetry('/api/learn-chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action,
+                    requestId,
                     currentSentence: sentenceInProgress,
                     context: effectiveContext,
-                        messageId: currentSentenceMessageId,
-                        languageCode: selectedLanguage
-                })
+                    messageId: currentSentenceMessageId,
+                    languageCode: selectedLanguage,
+                }),
             });
 
-            if (!res.ok) throw new Error('API Error');
+            if (!res.ok) {
+                const retryAfterMs = parseRetryAfterMs(res.headers.get('Retry-After'));
+                const apiError = new Error('API Error') as Error & { status?: number; retryAfterMs?: number };
+                apiError.status = res.status;
+                apiError.retryAfterMs = retryAfterMs;
+                throw apiError;
+            }
 
             const data = await res.json();
 
@@ -235,10 +382,9 @@ export default function useLearnChat() {
             setMessages(prev => [...prev, {
                 id: aiMessageId,
                 role: 'ai',
-                content: data.response
+                content: data.response,
             }]);
 
-            // Update difficulty state from response
             if (data.difficulty) {
                 setDifficultyLevel(data.difficulty.level ?? difficultyLevel);
                 setDifficultyDirection(data.difficulty.direction ?? 'maintain');
@@ -261,31 +407,150 @@ export default function useLearnChat() {
                 setCurrentSentence(data.original);
             }
 
+            applyAdaptiveCooldownOnSuccess();
         } catch (error) {
+            const err = error as Error & { status?: number; retryAfterMs?: number };
+            if (err?.status === 429) {
+                applyAdaptiveCooldownOn429(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
+            }
+
             console.error(error);
             setMessages(prev => [...prev, {
                 id: Date.now().toString() + 'err',
                 role: 'ai',
-                content: 'Sorry, I encountered an error. Please try again.'
+                content: 'Sorry, I encountered an error. Please try again.',
             }]);
         } finally {
             setLoading(false);
+            loadingRef.current = false;
+
+            startCooldownWindow(cooldownMsRef.current, () => {
+                cooldownTimerRef.current = null;
+                const now = Date.now();
+                const remaining = nextAllowedAtRef.current - now;
+                if (remaining > 0) {
+                    cooldownTimerRef.current = window.setTimeout(() => {
+                        cooldownTimerRef.current = null;
+                        const next = pendingActionRef.current;
+                        pendingActionRef.current = null;
+                        setHasQueuedAction(false);
+                        setCooldownRemainingMs(0);
+                        if (next) {
+                            metricsRef.current.send_after_cooldown_count += 1;
+                            logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
+                            void runActionNow(next);
+                        }
+                    }, remaining);
+                    startCountdownTicker();
+                    return;
+                }
+
+                setCooldownRemainingMs(0);
+                if (!pendingActionRef.current) {
+                    setHasQueuedAction(false);
+                    return;
+                }
+
+                const next = pendingActionRef.current;
+                pendingActionRef.current = null;
+                setHasQueuedAction(false);
+                metricsRef.current.send_after_cooldown_count += 1;
+                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
+                void runActionNow(next);
+            });
         }
     }, [
         currentSentence,
         currentSentenceMessageId,
         difficultyLevel,
         loadMasteredSentences,
-        loading,
         selectedContext,
         selectedLanguage,
         userProfile?.isOnboarded,
     ]);
 
+    const scheduleOrRunAction = useCallback((payload: ActionPayload) => {
+        if (loadingRef.current) return;
+        if (!userProfile?.isOnboarded) return;
+
+        const now = Date.now();
+        if (!cooldownEnabledRef.current || now >= nextAllowedAtRef.current) {
+            void runActionNow(payload);
+            return;
+        }
+
+        const hadPending = Boolean(pendingActionRef.current);
+        pendingActionRef.current = {
+            ...payload,
+            queuedAt: now,
+        };
+        setHasQueuedAction(true);
+
+        if (hadPending) {
+            metricsRef.current.pending_action_replaced_count += 1;
+            logCooldownMetric('pending_action_replaced_count', metricsRef.current.pending_action_replaced_count);
+        }
+
+        const waitMs = Math.max(0, nextAllowedAtRef.current - now);
+        setCooldownRemainingMs(waitMs);
+        metricsRef.current.cooldown_blocked_count += 1;
+        logCooldownMetric('cooldown_blocked_count', metricsRef.current.cooldown_blocked_count);
+
+        clearCooldownTimers();
+        cooldownTimerRef.current = window.setTimeout(() => {
+            cooldownTimerRef.current = null;
+            const next = pendingActionRef.current;
+            pendingActionRef.current = null;
+            setHasQueuedAction(false);
+            setCooldownRemainingMs(0);
+            if (next) {
+                metricsRef.current.send_after_cooldown_count += 1;
+                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
+                void runActionNow(next);
+            }
+        }, waitMs);
+        startCountdownTicker();
+    }, [runActionNow, userProfile?.isOnboarded]);
+
+    const handleAction = useCallback((action: LearnAction, context?: string) => {
+        scheduleOrRunAction({ action, context });
+    }, [scheduleOrRunAction]);
+
+    useEffect(() => {
+        const onVisibility = () => {
+            if (document.hidden) return;
+            if (loadingRef.current) return;
+            if (!pendingActionRef.current) return;
+            if (Date.now() < nextAllowedAtRef.current) return;
+
+            const next = pendingActionRef.current;
+            pendingActionRef.current = null;
+            setHasQueuedAction(false);
+            setCooldownRemainingMs(0);
+            if (next) {
+                metricsRef.current.send_after_cooldown_count += 1;
+                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
+                void runActionNow(next);
+            }
+        };
+
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
+    }, [runActionNow]);
+
+    useEffect(() => {
+        return () => {
+            clearCooldownGate();
+        };
+    }, []);
+
     const switchContext = useCallback((context: string) => {
         if (!userProfile?.isOnboarded) {
             return;
         }
+        clearCooldownGate();
         setSelectedContext(context);
         setShowContextMenu(false);
         localStorage.setItem(`learn-chat:last-context:${selectedLanguage}`, context);
@@ -304,6 +569,7 @@ export default function useLearnChat() {
     }, [handleAction, loadStoredChat, selectedLanguage, userProfile?.isOnboarded]);
 
     const switchLanguage = useCallback((language: LanguageCode) => {
+        clearCooldownGate();
         const normalized = normalizeLanguageCode(language);
         const fallback = normalizeLanguageCode(userProfile?.targetLanguage || 'en');
         const resolved = normalized === 'auto' ? (fallback === 'auto' ? 'en' : fallback) : normalized;
@@ -334,6 +600,9 @@ export default function useLearnChat() {
         difficultyLevel,
         difficultyDirection,
         difficultyPerformance,
+        isCooldownActive,
+        cooldownRemainingMs,
+        hasQueuedAction,
         placementCompleted,
         placementLoading,
         setPlacementCompleted,

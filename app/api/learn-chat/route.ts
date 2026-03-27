@@ -3,6 +3,7 @@ import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import {
     getProgress,
     getUserProfile,
+    getChatMessageByRequestId,
     saveMasteredSentence,
     setDifficultyLevel,
     updateProgress,
@@ -104,8 +105,9 @@ export async function POST(req: Request) {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
 
-        const { action, currentSentence, context: rawContext, messageId, languageCode } = await req.json();
+        const { action, requestId, currentSentence, context: rawContext, messageId, languageCode } = await req.json();
     const userId = user.id;
+    const stableRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : undefined;
     const context = typeof rawContext === 'string' && rawContext.trim() ? rawContext.trim() : 'General';
     const userProfile = await getUserProfile(userId);
     const requestedLanguage = normalizeLanguageCode(languageCode);
@@ -157,12 +159,19 @@ Structure:
     const userContent = mapActionToUserContent(action, currentSentence, context, difficultyCtx.currentLevel);
 
     if (action !== 'init') {
-        await saveChatMessage(userId, {
-            languageCode: targetLanguage,
-            context,
-            role: 'user',
-            content: userContent,
-        });
+        const existingMessage = stableRequestId
+            ? await getChatMessageByRequestId(userId, stableRequestId)
+            : null;
+
+        if (!existingMessage) {
+            await saveChatMessage(userId, {
+                languageCode: targetLanguage,
+                context,
+                role: 'user',
+                requestId: stableRequestId,
+                content: userContent,
+            });
+        }
     }
 
     if (action === 'understand') {

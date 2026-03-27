@@ -9,6 +9,7 @@ export interface ChatHistoryMessage {
   languageCode: string;
   context: string;
   role: string;
+  requestId?: string;
   content: string;
   messageType?: string;
   originalSentence?: string;
@@ -20,6 +21,7 @@ export interface NewChatMessage {
   languageCode: string;
   context: string;
   role: string;
+  requestId?: string;
   content: string;
   messageType?: string;
   originalSentence?: string;
@@ -40,6 +42,7 @@ function mapRow(row: typeof chatMessages.$inferSelect): ChatHistoryMessage {
     languageCode: row.languageCode,
     context: row.context,
     role: row.role,
+    requestId: row.requestId || undefined,
     content: row.content,
     messageType: row.messageType || undefined,
     originalSentence: row.originalSentence || undefined,
@@ -87,6 +90,7 @@ export async function saveChatMessage(
       languageCode: message.languageCode,
       context: message.context,
       role: message.role,
+      requestId: message.requestId,
       content: message.content,
       messageType: message.messageType,
       originalSentence: message.originalSentence,
@@ -96,6 +100,19 @@ export async function saveChatMessage(
     .returning();
 
   return mapRow(created);
+}
+
+export async function getChatMessageByRequestId(
+  userId: string,
+  requestId: string,
+): Promise<ChatHistoryMessage | null> {
+  const [row] = await db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.userId, userId), eq(chatMessages.requestId, requestId)))
+    .limit(1);
+
+  return row ? mapRow(row) : null;
 }
 
 export async function clearChatHistory(
