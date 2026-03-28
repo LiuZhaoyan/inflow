@@ -2,12 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MasteredSentence } from '@/lib/types/progress';
 import type { Msg } from '@/lib/types/learnTypes';
 import type { UserProfile } from '@/lib/types/user';
-import type { ActionPayload, ChatHistoryRow, LearnAction } from '@/lib/types/learnChat';
+import type { ActionPayload, LearnAction } from '@/lib/types/learnChat';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
-import { deriveCurrentSentence } from '@/hooks/learn/utils/chatHistory';
-import { parseRetryAfterMs, computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
-import { generateRequestId } from '@/hooks/learn/utils/requestId';
+import { useCooldownGate } from '@/hooks/learn/core/useCooldownGate';
+import {
+    deleteMasteredSentence,
+    fetchChatHistory,
+    fetchMasteredSentences,
+    fetchPlacementStatus,
+    fetchProfile,
+    postLearnChatAction,
+    updateCurrentLanguageCode,
+    type LearnChatApiError,
+} from '@/hooks/learn/services/learnChatApi';
+import {
+    mapChatHistoryRowsToViewModel,
+    mapLearnChatActionResponseToViewModel,
+} from '@/hooks/learn/services/learnChatMapper';
 
 const BASE_COOLDOWN_MS = 4000;
 const MAX_COOLDOWN_MS = 12000;
@@ -33,110 +44,15 @@ export default function useLearnChat() {
     const [difficultyPerformance, setDifficultyPerformance] = useState<string>('learning');
     const [placementCompleted, setPlacementCompleted] = useState(false);
     const [placementLoading, setPlacementLoading] = useState(true);
-    const [cooldownRemainingMs, setCooldownRemainingMs] = useState(0);
-    const [hasQueuedAction, setHasQueuedAction] = useState(false);
+    const [cooldownEnabled, setCooldownEnabled] = useState(true);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const languageInitializedRef = useRef(false);
     const loadingRef = useRef(false);
-    const nextAllowedAtRef = useRef(0);
-    const cooldownTimerRef = useRef<number | null>(null);
-    const countdownTimerRef = useRef<number | null>(null);
-    const pendingActionRef = useRef<ActionPayload | null>(null);
-    const cooldownMsRef = useRef(BASE_COOLDOWN_MS);
-    const successSince429Ref = useRef(0);
-    const cooldownEnabledRef = useRef(true);
-    const metricsRef = useRef({
-        cooldown_blocked_count: 0,
-        cooldown_wait_ms: 0,
-        pending_action_replaced_count: 0,
-        send_after_cooldown_count: 0,
-        cooldown_429_event_count: 0,
-    });
-
-    const isCooldownActive = cooldownRemainingMs > 0;
-
-    const logCooldownMetric = (event: string, value?: number) => {
-        console.info('[learn-chat-cooldown]', event, value ?? '');
-    };
-
-    const clearCooldownTimers = () => {
-        if (cooldownTimerRef.current !== null) {
-            window.clearTimeout(cooldownTimerRef.current);
-            cooldownTimerRef.current = null;
-        }
-        if (countdownTimerRef.current !== null) {
-            window.clearInterval(countdownTimerRef.current);
-            countdownTimerRef.current = null;
-        }
-    };
-
-    const clearCooldownGate = () => {
-        clearCooldownTimers();
-        pendingActionRef.current = null;
-        nextAllowedAtRef.current = 0;
-        setHasQueuedAction(false);
-        setCooldownRemainingMs(0);
-    };
-
-    const startCountdownTicker = () => {
-        if (countdownTimerRef.current !== null) {
-            window.clearInterval(countdownTimerRef.current);
-        }
-
-        countdownTimerRef.current = window.setInterval(() => {
-            const remaining = Math.max(0, nextAllowedAtRef.current - Date.now());
-            setCooldownRemainingMs(remaining);
-            if (remaining <= 0 && countdownTimerRef.current !== null) {
-                window.clearInterval(countdownTimerRef.current);
-                countdownTimerRef.current = null;
-            }
-        }, 100);
-    };
-
-    const applyAdaptiveCooldownOn429 = (retryAfterMs: number) => {
-        successSince429Ref.current = 0;
-        cooldownMsRef.current = computeCooldownAfter429(cooldownMsRef.current, retryAfterMs, {
-            baseMs: BASE_COOLDOWN_MS,
-            maxMs: MAX_COOLDOWN_MS,
-        });
-        metricsRef.current.cooldown_429_event_count += 1;
-        logCooldownMetric('429_after_cooldown_count', metricsRef.current.cooldown_429_event_count);
-    };
-
-    const applyAdaptiveCooldownOnSuccess = () => {
-        const nextState = computeCooldownAfterSuccess({
-            cooldownMs: cooldownMsRef.current,
-            successSince429: successSince429Ref.current,
-            baseMs: BASE_COOLDOWN_MS,
-            successWindowForDecay: SUCCESS_WINDOW_FOR_DECAY,
-            decayStepMs: 1000,
-        });
-        cooldownMsRef.current = nextState.cooldownMs;
-        successSince429Ref.current = nextState.successSince429;
-    };
-
-    const startCooldownWindow = (windowMs: number, onExpire: () => void) => {
-        if (!cooldownEnabledRef.current) {
-            return;
-        }
-
-        const waitMs = Math.max(0, Math.min(windowMs, MAX_COOLDOWN_MS));
-        nextAllowedAtRef.current = Date.now() + waitMs;
-        setCooldownRemainingMs(waitMs);
-        metricsRef.current.cooldown_wait_ms = waitMs;
-        logCooldownMetric('cooldown_wait_ms', waitMs);
-
-        clearCooldownTimers();
-        if (waitMs <= 0) {
-            setCooldownRemainingMs(0);
-            return;
-        }
-
-        cooldownTimerRef.current = window.setTimeout(onExpire, waitMs);
-        startCountdownTicker();
-    };
+    const runActionNowRef = useRef<(payload: ActionPayload) => Promise<void>>(async () => {});
+    const notify429Ref = useRef<(retryAfterMs?: number) => void>(() => {});
+    const notifySuccessRef = useRef<() => void>(() => {});
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -153,37 +69,47 @@ export default function useLearnChat() {
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const value = localStorage.getItem(COOLDOWN_FEATURE_FLAG_KEY);
-        cooldownEnabledRef.current = value !== 'false';
+        setCooldownEnabled(value !== 'false');
     }, []);
 
-    const loadMasteredSentences = useCallback(async (language: string) => {
+    const {
+        isCooldownActive,
+        cooldownRemainingMs,
+        hasQueuedAction,
+        scheduleOrRun,
+        notify429,
+        notifySuccess,
+        flushQueuedIfReady,
+        clear,
+    } = useCooldownGate<ActionPayload>({
+        enabled: cooldownEnabled,
+        baseMs: BASE_COOLDOWN_MS,
+        maxMs: MAX_COOLDOWN_MS,
+        fallbackRetryAfterMs: RETRY_AFTER_FALLBACK_MS,
+        successWindowForDecay: SUCCESS_WINDOW_FOR_DECAY,
+        onRun: (payload) => runActionNowRef.current(payload),
+        isBlocked: () => loadingRef.current,
+    });
+
+    useEffect(() => {
+        notify429Ref.current = notify429;
+        notifySuccessRef.current = notifySuccess;
+    }, [notify429, notifySuccess]);
+
+    const loadMasteredSentences = useCallback(async (language: LanguageCode) => {
         try {
-            const res = await fetch(`/api/mastered-sentences?languageCode=${language}`);
-            const data = await res.json();
-            if (data.sentences) setMasteredSentences(data.sentences);
+            const sentences = await fetchMasteredSentences(language);
+            setMasteredSentences(sentences);
         } catch (err) {
             console.error('Failed to load mastered sentences', err);
         }
     }, []);
 
-    const loadStoredChat = useCallback(async (language: string, context: string) => {
+    const loadStoredChat = useCallback(async (language: LanguageCode, context: string) => {
         try {
-            const params = new URLSearchParams({ lang: language, context });
-            const res = await fetch(`/api/chat-history?${params.toString()}`);
-            if (!res.ok) return null;
-            const data = await res.json();
-            const rows = Array.isArray(data?.messages) ? data.messages as ChatHistoryRow[] : [];
-            const mappedMessages: Msg[] = rows.map((row) => ({
-                id: row.id,
-                role: row.role,
-                content: row.content,
-            }));
-            const sentenceState = deriveCurrentSentence(rows);
-            return {
-                messages: mappedMessages,
-                currentSentence: sentenceState.sentence,
-                currentSentenceMessageId: sentenceState.messageId,
-            };
+            const rows = await fetchChatHistory(language, context);
+            if (!rows) return null;
+            return mapChatHistoryRowsToViewModel(rows);
         } catch (err) {
             console.error('Failed to load chat history', err);
             return null;
@@ -193,18 +119,8 @@ export default function useLearnChat() {
     useEffect(() => {
         const init = async () => {
             try {
-                const res = await fetch('/api/user');
-                if (res.ok) {
-                    const data = await res.json();
-                    const profile = data?.profile as UserProfile | undefined;
-                    if (profile) {
-                        setUserProfile(profile);
-                    } else {
-                        setUserProfile(null);
-                    }
-                } else {
-                    setUserProfile(null);
-                }
+                const profile = await fetchProfile();
+                setUserProfile(profile);
             } catch (err) {
                 console.error('Failed to load user profile', err);
                 setUserProfile(null);
@@ -214,12 +130,9 @@ export default function useLearnChat() {
 
             // Load placement test / difficulty status
             try {
-                const res = await fetch('/api/placement-test');
-                if (res.ok) {
-                    const data = await res.json();
-                    setPlacementCompleted(data.completed ?? false);
-                    setDifficultyLevel(data.level ?? 3);
-                }
+                const placement = await fetchPlacementStatus();
+                setPlacementCompleted(placement.completed);
+                setDifficultyLevel(placement.level);
             } catch (err) {
                 console.error('Failed to load placement status', err);
             } finally {
@@ -273,14 +186,10 @@ export default function useLearnChat() {
         setMasteredSentences(prev => prev.filter(s => s.id !== id));
 
         try {
-            const res = await fetch('/api/mastered-sentences', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, languageCode: selectedLanguage })
-            });
-            if (!res.ok) throw new Error('Delete failed');
-            const data = await res.json();
-            if (data.sentences) setMasteredSentences(data.sentences);
+            const nextSentences = await deleteMasteredSentence(id, selectedLanguage);
+            if (nextSentences) {
+                setMasteredSentences(nextSentences);
+            }
         } catch (error) {
             console.error(error);
             setMasteredSentences(previous);
@@ -317,48 +226,33 @@ export default function useLearnChat() {
         }
 
         try {
-            const requestId = generateRequestId();
-            const res = await fetchWithRetry('/api/learn-chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action,
-                    requestId,
-                    currentSentence: sentenceInProgress,
-                    context: effectiveContext,
-                    messageId: currentSentenceMessageId,
-                    languageCode: selectedLanguage,
-                }),
+            const apiData = await postLearnChatAction({
+                action,
+                context: effectiveContext,
+                currentSentence: sentenceInProgress,
+                messageId: currentSentenceMessageId,
+                languageCode: selectedLanguage,
             });
 
-            if (!res.ok) {
-                const retryAfterMs = parseRetryAfterMs(res.headers.get('Retry-After'), RETRY_AFTER_FALLBACK_MS);
-                const apiError = new Error('API Error') as Error & { status?: number; retryAfterMs?: number };
-                apiError.status = res.status;
-                apiError.retryAfterMs = retryAfterMs;
-                throw apiError;
-            }
-
-            const data = await res.json();
-
-            const aiMessageId = typeof data.messageId === 'string' ? data.messageId : Date.now().toString() + 'ai';
+            const viewModel = mapLearnChatActionResponseToViewModel(apiData);
+            const aiMessageId = viewModel.aiMessageId;
             setMessages(prev => [...prev, {
                 id: aiMessageId,
                 role: 'ai',
-                content: data.response,
+                content: viewModel.response,
             }]);
 
-            if (data.difficulty) {
-                setDifficultyLevel(data.difficulty.level ?? difficultyLevel);
-                setDifficultyDirection(data.difficulty.direction ?? 'maintain');
-                setDifficultyPerformance(data.difficulty.performance ?? 'learning');
+            if (viewModel.difficulty) {
+                setDifficultyLevel(viewModel.difficulty.level ?? difficultyLevel);
+                setDifficultyDirection(viewModel.difficulty.direction ?? 'maintain');
+                setDifficultyPerformance(viewModel.difficulty.performance ?? 'learning');
             }
 
-            const normalizedType = typeof data.type === 'string' ? data.type.toLowerCase() : '';
+            const normalizedType = viewModel.normalizedType;
 
             if (normalizedType === 'sentence' || action === 'init' || action === 'understand') {
-                if (typeof data.response === 'string' && data.response.trim()) {
-                    setCurrentSentence(data.response);
+                if (viewModel.response.trim()) {
+                    setCurrentSentence(viewModel.response);
                     setCurrentSentenceMessageId(aiMessageId);
                 }
 
@@ -366,15 +260,15 @@ export default function useLearnChat() {
                     void loadMasteredSentences(selectedLanguage);
                 }
 
-            } else if (data.original && normalizedType !== 'sentence') {
-                setCurrentSentence(data.original);
+            } else if (viewModel.originalSentence && normalizedType !== 'sentence') {
+                setCurrentSentence(viewModel.originalSentence);
             }
 
-            applyAdaptiveCooldownOnSuccess();
+            notifySuccessRef.current();
         } catch (error) {
-            const err = error as Error & { status?: number; retryAfterMs?: number };
+            const err = error as LearnChatApiError;
             if (err?.status === 429) {
-                applyAdaptiveCooldownOn429(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
+                notify429Ref.current(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
             }
 
             console.error(error);
@@ -386,41 +280,6 @@ export default function useLearnChat() {
         } finally {
             setLoading(false);
             loadingRef.current = false;
-
-            startCooldownWindow(cooldownMsRef.current, () => {
-                cooldownTimerRef.current = null;
-                const now = Date.now();
-                const remaining = nextAllowedAtRef.current - now;
-                if (remaining > 0) {
-                    cooldownTimerRef.current = window.setTimeout(() => {
-                        cooldownTimerRef.current = null;
-                        const next = pendingActionRef.current;
-                        pendingActionRef.current = null;
-                        setHasQueuedAction(false);
-                        setCooldownRemainingMs(0);
-                        if (next) {
-                            metricsRef.current.send_after_cooldown_count += 1;
-                            logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-                            void runActionNow(next);
-                        }
-                    }, remaining);
-                    startCountdownTicker();
-                    return;
-                }
-
-                setCooldownRemainingMs(0);
-                if (!pendingActionRef.current) {
-                    setHasQueuedAction(false);
-                    return;
-                }
-
-                const next = pendingActionRef.current;
-                pendingActionRef.current = null;
-                setHasQueuedAction(false);
-                metricsRef.current.send_after_cooldown_count += 1;
-                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-                void runActionNow(next);
-            });
         }
     }, [
         currentSentence,
@@ -432,48 +291,14 @@ export default function useLearnChat() {
         userProfile?.isOnboarded,
     ]);
 
+    useEffect(() => {
+        runActionNowRef.current = runActionNow;
+    }, [runActionNow]);
+
     const scheduleOrRunAction = useCallback((payload: ActionPayload) => {
-        if (loadingRef.current) return;
         if (!userProfile?.isOnboarded) return;
-
-        const now = Date.now();
-        if (!cooldownEnabledRef.current || now >= nextAllowedAtRef.current) {
-            void runActionNow(payload);
-            return;
-        }
-
-        const hadPending = Boolean(pendingActionRef.current);
-        pendingActionRef.current = {
-            ...payload,
-            queuedAt: now,
-        };
-        setHasQueuedAction(true);
-
-        if (hadPending) {
-            metricsRef.current.pending_action_replaced_count += 1;
-            logCooldownMetric('pending_action_replaced_count', metricsRef.current.pending_action_replaced_count);
-        }
-
-        const waitMs = Math.max(0, nextAllowedAtRef.current - now);
-        setCooldownRemainingMs(waitMs);
-        metricsRef.current.cooldown_blocked_count += 1;
-        logCooldownMetric('cooldown_blocked_count', metricsRef.current.cooldown_blocked_count);
-
-        clearCooldownTimers();
-        cooldownTimerRef.current = window.setTimeout(() => {
-            cooldownTimerRef.current = null;
-            const next = pendingActionRef.current;
-            pendingActionRef.current = null;
-            setHasQueuedAction(false);
-            setCooldownRemainingMs(0);
-            if (next) {
-                metricsRef.current.send_after_cooldown_count += 1;
-                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-                void runActionNow(next);
-            }
-        }, waitMs);
-        startCountdownTicker();
-    }, [runActionNow, userProfile?.isOnboarded]);
+        scheduleOrRun(payload);
+    }, [scheduleOrRun, userProfile?.isOnboarded]);
 
     const handleAction = useCallback((action: LearnAction, context?: string) => {
         scheduleOrRunAction({ action, context });
@@ -482,38 +307,26 @@ export default function useLearnChat() {
     useEffect(() => {
         const onVisibility = () => {
             if (document.hidden) return;
-            if (loadingRef.current) return;
-            if (!pendingActionRef.current) return;
-            if (Date.now() < nextAllowedAtRef.current) return;
-
-            const next = pendingActionRef.current;
-            pendingActionRef.current = null;
-            setHasQueuedAction(false);
-            setCooldownRemainingMs(0);
-            if (next) {
-                metricsRef.current.send_after_cooldown_count += 1;
-                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-                void runActionNow(next);
-            }
+            flushQueuedIfReady();
         };
 
         document.addEventListener('visibilitychange', onVisibility);
         return () => {
             document.removeEventListener('visibilitychange', onVisibility);
         };
-    }, [runActionNow]);
+    }, [flushQueuedIfReady]);
 
     useEffect(() => {
         return () => {
-            clearCooldownGate();
+            clear();
         };
-    }, []);
+    }, [clear]);
 
     const switchContext = useCallback((context: string) => {
         if (!userProfile?.isOnboarded) {
             return;
         }
-        clearCooldownGate();
+        clear();
         setSelectedContext(context);
         setShowContextMenu(false);
         localStorage.setItem(`learn-chat:last-context:${selectedLanguage}`, context);
@@ -529,23 +342,19 @@ export default function useLearnChat() {
             setCurrentSentenceMessageId(null);
             void handleAction('init', context);
         });
-    }, [handleAction, loadStoredChat, selectedLanguage, userProfile?.isOnboarded]);
+    }, [clear, handleAction, loadStoredChat, selectedLanguage, userProfile?.isOnboarded]);
 
     const switchLanguage = useCallback((language: LanguageCode) => {
-        clearCooldownGate();
+        clear();
         const normalized = normalizeLanguageCode(language);
         const fallback = normalizeLanguageCode(userProfile?.targetLanguage || 'en');
         const resolved = normalized === 'auto' ? (fallback === 'auto' ? 'en' : fallback) : normalized;
         setSelectedLanguage(resolved);
         localStorage.setItem('learn-chat:last-language', resolved);
         if (userProfile?.isOnboarded) {
-            fetch('/api/user', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ currentLanguageCode: resolved })
-            }).catch(() => {});
+            updateCurrentLanguageCode(resolved).catch(() => {});
         }
-    }, [userProfile?.isOnboarded, userProfile?.targetLanguage]);
+    }, [clear, userProfile?.isOnboarded, userProfile?.targetLanguage]);
 
     return {
         messages,
