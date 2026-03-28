@@ -2,51 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MasteredSentence } from '@/lib/types/progress';
 import type { Msg } from '@/lib/types/learnTypes';
 import type { UserProfile } from '@/lib/types/user';
+import type { ActionPayload, ChatHistoryRow, LearnAction } from '@/lib/types/learnChat';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
 import { fetchWithRetry } from '@/lib/fetchWithRetry';
-
-type LearnAction = 'init' | 'explain' | 'translate' | 'understand';
-
-interface ActionPayload {
-    action: LearnAction;
-    context?: string;
-    queuedAt?: number;
-}
+import { deriveCurrentSentence } from '@/hooks/learn/utils/chatHistory';
+import { parseRetryAfterMs, computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
+import { generateRequestId } from '@/hooks/learn/utils/requestId';
 
 const BASE_COOLDOWN_MS = 4000;
 const MAX_COOLDOWN_MS = 12000;
 const RETRY_AFTER_FALLBACK_MS = 10000;
 const SUCCESS_WINDOW_FOR_DECAY = 3;
 const COOLDOWN_FEATURE_FLAG_KEY = 'learnChatCooldownEnabled';
-
-interface ChatHistoryRow {
-    id: string;
-    role: 'user' | 'ai';
-    content: string;
-    messageType?: string;
-    originalSentence?: string;
-}
-
-function deriveCurrentSentence(rows: ChatHistoryRow[]) {
-    for (let i = rows.length - 1; i >= 0; i -= 1) {
-        const row = rows[i];
-        if (row.role !== 'ai') continue;
-        if (row.messageType === 'sentence' && row.content.trim()) {
-            return { sentence: row.content, messageId: row.id };
-        }
-        if (row.originalSentence && row.originalSentence.trim()) {
-            return { sentence: row.originalSentence, messageId: null as string | null };
-        }
-    }
-    return { sentence: '', messageId: null as string | null };
-}
-
-function generateRequestId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-        return crypto.randomUUID();
-    }
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
 
 export default function useLearnChat() {
     const [messages, setMessages] = useState<Msg[]>([]);
@@ -113,14 +80,6 @@ export default function useLearnChat() {
         setCooldownRemainingMs(0);
     };
 
-    const parseRetryAfterMs = (headerValue: string | null) => {
-        const seconds = Number(headerValue);
-        if (Number.isFinite(seconds) && seconds > 0) {
-            return seconds * 1000;
-        }
-        return RETRY_AFTER_FALLBACK_MS;
-    };
-
     const startCountdownTicker = () => {
         if (countdownTimerRef.current !== null) {
             window.clearInterval(countdownTimerRef.current);
@@ -138,20 +97,24 @@ export default function useLearnChat() {
 
     const applyAdaptiveCooldownOn429 = (retryAfterMs: number) => {
         successSince429Ref.current = 0;
-        cooldownMsRef.current = Math.min(
-            MAX_COOLDOWN_MS,
-            Math.max(cooldownMsRef.current, retryAfterMs, BASE_COOLDOWN_MS),
-        );
+        cooldownMsRef.current = computeCooldownAfter429(cooldownMsRef.current, retryAfterMs, {
+            baseMs: BASE_COOLDOWN_MS,
+            maxMs: MAX_COOLDOWN_MS,
+        });
         metricsRef.current.cooldown_429_event_count += 1;
         logCooldownMetric('429_after_cooldown_count', metricsRef.current.cooldown_429_event_count);
     };
 
     const applyAdaptiveCooldownOnSuccess = () => {
-        successSince429Ref.current += 1;
-        if (successSince429Ref.current >= SUCCESS_WINDOW_FOR_DECAY) {
-            cooldownMsRef.current = Math.max(BASE_COOLDOWN_MS, cooldownMsRef.current - 1000);
-            successSince429Ref.current = 0;
-        }
+        const nextState = computeCooldownAfterSuccess({
+            cooldownMs: cooldownMsRef.current,
+            successSince429: successSince429Ref.current,
+            baseMs: BASE_COOLDOWN_MS,
+            successWindowForDecay: SUCCESS_WINDOW_FOR_DECAY,
+            decayStepMs: 1000,
+        });
+        cooldownMsRef.current = nextState.cooldownMs;
+        successSince429Ref.current = nextState.successSince429;
     };
 
     const startCooldownWindow = (windowMs: number, onExpire: () => void) => {
@@ -369,7 +332,7 @@ export default function useLearnChat() {
             });
 
             if (!res.ok) {
-                const retryAfterMs = parseRetryAfterMs(res.headers.get('Retry-After'));
+                const retryAfterMs = parseRetryAfterMs(res.headers.get('Retry-After'), RETRY_AFTER_FALLBACK_MS);
                 const apiError = new Error('API Error') as Error & { status?: number; retryAfterMs?: number };
                 apiError.status = res.status;
                 apiError.retryAfterMs = retryAfterMs;

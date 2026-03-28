@@ -56,7 +56,7 @@ export default function ControlButtons({
             </div>
             {cooldownActive && (
                 <p className="text-xs text-[var(--ink-2)]">
-                    Sending in {cooldownSeconds}s...
+                    You should learn carefully in {cooldownSeconds}s...
                     {hasQueuedAction ? ' Latest action queued.' : ''}
                 </p>
             )}
