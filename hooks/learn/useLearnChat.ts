@@ -4,13 +4,13 @@ import type { Msg } from '@/lib/types/learnTypes';
 import type { UserProfile } from '@/lib/types/user';
 import type { ActionPayload, LearnAction } from '@/lib/types/learnChat';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
+import { useLearnChatBootstrap } from '@/hooks/learn/core/useLearnChatBootstrap';
 import { useCooldownGate } from '@/hooks/learn/core/useCooldownGate';
+import { useLearnChatPersistence } from '@/hooks/learn/core/useLearnChatPersistence';
 import {
     deleteMasteredSentence,
     fetchChatHistory,
     fetchMasteredSentences,
-    fetchPlacementStatus,
-    fetchProfile,
     postLearnChatAction,
     updateCurrentLanguageCode,
     type LearnChatApiError,
@@ -24,7 +24,6 @@ const BASE_COOLDOWN_MS = 4000;
 const MAX_COOLDOWN_MS = 12000;
 const RETRY_AFTER_FALLBACK_MS = 10000;
 const SUCCESS_WINDOW_FOR_DECAY = 3;
-const COOLDOWN_FEATURE_FLAG_KEY = 'learnChatCooldownEnabled';
 
 export default function useLearnChat() {
     const [messages, setMessages] = useState<Msg[]>([]);
@@ -45,10 +44,10 @@ export default function useLearnChat() {
     const [placementCompleted, setPlacementCompleted] = useState(false);
     const [placementLoading, setPlacementLoading] = useState(true);
     const [cooldownEnabled, setCooldownEnabled] = useState(true);
+    const persistence = useLearnChatPersistence();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-    const languageInitializedRef = useRef(false);
     const loadingRef = useRef(false);
     const runActionNowRef = useRef<(payload: ActionPayload) => Promise<void>>(async () => {});
     const notify429Ref = useRef<(retryAfterMs?: number) => void>(() => {});
@@ -67,10 +66,8 @@ export default function useLearnChat() {
     }, [loading]);
 
     useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const value = localStorage.getItem(COOLDOWN_FEATURE_FLAG_KEY);
-        setCooldownEnabled(value !== 'false');
-    }, []);
+        setCooldownEnabled(persistence.isCooldownEnabled());
+    }, [persistence]);
 
     const {
         isCooldownActive,
@@ -116,49 +113,23 @@ export default function useLearnChat() {
         }
     }, []);
 
-    useEffect(() => {
-        const init = async () => {
-            try {
-                const profile = await fetchProfile();
-                setUserProfile(profile);
-            } catch (err) {
-                console.error('Failed to load user profile', err);
-                setUserProfile(null);
-            } finally {
-                setProfileLoading(false);
-            }
-
-            // Load placement test / difficulty status
-            try {
-                const placement = await fetchPlacementStatus();
-                setPlacementCompleted(placement.completed);
-                setDifficultyLevel(placement.level);
-            } catch (err) {
-                console.error('Failed to load placement status', err);
-            } finally {
-                setPlacementLoading(false);
-            }
-        };
-
-        init();
-    }, []);
+    useLearnChatBootstrap({
+        getLastLanguage: persistence.getLastLanguage,
+        setUserProfile,
+        setProfileLoading,
+        setPlacementCompleted,
+        setDifficultyLevel,
+        setPlacementLoading,
+        setSelectedLanguage,
+    });
 
     useEffect(() => {
-        if (profileLoading) return;
-        const savedLanguage = localStorage.getItem('learn-chat:last-language');
-        const fallbackLanguage = userProfile?.currentLanguageCode || userProfile?.targetLanguage || 'en';
-        const normalizedSaved = normalizeLanguageCode(savedLanguage || fallbackLanguage);
-        setSelectedLanguage(normalizedSaved === 'auto' ? normalizeLanguageCode(fallbackLanguage) : normalizedSaved);
-        languageInitializedRef.current = true;
-    }, [profileLoading, userProfile?.currentLanguageCode, userProfile?.targetLanguage]);
-
-    useEffect(() => {
-        if (!selectedLanguage || !languageInitializedRef.current) return;
-        localStorage.setItem('learn-chat:last-language', selectedLanguage);
+        if (profileLoading || !selectedLanguage) return;
+        persistence.setLastLanguage(selectedLanguage);
 
         void loadMasteredSentences(selectedLanguage);
 
-        const lastContext = localStorage.getItem(`learn-chat:last-context:${selectedLanguage}`);
+        const lastContext = persistence.getLastContext(selectedLanguage);
         if (lastContext) {
             setSelectedContext(lastContext);
             void loadStoredChat(selectedLanguage, lastContext).then((stored) => {
@@ -179,7 +150,13 @@ export default function useLearnChat() {
         setMessages([]);
         setCurrentSentence('');
         setCurrentSentenceMessageId(null);
-    }, [loadMasteredSentences, loadStoredChat, selectedLanguage]);
+    }, [
+        loadMasteredSentences,
+        loadStoredChat,
+        persistence,
+        profileLoading,
+        selectedLanguage,
+    ]);
 
     const handleDeleteMasteredSentence = useCallback(async (id: string) => {
         const previous = masteredSentences;
@@ -211,7 +188,7 @@ export default function useLearnChat() {
 
         if (action === 'init' && effectiveContext) {
             setSelectedContext(effectiveContext);
-            localStorage.setItem(`learn-chat:last-context:${selectedLanguage}`, effectiveContext);
+            persistence.setLastContext(selectedLanguage, effectiveContext);
         }
 
         const sentenceInProgress = currentSentence;
@@ -288,6 +265,7 @@ export default function useLearnChat() {
         loadMasteredSentences,
         selectedContext,
         selectedLanguage,
+        persistence,
         userProfile?.isOnboarded,
     ]);
 
@@ -329,7 +307,7 @@ export default function useLearnChat() {
         clear();
         setSelectedContext(context);
         setShowContextMenu(false);
-        localStorage.setItem(`learn-chat:last-context:${selectedLanguage}`, context);
+        persistence.setLastContext(selectedLanguage, context);
         void loadStoredChat(selectedLanguage, context).then((stored) => {
             if (stored && stored.messages.length > 0) {
                 setMessages(stored.messages);
@@ -342,7 +320,14 @@ export default function useLearnChat() {
             setCurrentSentenceMessageId(null);
             void handleAction('init', context);
         });
-    }, [clear, handleAction, loadStoredChat, selectedLanguage, userProfile?.isOnboarded]);
+    }, [
+        clear,
+        handleAction,
+        loadStoredChat,
+        persistence,
+        selectedLanguage,
+        userProfile?.isOnboarded,
+    ]);
 
     const switchLanguage = useCallback((language: LanguageCode) => {
         clear();
@@ -350,11 +335,11 @@ export default function useLearnChat() {
         const fallback = normalizeLanguageCode(userProfile?.targetLanguage || 'en');
         const resolved = normalized === 'auto' ? (fallback === 'auto' ? 'en' : fallback) : normalized;
         setSelectedLanguage(resolved);
-        localStorage.setItem('learn-chat:last-language', resolved);
+        persistence.setLastLanguage(resolved);
         if (userProfile?.isOnboarded) {
             updateCurrentLanguageCode(resolved).catch(() => {});
         }
-    }, [clear, userProfile?.isOnboarded, userProfile?.targetLanguage]);
+    }, [clear, persistence, userProfile?.isOnboarded, userProfile?.targetLanguage]);
 
     return {
         messages,
