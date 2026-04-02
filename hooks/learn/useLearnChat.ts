@@ -4,6 +4,7 @@ import type { Msg } from '@/lib/types/learnTypes';
 import type { UserProfile } from '@/lib/types/user';
 import type { ActionPayload, LearnAction } from '@/lib/types/learnChat';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
+import { mapActionTexts } from '@/lib/learnChatMessageProtocol';
 import { useLearnChatBootstrap } from '@/hooks/learn/core/useLearnChatBootstrap';
 import { useCooldownGate } from '@/hooks/learn/core/useCooldownGate';
 import { useLearnChatPersistence } from '@/hooks/learn/core/useLearnChatPersistence';
@@ -194,10 +195,7 @@ export default function useLearnChat() {
         const sentenceInProgress = currentSentence;
 
         if (action !== 'init') {
-            let text = '';
-            if (action === 'explain') text = 'Explain please';
-            if (action === 'translate') text = 'Translate please';
-            if (action === 'understand') text = 'I got it!';
+            const text = mapActionTexts(action, sentenceInProgress, effectiveContext, difficultyLevel).displayText;
 
             setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: text }]);
         }

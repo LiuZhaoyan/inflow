@@ -2,6 +2,7 @@ import { and, desc, eq, lt } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './connection';
 import { chatMessages } from './schema';
+import type { LearnAction } from '@/lib/types/learnChat';
 
 export interface ChatHistoryMessage {
   id: string;
@@ -10,6 +11,7 @@ export interface ChatHistoryMessage {
   context: string;
   role: string;
   requestId?: string;
+  userAction?: LearnAction;
   content: string;
   messageType?: string;
   originalSentence?: string;
@@ -22,6 +24,7 @@ export interface NewChatMessage {
   context: string;
   role: string;
   requestId?: string;
+  userAction?: LearnAction;
   content: string;
   messageType?: string;
   originalSentence?: string;
@@ -43,6 +46,7 @@ function mapRow(row: typeof chatMessages.$inferSelect): ChatHistoryMessage {
     context: row.context,
     role: row.role,
     requestId: row.requestId || undefined,
+    userAction: (row.userAction as LearnAction | null) || undefined,
     content: row.content,
     messageType: row.messageType || undefined,
     originalSentence: row.originalSentence || undefined,
@@ -91,6 +95,7 @@ export async function saveChatMessage(
       context: message.context,
       role: message.role,
       requestId: message.requestId,
+      userAction: message.userAction,
       content: message.content,
       messageType: message.messageType,
       originalSentence: message.originalSentence,

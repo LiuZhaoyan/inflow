@@ -19,6 +19,11 @@ import {
     buildPersonalizationPrompt,
     updateLearningProfileFromAction,
 } from '@/lib/difficultyEngine';
+import {
+    buildLearnChatContextMessages,
+    mapActionTexts,
+} from '@/lib/learnChatMessageProtocol';
+import type { LearnAction } from '@/lib/types/learnChat';
 
 function isRateLimitError(error: unknown) {
     const err = error as {
@@ -38,8 +43,6 @@ function isRateLimitError(error: unknown) {
     return status === 429 || code === 'rate_limit' || code === 'rate_limited';
 }
 
-type HistoryEntry = { role?: string; content?: string };
-
 interface ParsedAiResponse {
     response?: string;
     type?: 'sentence' | 'explanation' | 'translation';
@@ -53,59 +56,13 @@ interface ParsedAiResponse {
     messageId?: string;
 }
 
-function buildContextMessages(systemPrompt: string, history: HistoryEntry[], limit = 10): ChatMessage[] {
-    const safeHistory = Array.isArray(history) ? history : [];
-    const filtered: HistoryEntry[] = [];
-
-    for (let i = 0; i < safeHistory.length - 1; i += 1) {
-        const current = safeHistory[i];
-        const next = safeHistory[i + 1];
-        if (current?.content === 'I got it!' && next?.content) {
-            filtered.push(next);
-        }
-    }
-
-    return [
-        { role: 'system', content: systemPrompt },
-        ...filtered.slice(-limit)
-            .map((h) => {
-                let role: 'user' | 'system' | 'assistant' = 'user';
-                if (h.role === 'ai') role = 'assistant';
-                else if (h.role === 'system') role = 'system';
-                else if (h.role === 'user') role = 'user';
-                // fallback to 'user' if undefined or any other value
-                return {
-                    role,
-                    content: h.content || ''
-                };
-            })
-    ];
-}
-
-function mapActionToUserContent(action: string, currentSentence?: string, context?: string, level?: number) {
-    if (action === 'init') {
-        return context
-            ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context at difficulty level ${level ?? 3}/10.`
-            : `Start the session. Generate a sentence at difficulty level ${level ?? 3}/10.`;
-    }
-
-    if (action === 'explain') {
-        return `Explain this sentence: "${currentSentence || ''}"`;
-    }
-
-    if (action === 'translate') {
-        return `Translate this sentence: "${currentSentence || ''}"`;
-    }
-
-    return `I understand this sentence: "${currentSentence || ''}". Give me the next one at the appropriate difficulty level.`;
-}
-
 export async function POST(req: Request) {
   try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
 
         const { action, requestId, currentSentence, context: rawContext, messageId, languageCode } = await req.json();
+    const learnAction = action as LearnAction;
     const userId = user.id;
     const stableRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : undefined;
     const context = typeof rawContext === 'string' && rawContext.trim() ? rawContext.trim() : 'General';
@@ -155,10 +112,10 @@ Structure:
 `;
 
     // Filter history to keep context manageable
-    const messages: ChatMessage[] = buildContextMessages(systemPrompt, history, 10);
-    const userContent = mapActionToUserContent(action, currentSentence, context, difficultyCtx.currentLevel);
+    const messages: ChatMessage[] = buildLearnChatContextMessages(systemPrompt, history, 10);
+    const actionTexts = mapActionTexts(learnAction, currentSentence, context, difficultyCtx.currentLevel);
 
-    if (action !== 'init') {
+    if (learnAction !== 'init') {
         const existingMessage = stableRequestId
             ? await getChatMessageByRequestId(userId, stableRequestId)
             : null;
@@ -169,12 +126,13 @@ Structure:
                 context,
                 role: 'user',
                 requestId: stableRequestId,
-                content: userContent,
+                content: actionTexts.displayText,
+                userAction: learnAction,
             });
         }
     }
 
-    if (action === 'understand') {
+    if (learnAction === 'understand') {
 
         // ── Update difficulty level ──
         const newLevel = computeNewDifficultyLevel(progress.currentDifficultyLevel ?? 3, difficultyCtx);
@@ -189,7 +147,7 @@ Structure:
                 strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
                 totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
             },
-            action,
+            learnAction,
             currentSentence || '',
             historyForDifficulty,
         );
@@ -232,21 +190,21 @@ Structure:
     }
 
     // For explain/translate actions, also update learning profile
-    if (action === 'explain' || action === 'translate') {
+    if (learnAction === 'explain' || learnAction === 'translate') {
         const updatedProfile = updateLearningProfileFromAction(
             progress.learningProfile ?? {
                 knownVocabulary: [], weakVocabulary: {}, masteredGrammar: [],
                 strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
                 totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
             },
-            action,
+            learnAction,
             currentSentence || '',
             historyForDifficulty,
         );
         await updateProgress({ learningProfile: updatedProfile, lastUpdated: Date.now() }, userId, targetLanguage);
     }
 
-    messages.push({ role: 'user', content: userContent });
+    messages.push({ role: 'user', content: actionTexts.modelText });
     console.log("Learn Chat Messages:", messages);
 
     const aiRes = await chatCompletion(messages, {

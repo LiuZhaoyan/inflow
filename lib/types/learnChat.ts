@@ -10,6 +10,7 @@ export interface ChatHistoryRow {
     id: string;
     role: 'user' | 'ai';
     content: string;
+    userAction?: LearnAction;
     messageType?: string;
     originalSentence?: string;
 }

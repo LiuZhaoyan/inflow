@@ -74,6 +74,7 @@ export const chatMessages = sqliteTable('chat_messages', {
   context:            text('context').notNull(),
   role:               text('role').notNull(),
   requestId:          text('request_id'),
+  userAction:         text('user_action'),
   content:            text('content').notNull(),
   messageType:        text('message_type'),
   originalSentence:   text('original_sentence'),
