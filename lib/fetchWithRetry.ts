@@ -9,6 +9,8 @@
  * - All other status codes are returned as-is on the first attempt.
  */
 
+import { logger } from '@/lib/logger';
+
 export interface FetchRetryOptions {
     /** Maximum number of retry attempts (default: 3). */
     maxRetries?: number;
@@ -63,8 +65,8 @@ export async function fetchWithRetry(
 
         const waitMs = parseRetryAfter(res, defaultDelayMs);
         options?.onRetry?.(attempt + 1, waitMs);
-        console.warn(
-            `[fetchWithRetry] 429 received – retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`,
+        logger.warn(
+            `fetchWithRetry: 429 received – retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`,
         );
         await delay(waitMs, signal);
     }

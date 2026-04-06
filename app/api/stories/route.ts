@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStoriesByUser, deleteStoryByUser, updateStoryByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -10,7 +11,10 @@ export async function GET() {
     const stories = await getStoriesByUser(user.id);
     return NextResponse.json({ stories });
   } catch (error) {
-    console.error('Failed to fetch stories:', error);
+    logger.error('Failed to fetch stories', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'GET /api/stories',
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -27,7 +31,10 @@ export async function DELETE(req: Request) {
     await deleteStoryByUser(user.id, id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to delete story:', error);
+    logger.error('Failed to delete story', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'DELETE /api/stories',
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -47,7 +54,10 @@ export async function PUT(req: Request) {
     }
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('Failed to update story:', error);
+    logger.error('Failed to update story', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'PUT /api/stories',
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

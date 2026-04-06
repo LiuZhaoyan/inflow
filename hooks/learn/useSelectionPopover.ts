@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 const sanitizeSelection = (text: string) => {
     const cleaned = text
@@ -79,7 +80,7 @@ export default function useSelectionPopover(options?: { languageCode?: string; c
             const selection = window.getSelection();
             selection?.removeAllRanges();
         } catch (error) {
-            console.error(error);
+            logger.error('useSelectionPopover: Failed to add word to vocabulary', error);
             setAddVocabError('Failed to add word');
         } finally {
             setIsAddingVocab(false);

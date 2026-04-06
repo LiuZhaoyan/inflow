@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/aiClient';
+import { logger } from '@/lib/logger';
 import {
     getProgress,
     getUserProfile,
@@ -57,14 +58,20 @@ interface ParsedAiResponse {
 }
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/learn-chat';
+  let userId: string | undefined;
+  let requestIdValue: string | undefined;
+
   try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
 
+        userId = user.id;
         const { action, requestId, currentSentence, context: rawContext, messageId, languageCode } = await req.json();
     const learnAction = action as LearnAction;
-    const userId = user.id;
     const stableRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : undefined;
+    requestIdValue = stableRequestId;
     const context = typeof rawContext === 'string' && rawContext.trim() ? rawContext.trim() : 'General';
     const userProfile = await getUserProfile(userId);
     const requestedLanguage = normalizeLanguageCode(languageCode);
@@ -172,8 +179,12 @@ Structure:
                     voiceId: 'audiobook_female_1',
                     speed: 1.0
                 }, userId);
-            } catch (err) {
-                console.error("Auto-TTS failed for mastered sentence:", err);
+            } catch {
+                logger.warn('Auto-TTS failed for mastered sentence', {
+                    requestId: stableRequestId,
+                    userId,
+                    endpoint,
+                });
             }
 
             await saveMasteredSentence({
@@ -205,19 +216,32 @@ Structure:
     }
 
     messages.push({ role: 'user', content: actionTexts.modelText });
-    console.log("Learn Chat Messages:", messages);
+    logger.info('AI chat completion initiated', {
+        requestId: stableRequestId,
+        userId,
+        endpoint,
+        action: learnAction,
+    });
 
     const aiRes = await chatCompletion(messages, {
         temperature: 0.7
     });
-    console.log("Learn Chat AI Response:", aiRes);
+    logger.info('AI response received', {
+        requestId: stableRequestId,
+        userId,
+        endpoint,
+    });
 
     let data: ParsedAiResponse;
     try {
         const cleaned = aiRes.replace(/```json/g, '').replace(/```/g, '').trim();
         data = JSON.parse(cleaned) as ParsedAiResponse;
     } catch {
-        console.error("JSON parse error", aiRes);
+        logger.warn('AI response JSON parsing failed, falling back to plain text', {
+            requestId: stableRequestId,
+            userId,
+            endpoint,
+        });
         data = {
             response: aiRes,
             type: 'explanation',
@@ -244,16 +268,44 @@ Structure:
     };
     data.messageId = aiMessage.id;
 
+    const durationMs = Date.now() - startTime;
+    logger.info('Learn Chat completed successfully', {
+        requestId: requestIdValue || stableRequestId,
+        userId,
+        endpoint,
+        statusCode: 200,
+        durationMs,
+    });
+
     return NextResponse.json(data);
 
     } catch (error) {
-        console.error('Learn Chat Error:', error);
+        const durationMs = Date.now() - startTime;
+        let statusCode = 500;
+
         if (isRateLimitError(error)) {
-                return NextResponse.json(
-                        { error: 'Rate limited' },
-                        { status: 429, headers: { 'Retry-After': '10' } }
-                );
+            statusCode = 429;
+            logger.warn('Learn Chat rate limit exceeded', {
+                requestId: requestIdValue,
+                userId,
+                endpoint,
+                statusCode,
+                durationMs,
+            });
+            return NextResponse.json(
+                    { error: 'Rate limited' },
+                    { status: 429, headers: { 'Retry-After': '10' } }
+            );
         }
+
+        logger.error('Learn Chat error', {
+            requestId: requestIdValue,
+            userId,
+            endpoint,
+            statusCode,
+            durationMs,
+            ...(error instanceof Error && { error }),
+        });
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

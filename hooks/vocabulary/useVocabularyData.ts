@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
+import { logger } from '@/lib/logger';
 
 export default function useVocabularyData() {
   const [words, setWords] = useState<VocabularyWord[]>([]);
@@ -15,7 +16,7 @@ export default function useVocabularyData() {
         setWords(data.sort((a: VocabularyWord, b: VocabularyWord) => b.createdAt - a.createdAt));
       }
     } catch (err) {
-      console.error('Failed to load vocabulary', err);
+      logger.error('useVocabularyData: Failed to load vocabulary', err);
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/lib/logger';
 import { db } from './connection';
 import { books } from './schema';
 import type { Book, BookContent, BookMetadata, Chapter } from '@/lib/types/books';
@@ -114,7 +115,7 @@ export async function getBookById(id: string): Promise<Book | undefined> {
       const bookContent = JSON.parse(contentData) as BookContent;
       chapters = normalizeChapters(bookContent?.chapters);
     } catch (err) {
-      console.error(`Failed to load content for book ${id}:`, err);
+      logger.error('getBookById: Failed to load content for book', { id, error: (err as Error).message });
     }
   }
 

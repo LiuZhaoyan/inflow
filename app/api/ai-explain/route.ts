@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
+import { logger } from '@/lib/logger';
 import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 
@@ -86,13 +87,11 @@ export async function POST(request: Request) {
 
     // High-signal logging for debugging language mismatches.
     // (Avoid logging huge text; keep it short.)
-    console.log('[ai-explain] input', {
+    logger.info('[ai-explain] Processing explanation request', {
       difficulty,
       forcedLanguage: forced,
       heuristicLanguage: detected.code,
       heuristicReason: detected.reason,
-      textPreview: String(text).slice(0, 160),
-      contextPreview: String(context || '').slice(0, 160),
     });
 
     const messages: ChatMessage[] = [
@@ -106,7 +105,9 @@ export async function POST(request: Request) {
       maxTokens: 150,
     }) || 'Could not generate explanation.';
 
-    console.log('[ai-explain] outputPreview', String(explanation).slice(0, 200));
+    logger.info('[ai-explain] Explanation generated successfully', {
+      endpoint: 'POST /api/ai-explain',
+    });
 
     const payload: { explanation: string; debug?: Record<string, unknown> } = { explanation };
     if (debug) {
@@ -126,9 +127,14 @@ export async function POST(request: Request) {
     });
 
   } catch (error: unknown) {
-    console.error('AI API Error:', error);
+    const statusCode = getErrorStatus(error) || 500;
+    logger.error('AI explain API error', {
+      endpoint: 'POST /api/ai-explain',
+      statusCode,
+      ...(error instanceof Error && { error }),
+    });
 
-    if (getErrorStatus(error) === 429) {
+    if (statusCode === 429) {
       return NextResponse.json(
         { error: 'AI Service is busy (Rate Limit). Please try again later.' },
         { status: 429, headers: { 'Retry-After': '10' } }
@@ -136,7 +142,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to fetch explanation from AI' }, 
+      { error: 'Failed to fetch explanation from AI' },
       { status: 500 }
     );
   }

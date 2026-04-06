@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import EPub from 'epub2';
 import path from 'path';
+import { logger } from '@/lib/logger';
 
 export interface ProcessedBook {
   title: string;
@@ -87,7 +88,7 @@ async function parsePdf(buffer: Buffer): Promise<string> {
       await parser.destroy();
     }
   } catch (error) {
-    console.error('PDF Parse Error:', error);
+    logger.error('parsePdf: PDF Parse Error', { error: (error as Error).message });
     // Keep this message user-friendly; the raw error still logs server-side.
     throw new Error('Failed to parse PDF');
   }
@@ -134,11 +135,11 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
           const [buf] = await (epub as any).getFileAsync(chapter.id);
           html = buf?.toString('utf-8') ?? null;
         } catch (err2) {
-          console.warn('EPUB chapter fallback read failed:', chapter?.id, err2);
+          logger.warn('parseEpub: EPUB chapter fallback read failed', { chapterId: chapter?.id, error: (err2 as Error).message });
           html = null;
         }
       } else {
-        console.warn('Skipping non-HTML EPUB item in flow:', chapter?.id, declaredMime);
+        logger.warn('parseEpub: Skipping non-HTML EPUB item in flow', { chapterId: chapter?.id, declaredMime });
       }
     }
 
@@ -176,7 +177,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
               const [buffer] = await epub.getFileAsync(imageId);
               if (buffer) images[imageKey] = buffer;
             } catch (e) {
-              console.warn(`Failed to load image ${absoluteHref}:`, e);
+              logger.warn('parseEpub: Failed to load image', { imageHref: absoluteHref, error: (e as Error).message });
             }
           })());
         }

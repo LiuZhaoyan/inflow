@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import type { UserProfile } from '@/lib/types/user';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
+import { logger } from '@/lib/logger';
 import { fetchPlacementStatus, fetchProfile } from '@/hooks/learn/services/learnChatApi';
 
 interface UseLearnChatBootstrapInput {
@@ -39,7 +40,7 @@ export function useLearnChatBootstrap(input: UseLearnChatBootstrapInput) {
 
                 setSelectedLanguage(initialLanguage);
             } catch (err) {
-                console.error('Failed to load user profile', err);
+                logger.error('useLearnChatBootstrap: Failed to load user profile', err);
                 setUserProfile(null);
                 setSelectedLanguage('en');
             } finally {
@@ -51,7 +52,7 @@ export function useLearnChatBootstrap(input: UseLearnChatBootstrapInput) {
                 setPlacementCompleted(placement.completed);
                 setDifficultyLevel(placement.level);
             } catch (err) {
-                console.error('Failed to load placement status', err);
+                logger.error('useLearnChatBootstrap: Failed to load placement status', err);
             } finally {
                 setPlacementLoading(false);
             }

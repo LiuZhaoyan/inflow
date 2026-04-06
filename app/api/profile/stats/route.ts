@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getVocabularyByUser, getBooksByUser, getProgress, getStoriesByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -43,7 +44,10 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Failed to fetch profile stats:', error);
+    logger.error('Failed to fetch profile stats', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'GET /api/profile/stats',
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

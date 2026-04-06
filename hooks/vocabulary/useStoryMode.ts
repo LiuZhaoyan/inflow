@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
 import type { Story } from '@/lib/types/story';
+import { logger } from '@/lib/logger';
 
 interface StoryModeOptions {
   words: VocabularyWord[];
@@ -25,7 +26,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
       .then(data => {
         if (data.stories) setStories(data.stories);
       })
-      .catch(err => console.error('Failed to load stories:', err));
+      .catch(err => logger.error('useStoryMode: Failed to load stories', err));
   }, []);
 
   const toggleSelection = (id: string) => {
@@ -64,7 +65,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
       }
       setIsStorySidebarOpen(true);
     } catch (err) {
-      console.error(err);
+      logger.error('useStoryMode: Failed to generate story', err);
       alert('Failed to generate story');
     } finally {
       setIsGeneratingStory(false);
@@ -92,7 +93,7 @@ export default function useStoryMode({ words }: StoryModeOptions) {
         setActiveStoryId(null);
       }
     } catch (err) {
-      console.error('Failed to delete story:', err);
+      logger.error('useStoryMode: Failed to delete story', err);
     }
   };
 

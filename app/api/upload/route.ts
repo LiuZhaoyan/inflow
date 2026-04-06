@@ -5,6 +5,7 @@ import path from 'path';
 import { processDocument } from '@/lib/textProcessor';
 import { detectLanguageFromSentences, normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -81,7 +82,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, books: savedBooks, files: uploadedFilenames });
   } catch (err) {
-    console.error("Upload error:", err);
+    logger.error('Upload error', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      endpoint: 'POST /api/upload',
+    });
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

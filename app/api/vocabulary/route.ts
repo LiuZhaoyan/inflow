@@ -9,6 +9,7 @@ import {
 import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageFromSentences } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -40,7 +41,11 @@ async function generateDefinition(word: string, nativeLanguage: string): Promise
 
     return (definition || '').trim();
   } catch (err) {
-    console.error('Definition generation failed:', err);
+    logger.error('Definition generation failed', {
+      error: err instanceof Error ? err : new Error(String(err)),
+      endpoint: 'POST /api/vocabulary',
+      word,
+    });
     return '';
   }
 }

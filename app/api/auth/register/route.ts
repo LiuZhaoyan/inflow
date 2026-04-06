@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -60,7 +61,10 @@ export async function POST(req: Request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error('Register error:', error);
+    logger.error('Register error', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'POST /api/auth/register',
+    });
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 },

@@ -6,6 +6,7 @@ import {
   executeImageGenerationTask,
 } from '@/lib/aiClient';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -34,9 +35,13 @@ export async function POST(request: Request) {
     }
 
     const task = createTask<{ imageUrl: string }>();
-    
+
     executeImageGenerationTask(task.id, prompt).catch((err) => {
-      console.error('Background image generation failed:', err);
+      logger.error('Background image generation failed', {
+        error: err instanceof Error ? err : new Error(String(err)),
+        endpoint: 'POST /api/ai-depict',
+        taskId: task.id,
+      });
     });
 
     return NextResponse.json({
@@ -46,7 +51,10 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('AI Depict Route Error:', error);
+    logger.error('AI Depict Route Error', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'POST /api/ai-depict',
+    });
     return NextResponse.json(
       { error: getErrorMessage(error) },
       { status: 500 }
@@ -90,7 +98,11 @@ export async function GET(request: Request) {
     taskId: task.id,
     status: task.status,
   };
-  console.log('[GET /api/ai-depict] Task status:', task);
+  logger.info('GET /api/ai-depict task status', {
+    taskId: task.id,
+    status: task.status,
+    endpoint: 'GET /api/ai-depict',
+  });
   if (task.status === 'completed' && task.result) {
     response.imageUrl = task.result.imageUrl;
   }

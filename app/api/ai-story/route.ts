@@ -4,6 +4,7 @@ import { detectLanguageHint, resolveLanguageLabel, normalizeLanguageCode } from 
 import { addStoryByUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/user';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -80,7 +81,11 @@ Ensure the story and translation follow the constraints and response format exac
       story = parsed.story || '';
       translation = parsed.translation || '';
     } catch (parseError) {
-      console.error('Story JSON Parse Error:', parseError, rawResponse);
+      logger.error('Story JSON Parse Error', {
+        error: parseError instanceof Error ? parseError : new Error(String(parseError)),
+        endpoint: 'POST /api/ai-story',
+        response: rawResponse,
+      });
       return NextResponse.json(
         { error: 'Invalid AI response format' },
         { status: 500 }
@@ -98,7 +103,10 @@ Ensure the story and translation follow the constraints and response format exac
     return NextResponse.json({ story, translation, saved });
 
   } catch (error: unknown) {
-    console.error('Story Generation Error:', error);
+    logger.error('Story Generation Error', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'POST /api/ai-story',
+    });
     return NextResponse.json(
       { error: getErrorMessage(error) },
       { status: 500 }

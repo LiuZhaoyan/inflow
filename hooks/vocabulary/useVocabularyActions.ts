@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
+import { logger } from '@/lib/logger';
 
 interface VocabularyActionsOptions {
   words: VocabularyWord[];
@@ -46,7 +47,7 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
         throw new Error('Failed to create card');
       }
     } catch (err) {
-      console.error(err);
+      logger.error('useVocabularyActions: Failed to create card', err);
       alert('Failed to create card. Please check your API keys and try again.');
     } finally {
       setAddingStatus('idle');
@@ -118,7 +119,7 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
         }
       }
     } catch (err) {
-      console.error('Generate image failed', err);
+      logger.error('useVocabularyActions: Failed to generate image', err);
       alert('Failed to generate image');
     } finally {
       setGeneratingState(word.id, 'img', false);
@@ -147,7 +148,7 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
         }
       }
     } catch (err) {
-      console.error('Generate audio failed', err);
+      logger.error('useVocabularyActions: Failed to generate audio', err);
       alert('Failed to generate pronunciation');
     } finally {
       setGeneratingState(word.id, 'audio', false);
@@ -165,7 +166,7 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
       const audio = new Audio(path);
       audio.play();
     } catch (e) {
-      console.error('Failed to play audio', e);
+      logger.error('useVocabularyActions: Failed to play audio', e);
     }
   };
 

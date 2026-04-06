@@ -1,6 +1,7 @@
 // lib/aiClient.ts
 
 import OpenAI from 'openai';
+import { logger } from '@/lib/logger';
 
 let openaiClient: OpenAI | null = null;
 
@@ -91,7 +92,7 @@ export async function generateImage(
   const imageUrl = data.images?.[0] || data.image_url || data.imageUrl;
 
   if (!imageUrl) {
-    console.error('Unexpected API response structure:', data);
+    logger.error('generateImage: Unexpected API response structure', { data });
     throw new Error('No image URL found in response');
   }
 
@@ -124,7 +125,7 @@ export async function generateImageAsync(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Image Generation API Error:', response.status, errorText);
+    logger.error('generateImageAsync: Image Generation API Error', { status: response.status, errorText });
     throw new Error(`Image API request failed with status ${response.status}`);
   }
 
@@ -154,7 +155,7 @@ export async function getExternalImageTaskStatus(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Status Query API Error:', response.status, errorText);
+    logger.error('getExternalImageTaskStatus: Status Query API Error', { status: response.status, errorText });
     throw new Error(`Failed to get task status: ${response.status}`);
   }
 
@@ -239,7 +240,7 @@ export async function executeImageGenerationTask(
       result: { imageUrl },
     });
   } catch (error) {
-    console.error('Image generation task failed:', error);
+    logger.error('executeImageGenerationTask: Image generation task failed', { taskId, error: (error as Error).message });
     updateTask(taskId, {
       status: 'failed',
       error: (error as Error).message || 'Failed to generate image',

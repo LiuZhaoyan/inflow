@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { logger } from '@/lib/logger';
 import { getUserProfile, updateUserProfile, updateProgress } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
@@ -14,9 +15,14 @@ export async function GET() {
     if (errorResponse) return errorResponse;
 
     const profile = await getUserProfile(user.id);
+    logger.info('User profile retrieved', { userId: user.id, endpoint: 'GET /api/user' });
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error('Get user profile failed:', error);
+    logger.error('Get user profile failed', {
+      endpoint: 'GET /api/user',
+      statusCode: 500,
+      ...(error instanceof Error && { error }),
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -44,9 +50,19 @@ export async function POST(req: Request) {
 
     await updateProgress({ targetLanguage: profile.targetLanguage }, user.id);
 
+    logger.info('User profile created', {
+      userId: user.id,
+      endpoint: 'POST /api/user',
+      statusCode: 200,
+    });
+
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error('Create user profile failed:', error);
+    logger.error('Create user profile failed', {
+      endpoint: 'POST /api/user',
+      statusCode: 500,
+      ...(error instanceof Error && { error }),
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -85,9 +101,19 @@ export async function PUT(req: Request) {
 
     await updateProgress({ targetLanguage: profile.targetLanguage }, user.id);
 
+    logger.info('User profile updated', {
+      userId: user.id,
+      endpoint: 'PUT /api/user',
+      statusCode: 200,
+    });
+
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error('Update user profile failed:', error);
+    logger.error('Update user profile failed', {
+      endpoint: 'PUT /api/user',
+      statusCode: 500,
+      ...(error instanceof Error && { error }),
+    });
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

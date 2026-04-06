@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 export default function useAudioTTS() {
     const [playing, setPlaying] = useState(false);
@@ -57,7 +58,7 @@ export default function useAudioTTS() {
                 await playFromUrl(refreshedUrl);
             }
         } catch (error) {
-            console.error(error);
+            logger.error('useAudioTTS: Failed to play audio', error);
             alert('Audio URL expired. Please retry.');
         } finally {
             setPlaying(false);

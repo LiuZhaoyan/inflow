@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { logger } from '@/lib/logger';
 import { computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
 
 interface CooldownGateInput<T extends { queuedAt?: number }> {
@@ -56,7 +57,7 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
     }, [input.onRun, input.isBlocked]);
 
     const logCooldownMetric = (event: string, value?: number) => {
-        console.info('[learn-chat-cooldown]', event, value ?? '');
+        logger.info('useCooldownGate: cooldown metric', { event, value });
     };
 
     const clearTimers = useCallback(() => {

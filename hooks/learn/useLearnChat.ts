@@ -5,6 +5,7 @@ import type { UserProfile } from '@/lib/types/user';
 import type { ActionPayload, LearnAction } from '@/lib/types/learnChat';
 import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
 import { mapActionTexts } from '@/lib/learnChatMessageProtocol';
+import { logger } from '@/lib/logger';
 import { useLearnChatBootstrap } from '@/hooks/learn/core/useLearnChatBootstrap';
 import { useCooldownGate } from '@/hooks/learn/core/useCooldownGate';
 import { useLearnChatPersistence } from '@/hooks/learn/core/useLearnChatPersistence';
@@ -99,7 +100,7 @@ export default function useLearnChat() {
             const sentences = await fetchMasteredSentences(language);
             setMasteredSentences(sentences);
         } catch (err) {
-            console.error('Failed to load mastered sentences', err);
+            logger.error('useLearnChat: Failed to load mastered sentences', err);
         }
     }, []);
 
@@ -109,7 +110,7 @@ export default function useLearnChat() {
             if (!rows) return null;
             return mapChatHistoryRowsToViewModel(rows);
         } catch (err) {
-            console.error('Failed to load chat history', err);
+            logger.error('useLearnChat: Failed to load chat history', err);
             return null;
         }
     }, []);
@@ -169,7 +170,7 @@ export default function useLearnChat() {
                 setMasteredSentences(nextSentences);
             }
         } catch (error) {
-            console.error(error);
+            logger.error('useLearnChat: Failed to delete mastered sentence', error);
             setMasteredSentences(previous);
         }
     }, [masteredSentences, selectedLanguage]);
@@ -246,7 +247,7 @@ export default function useLearnChat() {
                 notify429Ref.current(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
             }
 
-            console.error(error);
+            logger.error('useLearnChat: Failed to execute chat action', error);
             setMessages(prev => [...prev, {
                 id: Date.now().toString() + 'err',
                 role: 'ai',

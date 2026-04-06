@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requestTtsPersistent, requestTtsRealtime, requestTtsTemporaryUrl } from '@/lib/ttsService';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -71,7 +72,10 @@ export async function POST(request: Request) {
     }
 
   } catch (error: unknown) {
-    console.error('TTS Error:', error);
+    logger.error('TTS Error:', {
+      error: error instanceof Error ? error : new Error(String(error)),
+      endpoint: 'POST /api/ai-tts',
+    });
     return NextResponse.json(
       { error: getErrorMessage(error) },
       { status: 500 }

@@ -3,6 +3,7 @@ import { chatCompletion, ChatMessage } from '@/lib/aiClient';
 import { getProgress, setPlacementResult, getUserProfile } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { logger } from '@/lib/logger';
 
 /**
  * POST /api/placement-test
@@ -113,7 +114,10 @@ Make sure:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
     } catch (error) {
-        console.error('Placement Test Error:', error);
+        logger.error('Placement Test Error', {
+            error: error instanceof Error ? error : new Error(String(error)),
+            endpoint: 'POST /api/placement-test',
+        });
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
