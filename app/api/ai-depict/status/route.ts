@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function GET() {
   const startTime = Date.now();

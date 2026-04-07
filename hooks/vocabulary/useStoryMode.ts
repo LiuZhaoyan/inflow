@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
 import type { Story } from '@/lib/types/story';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 interface StoryModeOptions {
   words: VocabularyWord[];

@@ -1,7 +1,7 @@
 import type { ActionPayload, ChatHistoryRow } from '@/lib/types/learnChat';
 import type { MasteredSentence } from '@/lib/types/progress';
 import type { UserProfile } from '@/lib/types/user';
-import { fetchWithRetry } from '@/lib/fetchWithRetry';
+import { fetchWithRetry } from '@/lib/app/fetch-with-retry';
 import { parseRetryAfterMs } from '@/hooks/learn/utils/cooldownPolicy';
 import { generateRequestId } from '@/hooks/learn/utils/requestId';
 

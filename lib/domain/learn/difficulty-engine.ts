@@ -1,6 +1,6 @@
 /**
  * Difficulty Engine
- * 
+ *
  * Calculates and adjusts difficulty levels based on user performance.
  * Uses a sliding-window approach over recent sessions to adapt in real-time.
  */
@@ -48,7 +48,7 @@ export function getLevelLabel(level: number): string {
 
 // ── Performance analysis ────────────────────────────────────────────────
 
-/** 
+/**
  * Analyse the recent action history to compute explain / translate rates
  * `history` is the raw chat history array from the client.
  */

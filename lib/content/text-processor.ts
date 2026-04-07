@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import EPub from 'epub2';
 import path from 'path';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 export interface ProcessedBook {
   title: string;
@@ -53,10 +53,10 @@ function splitTextIntoParagraphs(text: string): string[] {
 // Helper: Basic difficulty analysis (Average Word Length + Sentence Length)
 function analyzeDifficulty(sentences: string[]): number {
   if (sentences.length === 0) return 0;
-  
+
   const totalWords = sentences.reduce((acc, s) => acc + s.split(/\s+/).length, 0);
   const avgSentenceLength = totalWords / sentences.length;
-  
+
   // Heuristic score (0-100)
   // Avg sentence length > 20 is "hard", < 10 is "easy"
   return Math.min(100, Math.max(0, (avgSentenceLength - 5) * 4));
@@ -115,7 +115,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
     const m = (mime || '').toLowerCase().trim();
     return m === 'application/xhtml+xml' || m === 'text/html' || m.endsWith('+xml') || m.includes('html');
   };
-  
+
   // @ts-ignore
   for (const chapter of epub.flow) {
     let html: string | null = null;
@@ -149,7 +149,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
 
     // Process images
     const imagePromises: Promise<void>[] = [];
-    
+
     body.find('img').each((_, img) => {
       const src = $(img).attr('src');
       if (!src) return;
@@ -159,13 +159,13 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
       const chapterHref = epub.manifest[chapter.id]?.href || '';
       const chapterDir = path.posix.dirname(chapterHref);
       const absoluteHref = path.posix.join(chapterDir, src);
-      
+
       const imageId = hrefToId[absoluteHref];
       if (imageId) {
         // Use a unique key for the image map (e.g., the absolute href)
         // Relaxed sanitization: filter out file system reserved characters
         const imageKey = absoluteHref.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
-        
+
         // Replace img tag with marker (escape brackets so cheerio treats them as text, not tags)
         $(img).replaceWith(` &lt;&lt;&lt;IMAGE:${imageKey}&gt;&gt;&gt;. `);
 
@@ -213,7 +213,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
       });
     }
   }
-  
+
   return {
     title: epub.metadata.title || 'Untitled EPUB',
     chapters,
@@ -231,14 +231,14 @@ function parseSRT(content: string): string[] {
     if (/^\d+$/.test(line.trim())) return false;
     return line.trim().length > 0;
   });
-  
+
   // Join lines that are part of the same sentence (heuristic)
   return splitIntoSentences(textLines.join(" "));
 }
 
 export async function processDocument(
-  fileBuffer: Buffer, 
-  fileName: string, 
+  fileBuffer: Buffer,
+  fileName: string,
   mimeType: string,
   filePath?: string // Needed for EPUB
 ): Promise<ProcessedBook> {
@@ -257,14 +257,14 @@ export async function processDocument(
       .map(p => splitIntoSentences(p))
       .filter(s => s.length > 0);
     chapters = [{ title: 'Full Text', paragraphs: paragraphs.length ? paragraphs : [splitIntoSentences(rawText)] }];
-  } 
+  }
   else if (ext === 'epub' && filePath) {
     format = 'epub';
     const epubData = await parseEpub(filePath);
     title = epubData.title || title;
     chapters = epubData.chapters;
     images = epubData.images;
-  } 
+  }
   else if (ext === 'srt' || ext === 'vtt') {
     format = 'subtitle';
     const content = fileBuffer.toString('utf-8');
@@ -283,7 +283,7 @@ export async function processDocument(
   // Aggregate stats
   let totalSentences = 0;
   let totalWords = 0;
-  
+
   chapters.forEach(c => {
     const sentences = c.paragraphs.flatMap(p => p);
     totalSentences += sentences.length;

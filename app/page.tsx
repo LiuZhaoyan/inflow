@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, ArrowRight, Info, MessageCircle } from 'lucide-react';
-import { LANGUAGE_OPTIONS } from '@/lib/language';
+import { LANGUAGE_OPTIONS } from '@/lib/core/language';
 import type { UserProfile } from '@/lib/types/user';
 
 export default function Home() {

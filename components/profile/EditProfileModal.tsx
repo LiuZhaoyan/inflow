@@ -1,5 +1,5 @@
 import { Loader2, X } from 'lucide-react';
-import { LANGUAGE_OPTIONS } from '@/lib/language';
+import { LANGUAGE_OPTIONS } from '@/lib/core/language';
 import type { ProfileFormState } from './types';
 
 interface EditProfileModalProps {

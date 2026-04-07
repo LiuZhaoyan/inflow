@@ -3,7 +3,7 @@
 import { TrendingDown, TrendingUp, Minus, ChevronUp, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
-import { LEVEL_LABELS } from '@/lib/difficultyEngine';
+import { LEVEL_LABELS } from '@/lib/domain/learn/difficulty-engine';
 
 const LEVEL_COLORS: Record<string, string> = {
     struggling: 'paper-pill-soft text-[var(--accent-1)] bg-[rgba(188,106,64,0.12)]',

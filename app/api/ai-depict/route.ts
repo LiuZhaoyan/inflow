@@ -4,10 +4,10 @@ import {
   createTask,
   getTask,
   executeImageGenerationTask,
-} from '@/lib/aiClient';
+} from '@/lib/ai/client';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function POST(request: Request) {
   const startTime = Date.now();

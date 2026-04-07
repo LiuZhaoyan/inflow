@@ -226,7 +226,7 @@ export async function saveAudioFile(buffer: Buffer, ext: string, userId: string)
 
 /**
  * 高级函数：实时播放 + 临时缓存
- * 
+ *
  * @param text 待合成文本
  * @param options TTS 选项（voiceId、speed、format、emotion）
  * @returns 音频 Buffer，仅在内存保留，不落盘
@@ -273,7 +273,7 @@ export async function requestTtsTemporaryUrl(
 
 /**
  * 高级函数：永久保存 + 下载
- * 
+ *
  * @param text 待合成文本
  * @param options TTS 选项（voiceId、speed、format、emotion）
  * @param userId 用户 ID，用于组织文件存储

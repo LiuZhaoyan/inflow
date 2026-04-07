@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 import { computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
 
 interface CooldownGateInput<T extends { queuedAt?: number }> {

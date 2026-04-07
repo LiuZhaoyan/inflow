@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { chatCompletion, ChatMessage } from '@/lib/aiClient';
-import { logger } from '@/lib/logger';
+import { chatCompletion, ChatMessage } from '@/lib/ai/client';
+import { logger } from '@/lib/core/logger';
 import {
     getProgress,
     getUserProfile,
@@ -11,21 +11,21 @@ import {
     getChatHistory,
     saveChatMessage,
 } from '@/lib/db';
-import { normalizeLanguageCode } from '@/lib/language';
-import { requestTtsPersistent } from '@/lib/ttsService';
+import { normalizeLanguageCode } from '@/lib/core/language';
+import { requestTtsPersistent } from '@/lib/media/tts-service';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import {
     calculateDifficultyContext,
     computeNewDifficultyLevel,
     buildPersonalizationPrompt,
     updateLearningProfileFromAction,
-} from '@/lib/difficultyEngine';
+} from '@/lib/domain/learn/difficulty-engine';
 import {
     buildLearnChatContextMessages,
     mapActionTexts,
-} from '@/lib/learnChatMessageProtocol';
+} from '@/lib/domain/learn/message-protocol';
 import type { LearnAction } from '@/lib/types/learnChat';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 interface ParsedAiResponse {
     response?: string;

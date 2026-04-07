@@ -1,6 +1,6 @@
 import { Trash2 } from 'lucide-react';
 import type { Story } from '@/lib/types/story';
-import { resolveLanguageLabel } from '@/lib/language';
+import { resolveLanguageLabel } from '@/lib/core/language';
 
 interface ProfileStoryCardProps {
   story: Story;

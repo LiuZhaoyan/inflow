@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { Dispatch, FormEvent, SetStateAction } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 interface VocabularyActionsOptions {
   words: VocabularyWord[];

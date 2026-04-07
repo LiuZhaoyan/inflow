@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { saveImageFromUrl } from '@/lib/media';
+import { saveImageFromUrl } from '@/lib/media/image-storage';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function POST(request: Request) {
   const startTime = Date.now();

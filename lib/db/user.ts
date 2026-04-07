@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { db } from './connection';
 import { users } from './schema';
-import { normalizeLanguageCode } from '@/lib/language';
+import { normalizeLanguageCode } from '@/lib/core/language';
 import { DEFAULT_USER, type UserProfile } from '@/lib/types/user';
 
 const LEGACY_SINGLE_USER_ID = DEFAULT_USER.id;

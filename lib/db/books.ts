@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { and, eq, isNull, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 import { db } from './connection';
 import { books } from './schema';
 import type { Book, BookContent, BookMetadata, Chapter } from '@/lib/types/books';

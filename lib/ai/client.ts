@@ -1,7 +1,7 @@
-// lib/aiClient.ts
+// lib/ai/client.ts
 
 import OpenAI from 'openai';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 let openaiClient: OpenAI | null = null;
 
@@ -141,7 +141,7 @@ export async function getExternalImageTaskStatus(
   config: { statusUrl?: string; apiUrl?: string } = {}
 ): Promise<ExternalImageTaskResponse> {
   const apiKey = process.env.API_KEY;
-  
+
   const baseUrl = config.statusUrl || config.apiUrl || process.env.AI_DEPICT_API_URL;
   const statusUrl = config.statusUrl || `${baseUrl}/status/${taskId}`;
 
@@ -219,9 +219,9 @@ export function updateTask<T = unknown>(
 ): void {
   const task = taskStore.get(taskId);
   if (!task) return;
-  
+
   Object.assign(task, updates);
-  
+
   if (updates.status === 'completed' || updates.status === 'failed') {
     task.completedAt = Date.now();
   }

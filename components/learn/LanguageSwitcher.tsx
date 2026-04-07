@@ -1,4 +1,4 @@
-import { LANGUAGE_OPTIONS, resolveLanguageLabel, type LanguageCode } from '@/lib/language';
+import { LANGUAGE_OPTIONS, resolveLanguageLabel, type LanguageCode } from '@/lib/core/language';
 import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 
 interface LanguageSwitcherProps {

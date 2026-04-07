@@ -1,6 +1,6 @@
 import { Pencil } from 'lucide-react';
 import type { UserProfile } from '@/lib/types/user';
-import { resolveLanguageLabel } from '@/lib/language';
+import { resolveLanguageLabel } from '@/lib/core/language';
 
 interface ProfileSummaryCardProps {
   profile: UserProfile | null;

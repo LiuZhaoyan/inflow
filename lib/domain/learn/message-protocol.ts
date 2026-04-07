@@ -1,4 +1,4 @@
-import type { ChatMessage } from './aiClient';
+import type { ChatMessage } from '@/lib/ai/client';
 import type { LearnAction } from './types/learnChat';
 
 export interface LearnActionTexts {

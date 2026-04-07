@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { chatCompletion, ChatMessage } from '@/lib/aiClient';
+import { chatCompletion, ChatMessage } from '@/lib/ai/client';
 import { getProgress, setPlacementResult, getUserProfile } from '@/lib/db';
-import { normalizeLanguageCode } from '@/lib/language';
+import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 /**
  * POST /api/placement-test
@@ -30,7 +30,6 @@ export async function POST(req: Request) {
 
         const body = await req.json();
         const { action, languageCode, answers } = body;
-        const userId = user.id;
 
         const userProfile = await getUserProfile(userId);
         const requestedLanguage = normalizeLanguageCode(languageCode);

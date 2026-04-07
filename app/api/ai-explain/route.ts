@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
-import { logger } from '@/lib/logger';
-import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
+import { chatCompletion, type ChatMessage } from '@/lib/ai/client';
+import { logger } from '@/lib/core/logger';
+import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 interface RequestBody {
   text: string;

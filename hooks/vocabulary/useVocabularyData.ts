@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 export default function useVocabularyData() {
   const [words, setWords] = useState<VocabularyWord[]>([]);

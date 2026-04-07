@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { chatCompletion, ChatMessage } from '@/lib/aiClient';
-import { detectLanguageHint, resolveLanguageLabel, normalizeLanguageCode } from '@/lib/language';
+import { chatCompletion, ChatMessage } from '@/lib/ai/client';
+import { detectLanguageHint, resolveLanguageLabel, normalizeLanguageCode } from '@/lib/core/language';
 import { addStoryByUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/user';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function POST(request: Request) {
   const startTime = Date.now();

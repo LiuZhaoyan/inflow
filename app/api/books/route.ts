@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deleteAllBooksByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export const runtime = 'nodejs';
 

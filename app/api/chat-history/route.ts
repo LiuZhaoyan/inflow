@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { clearChatHistory, getChatHistory } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { normalizeLanguageCode } from '@/lib/language';
-import { handleApiError } from '@/lib/errorHandler';
+import { normalizeLanguageCode } from '@/lib/core/language';
+import { handleApiError } from '@/lib/core/error-handler';
 
 function parseLimit(raw: string | null): number {
   const value = Number(raw || '50');

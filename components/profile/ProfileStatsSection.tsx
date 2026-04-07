@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { resolveLanguageLabel } from '@/lib/language';
+import { resolveLanguageLabel } from '@/lib/core/language';
 import type { ProfileStatCard } from './types';
 
 interface ProfileStatsSectionProps {

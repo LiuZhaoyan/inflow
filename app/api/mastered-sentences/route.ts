@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getProgress, deleteMasteredSentence } from '@/lib/db';
-import { normalizeLanguageCode } from '@/lib/language';
+import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function GET(req: Request) {
   const startTime = Date.now();

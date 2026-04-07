@@ -6,11 +6,11 @@ import {
   updateWordByUser,
   getUserProfile,
 } from '@/lib/db';
-import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
-import { detectLanguageFromSentences } from '@/lib/language';
+import { chatCompletion, type ChatMessage } from '@/lib/ai/client';
+import { detectLanguageFromSentences } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
   try {

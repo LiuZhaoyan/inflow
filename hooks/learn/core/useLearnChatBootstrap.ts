@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import type { UserProfile } from '@/lib/types/user';
-import { normalizeLanguageCode, type LanguageCode } from '@/lib/language';
-import { logger } from '@/lib/logger';
+import { normalizeLanguageCode, type LanguageCode } from '@/lib/core/language';
+import { logger } from '@/lib/core/logger';
 import { fetchPlacementStatus, fetchProfile } from '@/hooks/learn/services/learnChatApi';
 
 interface UseLearnChatBootstrapInput {

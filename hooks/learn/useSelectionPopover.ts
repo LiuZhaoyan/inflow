@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 const sanitizeSelection = (text: string) => {
     const cleaned = text

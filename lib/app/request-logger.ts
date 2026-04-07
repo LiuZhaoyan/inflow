@@ -3,7 +3,7 @@
  * Provides helpers for logging with request context
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 interface RequestLogContext {
   requestId?: string;

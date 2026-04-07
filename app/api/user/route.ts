@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 import { getUserProfile, updateUserProfile, updateProgress } from '@/lib/db';
-import { normalizeLanguageCode } from '@/lib/language';
+import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 function normalizeRequiredLanguage(input: string | undefined | null, fallback: string) {
   const normalized = normalizeLanguageCode(input || fallback);

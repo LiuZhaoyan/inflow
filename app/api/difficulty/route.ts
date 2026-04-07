@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getProgress, setDifficultyLevel } from '@/lib/db';
-import { getLevelLabel } from '@/lib/difficultyEngine';
-import { normalizeLanguageCode } from '@/lib/language';
+import { getLevelLabel } from '@/lib/domain/learn/difficulty-engine';
+import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { handleApiError } from '@/lib/errorHandler';
+import { handleApiError } from '@/lib/core/error-handler';
 
 /**
  * GET /api/difficulty

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import type { LanguageCode } from '@/lib/language';
+import type { LanguageCode } from '@/lib/core/language';
 
 const LAST_LANGUAGE_KEY = 'learn-chat:last-language';
 const LAST_CONTEXT_PREFIX = 'learn-chat:last-context:';

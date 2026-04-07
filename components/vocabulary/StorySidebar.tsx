@@ -1,6 +1,6 @@
 import { Loader2, Wand2, X, GripHorizontal, Trash2, Clock, Volume2 } from 'lucide-react';
 import { useState, useRef, useCallback } from 'react';
-import { resolveLanguageLabel } from '@/lib/language';
+import { resolveLanguageLabel } from '@/lib/core/language';
 import type { Story } from '@/lib/types/story';
 
 interface StorySidebarProps {

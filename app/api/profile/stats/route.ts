@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getVocabularyByUser, getBooksByUser, getProgress, getStoriesByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/logger';
-import { handleApiError } from '@/lib/errorHandler';
+import { logger } from '@/lib/core/logger';
+import { handleApiError } from '@/lib/core/error-handler';
 
 export async function GET() {
   const startTime = Date.now();

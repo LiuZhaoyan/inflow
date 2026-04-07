@@ -9,7 +9,7 @@
  * - All other status codes are returned as-is on the first attempt.
  */
 
-import { logger } from '@/lib/logger';
+import { logger } from '@/lib/core/logger';
 
 export interface FetchRetryOptions {
     /** Maximum number of retry attempts (default: 3). */

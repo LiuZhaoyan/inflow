@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { CheckCircle, XCircle, Loader2, ArrowRight, GraduationCap } from 'lucide-react';
-import { LEVEL_LABELS } from '@/lib/difficultyEngine';
+import { LEVEL_LABELS } from '@/lib/domain/learn/difficulty-engine';
 
 interface PlacementSentence {
     level: number;
