@@ -1,5 +1,5 @@
 // Utility functions for Reader components
-import type { Chapter } from './types/books';
+import type { Chapter } from '@/lib/types/books';
 
 export function getImageKey(text: string): string | null {
   const match = text.match(/<<<IMAGE:([^>]+)>>>/);
@@ -42,7 +42,7 @@ export function normalizeChapters(chapters: { title: string; paragraphs?: string
 }
 
 export function flattenChapterSentences(chapter: Chapter): string[] {
-  return (chapter.paragraphs || []).flatMap(p => (Array.isArray(p) ? p : [])).filter(Boolean);
+  return (chapter.paragraphs || []).flatMap((p: string[]) => (Array.isArray(p) ? p : [])).filter(Boolean);
 }
 
 export function pickBodyChapters(chapters: Chapter[]): Chapter[] {

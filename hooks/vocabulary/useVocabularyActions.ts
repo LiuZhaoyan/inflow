@@ -6,11 +6,10 @@ import type { VocabularyWord } from '@/lib/types/vocabulary';
 import { logger } from '@/lib/core/logger';
 
 interface VocabularyActionsOptions {
-  words: VocabularyWord[];
   setWords: Dispatch<SetStateAction<VocabularyWord[]>>;
 }
 
-export default function useVocabularyActions({ words, setWords }: VocabularyActionsOptions) {
+export default function useVocabularyActions({ setWords }: VocabularyActionsOptions) {
   const [generating, setGenerating] = useState<Record<string, { img?: boolean; audio?: boolean }>>({});
   const [isAdding, setIsAdding] = useState(false);
   const [newWord, setNewWord] = useState('');
@@ -46,8 +45,9 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
       } else {
         throw new Error('Failed to create card');
       }
-    } catch (err) {
-      logger.error('useVocabularyActions: Failed to create card', err);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('useVocabularyActions: Failed to create card', error);
       alert('Failed to create card. Please check your API keys and try again.');
     } finally {
       setAddingStatus('idle');
@@ -118,8 +118,9 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
           setWords(prev => prev.map(w => w.id === word.id ? { ...w, imagePath } : w));
         }
       }
-    } catch (err) {
-      logger.error('useVocabularyActions: Failed to generate image', err);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('useVocabularyActions: Failed to generate image', error);
       alert('Failed to generate image');
     } finally {
       setGeneratingState(word.id, 'img', false);
@@ -147,8 +148,9 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
           setWords(prev => prev.map(w => w.id === word.id ? { ...w, audioPath } : w));
         }
       }
-    } catch (err) {
-      logger.error('useVocabularyActions: Failed to generate audio', err);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error('useVocabularyActions: Failed to generate audio', error);
       alert('Failed to generate pronunciation');
     } finally {
       setGeneratingState(word.id, 'audio', false);
@@ -165,8 +167,9 @@ export default function useVocabularyActions({ words, setWords }: VocabularyActi
     try {
       const audio = new Audio(path);
       audio.play();
-    } catch (e) {
-      logger.error('useVocabularyActions: Failed to play audio', e);
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      logger.error('useVocabularyActions: Failed to play audio', error);
     }
   };
 

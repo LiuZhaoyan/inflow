@@ -79,13 +79,14 @@ export default function useSelectionPopover(options?: { languageCode?: string; c
             clearSelectionUI();
             const selection = window.getSelection();
             selection?.removeAllRanges();
-        } catch (error) {
-            logger.error('useSelectionPopover: Failed to add word to vocabulary', error);
+        } catch (error: unknown) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            logger.error('useSelectionPopover: Failed to add word to vocabulary', err);
             setAddVocabError('Failed to add word');
         } finally {
             setIsAddingVocab(false);
         }
-    }, [clearSelectionUI, isAddingVocab, selectedText]);
+    }, [clearSelectionUI, isAddingVocab, selectedText, options?.contextSentence, options?.languageCode]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

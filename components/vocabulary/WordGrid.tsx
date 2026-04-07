@@ -1,4 +1,4 @@
-import { BookOpen, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import type { VocabularyWord } from '@/lib/types/vocabulary';
 import WordCard from './WordCard';
 

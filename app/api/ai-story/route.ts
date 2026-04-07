@@ -29,6 +29,9 @@ export async function POST(request: Request) {
     const langCode = normalizeLanguageCode(code);
     const langLabel = resolveLanguageLabel(langCode);
     const userProfile = await getUserProfile(user.id);
+    if (!userProfile) {
+      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+    }
     const translationLangCode = normalizeLanguageCode(userProfile.nativeLanguage);
     const translationLangLabel = resolveLanguageLabel(translationLangCode);
 

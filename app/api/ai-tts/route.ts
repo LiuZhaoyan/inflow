@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requestTtsPersistent, requestTtsRealtime, requestTtsTemporaryUrl } from '@/lib/media/tts-service';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/core/logger';
 import { handleApiError } from '@/lib/core/error-handler';
 
 function shouldUseRealtimeStream(): boolean {

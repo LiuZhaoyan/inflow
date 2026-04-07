@@ -2,12 +2,10 @@
 
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import MasteredSentencesSidebar from '@/components/learn/MasteredSentencesSidebar';
 import ChatArea from '@/components/learn/ChatArea';
 import ContextSwitcher from '@/components/learn/ContextSwitcher';
-import LanguageSwitcher from '@/components/learn/LanguageSwitcher';
 import ControlButtons from '@/components/learn/ControlButtons';
 import CurrentSentenceCard from '@/components/learn/CurrentSentenceCard';
 import DifficultyIndicator from '@/components/learn/DifficultyIndicator';
@@ -46,11 +44,8 @@ export default function LearnPage() {
         setShowContextMenu,
         handleAction,
         switchContext,
-        switchLanguage,
         handleDeleteMasteredSentence,
     } = useLearnChat();
-
-    const [showLanguageMenu, setShowLanguageMenu] = useState(false);
 
     const {
         sentenceRef,

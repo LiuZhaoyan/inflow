@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { ChevronRight, ChevronLeft, Book, Volume2, Trash2 } from 'lucide-react';
+import { ChevronLeft, Book, Volume2, Trash2 } from 'lucide-react';
 import { MasteredSentence } from '@/lib/types/progress';
 
 interface Props {

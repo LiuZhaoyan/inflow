@@ -43,6 +43,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const isBypass = process.env.AUTH_BYPASS === 'true';
+  const expiresDate = new Date();
+  expiresDate.setFullYear(expiresDate.getFullYear() + 1);
   const session: Session | null = isBypass
     ? {
         user: {
@@ -50,7 +52,7 @@ export default function RootLayout({
           email: process.env.AUTH_BYPASS_USER_EMAIL || 'test-user@local.dev',
           name: process.env.AUTH_BYPASS_USER_NAME || 'Test User',
         },
-        expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        expires: expiresDate.toISOString(),
       }
     : null;
 

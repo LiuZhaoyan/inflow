@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { logger } from '@/lib/core/logger';
 import { computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
 
@@ -38,6 +38,7 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
     const enabledRef = useRef(input.enabled);
     const onRunRef = useRef(input.onRun);
     const isBlockedRef = useRef(input.isBlocked);
+    const runWithCooldownRef = useRef<((payload: T) => Promise<void>) | null>(null);
 
     const metricsRef = useRef({
         cooldown_blocked_count: 0,
@@ -126,16 +127,20 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
             const next = pendingActionRef.current;
             pendingActionRef.current = null;
             setHasQueuedAction(false);
-            if (next) {
+            if (next && runWithCooldownRef.current) {
                 metricsRef.current.send_after_cooldown_count += 1;
                 logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-                void runWithCooldown(next);
+                void runWithCooldownRef.current(next);
             }
         };
 
         cooldownTimerRef.current = window.setTimeout(onCooldownExpire, waitMs);
         startCountdownTicker();
     }, [clearTimers, input.maxMs, startCountdownTicker]);
+
+    useEffect(() => {
+        runWithCooldownRef.current = runWithCooldown;
+    }, [runWithCooldown]);
 
     const flushQueuedIfReady = useCallback(() => {
         if (isBlockedRef.current?.()) {
@@ -151,12 +156,12 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
         setHasQueuedAction(false);
         setCooldownRemainingMs(0);
 
-        if (next) {
+        if (next && runWithCooldownRef.current) {
             metricsRef.current.send_after_cooldown_count += 1;
             logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
-            void runWithCooldown(next);
+            void runWithCooldownRef.current(next);
         }
-    }, [input, runWithCooldown]);
+    }, []);
 
     const scheduleOrRun = useCallback((payload: T) => {
         if (isBlockedRef.current?.()) {
@@ -165,7 +170,9 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
 
         const now = Date.now();
         if (!enabledRef.current || now >= nextAllowedAtRef.current) {
-            void runWithCooldown(payload);
+            if (runWithCooldownRef.current) {
+                void runWithCooldownRef.current(payload);
+            }
             return;
         }
 
@@ -192,7 +199,7 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
             flushQueuedIfReady();
         }, waitMs);
         startCountdownTicker();
-    }, [clearTimers, flushQueuedIfReady, runWithCooldown, startCountdownTicker]);
+    }, [clearTimers, flushQueuedIfReady, startCountdownTicker]);
 
     const notify429 = useCallback((retryAfterMs?: number) => {
         successSince429Ref.current = 0;
@@ -228,13 +235,24 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
         setCooldownRemainingMs(0);
     }, [clearTimers]);
 
-    useEffect(() => {
-        if (!enabledRef.current) {
+    const stateUpdateScheduledRef = useRef(false);
+
+    useLayoutEffect(() => {
+        if (!enabledRef.current && !stateUpdateScheduledRef.current) {
+            stateUpdateScheduledRef.current = true;
             cooldownMsRef.current = input.baseMs;
             successSince429Ref.current = 0;
-            clear();
+            clearTimers();
+            pendingActionRef.current = null;
+            nextAllowedAtRef.current = 0;
+            // Schedule state updates in a separate microtask
+            Promise.resolve().then(() => {
+                setHasQueuedAction(false);
+                setCooldownRemainingMs(0);
+                stateUpdateScheduledRef.current = false;
+            });
         }
-    }, [clear, input.baseMs, input.enabled]);
+    }, [clearTimers, input.baseMs, input.enabled]);
 
     useEffect(() => {
         return () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, LogOut, Sparkles, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { signOut } from 'next-auth/react';
 import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';

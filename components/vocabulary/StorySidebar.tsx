@@ -243,7 +243,7 @@ export default function StorySidebar({
                           <span>{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           {s.language && (
                             <span className="bg-[#eadbc7] text-[var(--ink-2)] rounded-full px-1.5 py-0.5 text-[10px] font-medium">
-                              {resolveLanguageLabel(s.language as any)}
+                              {resolveLanguageLabel(s.language)}
                             </span>
                           )}
                         </p>

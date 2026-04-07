@@ -7,7 +7,6 @@ import { LANGUAGE_OPTIONS } from '@/lib/core/language';
 import type { UserProfile } from '@/lib/types/user';
 
 export default function Home() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -26,7 +25,6 @@ export default function Home() {
           const data = await res.json();
           const profile = data?.profile as UserProfile | undefined;
           if (profile) {
-            setUserProfile(profile);
             setProfileForm({
               username: profile.username || '',
               nativeLanguage: profile.nativeLanguage || 'en',
@@ -71,7 +69,6 @@ export default function Home() {
       const data = await res.json();
       const profile = data?.profile as UserProfile | undefined;
       if (profile) {
-        setUserProfile(profile);
         setShowProfileModal(false);
       } else {
         setProfileError('Failed to save profile. Please try again.');

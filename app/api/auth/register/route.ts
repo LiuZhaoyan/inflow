@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
-import { logger } from '@/lib/core/logger';
 import { handleApiError } from '@/lib/core/error-handler';
 
 export async function POST(req: Request) {

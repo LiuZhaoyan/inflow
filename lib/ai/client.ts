@@ -109,7 +109,7 @@ export async function generateImageAsync(
   const apiKey = process.env.API_KEY;
   const apiUrl = config.apiUrl || process.env.AI_DEPICT_API_URL || 'https://api.openai.com/v1/images/generations';
 
-  const requestBody: any = { prompt };
+  const requestBody: { prompt: string; async?: boolean } = { prompt };
   if (config.async) {
     requestBody.async = true;
   }

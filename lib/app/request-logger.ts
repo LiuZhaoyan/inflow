@@ -3,6 +3,7 @@
  * Provides helpers for logging with request context
  */
 
+import { NextRequest } from 'next/server';
 import { logger } from '@/lib/core/logger';
 
 interface RequestLogContext {

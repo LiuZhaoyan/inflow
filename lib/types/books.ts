@@ -24,7 +24,7 @@ export interface BookMetadata {
   // Optional: Preview sentences for the card
   preview?: string[];
   // Legacy support for migration
-  chapters?: any;
+  chapters?: unknown;
 }
 
 // Full content structure

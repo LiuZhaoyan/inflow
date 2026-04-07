@@ -3,7 +3,6 @@ import { chatCompletion, ChatMessage } from '@/lib/ai/client';
 import { getProgress, setPlacementResult, getUserProfile } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/core/logger';
 import { handleApiError } from '@/lib/core/error-handler';
 
 /**

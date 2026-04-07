@@ -5,7 +5,6 @@ import path from 'path';
 import { processDocument } from '@/lib/content/text-processor';
 import { detectLanguageFromSentences, normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
-import { logger } from '@/lib/core/logger';
 import { handleApiError } from '@/lib/core/error-handler';
 
 export const runtime = 'nodejs';

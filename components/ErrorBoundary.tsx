@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, useState, useEffect, useCallback } from 'react';
+import React, { ReactNode, useState, useCallback } from 'react';
 
 /**
  * Error details for error boundary

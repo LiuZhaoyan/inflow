@@ -25,7 +25,7 @@ function splitIntoSentences(text: string): string[] {
   try {
     const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
     return Array.from(segmenter.segment(cleanText)).map(s => s.segment.trim()).filter(s => s.length > 0);
-  } catch (e) {
+  } catch {
     // Fallback regex for environments without Intl.Segmenter
     return cleanText.match(/[^.!?]+[.!?]+(?=\s|$)/g)?.map(s => s.trim()) || [cleanText];
   }
@@ -68,8 +68,9 @@ async function parsePdf(buffer: Buffer): Promise<string> {
   try {
     // Lazy-load PDF parsing deps so EPUB/TXT uploads don't crash at module load time.
     // Note: `pdf-parse@v2` no longer exposes the old `pdf(buffer)` function API.
-    const mod: any = await import('pdf-parse');
-    const PDFParse = mod?.PDFParse ?? mod?.default?.PDFParse ?? mod?.default;
+    const mod: Record<string, unknown> = await import('pdf-parse');
+    const modDefault = (mod.default ?? null) as Record<string, unknown> | null;
+    const PDFParse = (mod.PDFParse ?? modDefault?.PDFParse ?? modDefault) as unknown;
 
     if (typeof PDFParse !== 'function') {
       throw new TypeError(
@@ -79,6 +80,7 @@ async function parsePdf(buffer: Buffer): Promise<string> {
 
     // In Next.js dev (and some server bundlers), pdf.js may fail to resolve its worker script
     // and throw "Setting up fake worker failed". Disable workers for server-side parsing.
+    // @ts-expect-error pdf-parse module exports are dynamic
     const parser = new PDFParse({ data: buffer, disableWorker: true });
     try {
       const result = await parser.getText();
@@ -95,18 +97,24 @@ async function parsePdf(buffer: Buffer): Promise<string> {
 }
 
 async function parseEpub(filePath: string): Promise<{ title: string; chapters: { title: string; paragraphs: string[][] }[]; images: Record<string, Buffer> }> {
-  // @ts-ignore - EPub types are sometimes tricky
-  const epub = await EPub.createAsync(filePath);
+  type EpubManifestItem = { href?: string; 'media-type'?: string };
+  type EpubFlowItem = { id: string; title?: string };
+  type EpubLike = {
+    metadata?: { title?: string };
+    manifest?: Record<string, EpubManifestItem>;
+    flow?: EpubFlowItem[];
+    getChapterAsync: (id: string) => Promise<string>;
+    getFileAsync: (id: string) => Promise<[Buffer, string?]>;
+  };
+
+  const epub = (await EPub.createAsync(filePath)) as unknown as EpubLike;
   const chapters = [];
   const images: Record<string, Buffer> = {};
 
   // Build a map of href -> id for image resolution
   const hrefToId: Record<string, string> = {};
-  // @ts-ignore
   if (epub.manifest) {
-    // @ts-ignore
     for (const [id, data] of Object.entries(epub.manifest)) {
-      // @ts-ignore
       if (data.href) hrefToId[data.href] = id;
     }
   }
@@ -116,23 +124,19 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
     return m === 'application/xhtml+xml' || m === 'text/html' || m.endsWith('+xml') || m.includes('html');
   };
 
-  // @ts-ignore
-  for (const chapter of epub.flow) {
+  for (const chapter of epub.flow ?? []) {
     let html: string | null = null;
     try {
-      // @ts-ignore
       html = await epub.getChapterAsync(chapter.id);
-    } catch (err) {
+    } catch {
       // Some EPUBs mark chapters as `text/html`, but epub2's getChapterRaw() only accepts
       // `application/xhtml+xml` (and svg). Fallback to reading the raw file contents.
-      // @ts-ignore
-      const meta = (epub as any).manifest?.[chapter.id];
-      const declaredMime = meta?.['media-type'] as string | undefined;
+      const declaredMime = epub.manifest?.[chapter.id]?.['media-type'];
 
       if (isHtmlLike(declaredMime)) {
         try {
           // Returns [Buffer, mimeType]
-          const [buf] = await (epub as any).getFileAsync(chapter.id);
+          const [buf] = await epub.getFileAsync(chapter.id);
           html = buf?.toString('utf-8') ?? null;
         } catch (err2) {
           logger.warn('parseEpub: EPUB chapter fallback read failed', { chapterId: chapter?.id, error: (err2 as Error).message });
@@ -155,8 +159,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
       if (!src) return;
 
       // Resolve path relative to the chapter file
-      // @ts-ignore
-      const chapterHref = epub.manifest[chapter.id]?.href || '';
+      const chapterHref = epub.manifest?.[chapter.id]?.href || '';
       const chapterDir = path.posix.dirname(chapterHref);
       const absoluteHref = path.posix.join(chapterDir, src);
 
@@ -173,7 +176,6 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
         if (!images[imageKey]) {
           imagePromises.push((async () => {
             try {
-              // @ts-ignore
               const [buffer] = await epub.getFileAsync(imageId);
               if (buffer) images[imageKey] = buffer;
             } catch (e) {
@@ -215,7 +217,7 @@ async function parseEpub(filePath: string): Promise<{ title: string; chapters: {
   }
 
   return {
-    title: epub.metadata.title || 'Untitled EPUB',
+    title: epub.metadata?.title || 'Untitled EPUB',
     chapters,
     images
   };

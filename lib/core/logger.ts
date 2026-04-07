@@ -117,7 +117,7 @@ export const logger = {
   /**
    * Log warning messages
    */
-  warn(message: string, context?: LogContext | Error): void {
+  warn(message: string, context?: LogContext | Error | unknown): void {
     log('warn', message, context);
   },
 
@@ -125,7 +125,7 @@ export const logger = {
    * Log error messages with optional context
    * Best for API errors, missing data, exceptions
    */
-  error(message: string, contextOrError?: LogContext | Error): void {
+  error(message: string, contextOrError?: LogContext | Error | unknown): void {
     log('error', message, contextOrError);
   },
 

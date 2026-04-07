@@ -5,8 +5,8 @@
  * Uses a sliding-window approach over recent sessions to adapt in real-time.
  */
 
-import type { LearningProfile, PerformanceMetrics } from './types/learnTypes';
-import type { MasteredSentence, UserProgress } from './types/progress';
+import type { LearningProfile, PerformanceMetrics } from '../../types/learnTypes';
+import type { MasteredSentence, UserProgress } from '../../types/progress';
 
 // ── Difficulty context passed to the AI prompt ──────────────────────────
 export interface DifficultyContext {
@@ -172,7 +172,6 @@ function computeReviewDue(sentences: MasteredSentence[]): string[] {
   const due: string[] = [];
 
   for (const s of sentences) {
-    const age = now - (s.masteredAt || 0);
     const reviewCount = s.reviewCount ?? 0;
     const interval = REVIEW_INTERVALS_MS[Math.min(reviewCount, REVIEW_INTERVALS_MS.length - 1)];
     const lastReview = s.lastReviewedAt ?? s.masteredAt ?? 0;
@@ -210,7 +209,7 @@ export function updateLearningProfileFromAction(
     // The sentence the user needed help with – track weak vocabulary
     const tokens = extractTokens(sentence);
     const weakMap: Record<string, number> = {};
-    for (const [k, v] of Object.entries(updated.weakVocabulary || {})) {
+    for (const [k, v] of Object.entries(updated.weakVocabulary || {}) as Array<[string, number]>) {
       weakMap[k] = v;
     }
     for (const t of tokens) {

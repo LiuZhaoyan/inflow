@@ -29,7 +29,7 @@ export default function VocabularyPage() {
     generateImageForWord,
     generateAudioForWord,
     playAudio,
-  } = useVocabularyActions({ words, setWords });
+  } = useVocabularyActions({ setWords });
   const {
     selectionMode,
     selectedIds,
