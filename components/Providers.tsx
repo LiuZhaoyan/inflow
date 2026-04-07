@@ -3,6 +3,7 @@
 import { SessionProvider } from 'next-auth/react';
 import type { Session } from 'next-auth';
 import type { ReactNode } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 
 type ProvidersProps = {
   children: ReactNode;
@@ -12,13 +13,15 @@ type ProvidersProps = {
 
 export default function Providers({ children, session, isBypass = false }: ProvidersProps) {
   return (
-    <SessionProvider
-      session={session}
-      refetchOnWindowFocus={!isBypass}
-      refetchInterval={0}
-      refetchWhenOffline={false}
-    >
-      {children}
-    </SessionProvider>
+    <ErrorBoundary>
+      <SessionProvider
+        session={session}
+        refetchOnWindowFocus={!isBypass}
+        refetchInterval={0}
+        refetchWhenOffline={false}
+      >
+        {children}
+      </SessionProvider>
+    </ErrorBoundary>
   );
 }

@@ -3,15 +3,20 @@ import { getProgress, setDifficultyLevel } from '@/lib/db';
 import { getLevelLabel } from '@/lib/difficultyEngine';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { handleApiError } from '@/lib/errorHandler';
 
 /**
  * GET /api/difficulty
  * Returns current difficulty level, label, user level, and learning stats
  */
 export async function GET(req: Request) {
+    const startTime = Date.now();
+    const endpoint = 'GET /api/difficulty';
+    let userId: string | undefined;
     try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
+        userId = user.id;
 
         const url = new URL(req.url);
         const requested = normalizeLanguageCode(url.searchParams.get('languageCode') || undefined);
@@ -29,8 +34,15 @@ export async function GET(req: Request) {
                 learningPace: progress.learningProfile?.learningPace ?? 'normal',
             },
         });
-    } catch {
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } catch (error) {
+        const durationMs = Date.now() - startTime;
+        return handleApiError(error, {
+            endpoint,
+            userId,
+            statusCode: 500,
+            durationMs,
+            originalError: error instanceof Error ? error : undefined,
+        });
     }
 }
 
@@ -40,9 +52,13 @@ export async function GET(req: Request) {
  * Body: { level: number }
  */
 export async function PUT(req: Request) {
+    const startTime = Date.now();
+    const endpoint = 'PUT /api/difficulty';
+    let userId: string | undefined;
     try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
+        userId = user.id;
 
         const { level } = await req.json();
         if (typeof level !== 'number' || level < 1 || level > 10) {
@@ -57,7 +73,14 @@ export async function PUT(req: Request) {
             level: newLevel,
             label: getLevelLabel(newLevel),
         });
-    } catch {
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } catch (error) {
+        const durationMs = Date.now() - startTime;
+        return handleApiError(error, {
+            endpoint,
+            userId,
+            statusCode: 500,
+            durationMs,
+            originalError: error instanceof Error ? error : undefined,
+        });
     }
 }

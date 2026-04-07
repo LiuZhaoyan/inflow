@@ -10,11 +10,7 @@ import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { detectLanguageFromSentences } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Internal Server Error';
-}
+import { handleApiError } from '@/lib/errorHandler';
 
 async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
   try {
@@ -51,22 +47,41 @@ async function generateDefinition(word: string, nativeLanguage: string): Promise
 }
 
 export async function GET(request: Request) {
-  const { user, errorResponse } = await getAuthenticatedUser();
-  if (errorResponse) return errorResponse;
-
-  const vocab = await getVocabularyByUser(user.id);
-  const url = new URL(request.url);
-  const languageCode = (url.searchParams.get('languageCode') || '').trim().toLowerCase();
-  if (!languageCode || languageCode === 'all') {
-    return NextResponse.json(vocab);
-  }
-  return NextResponse.json(vocab.filter(w => (w.language || '') === languageCode));
-}
-
-export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'GET /api/vocabulary';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
+
+    const vocab = await getVocabularyByUser(user.id);
+    const url = new URL(request.url);
+    const languageCode = (url.searchParams.get('languageCode') || '').trim().toLowerCase();
+    if (!languageCode || languageCode === 'all') {
+      return NextResponse.json(vocab);
+    }
+    return NextResponse.json(vocab.filter(w => (w.language || '') === languageCode));
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
+  }
+}
+
+export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/vocabulary';
+  let userId: string | undefined;
+  try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const wordData = await request.json();
     if (!wordData.word) {
@@ -94,14 +109,25 @@ export async function POST(request: Request) {
     const newWord = await addWordByUser(user.id, wordData);
     return NextResponse.json(newWord);
   } catch (error: unknown) {
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
 }
 
 export async function PUT(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'PUT /api/vocabulary';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { id, ...updates } = await request.json();
     if (!id) {
@@ -113,19 +139,41 @@ export async function PUT(request: Request) {
     }
     return NextResponse.json(updatedWord);
   } catch (error: unknown) {
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
 }
 
 export async function DELETE(request: Request) {
-  const { user, errorResponse } = await getAuthenticatedUser();
-  if (errorResponse) return errorResponse;
+  const startTime = Date.now();
+  const endpoint = 'DELETE /api/vocabulary';
+  let userId: string | undefined;
+  try {
+    const { user, errorResponse } = await getAuthenticatedUser();
+    if (errorResponse) return errorResponse;
+    userId = user.id;
 
-  const url = new URL(request.url);
-  const id = url.searchParams.get('id');
-  if (id) {
-    await deleteWordByUser(user.id, id);
-    return NextResponse.json({ ok: true });
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (id) {
+      await deleteWordByUser(user.id, id);
+      return NextResponse.json({ ok: true });
+    }
+    return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
-  return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 }

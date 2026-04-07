@@ -2,27 +2,39 @@ import { NextResponse } from 'next/server';
 import { getStoriesByUser, deleteStoryByUser, updateStoryByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function GET() {
+  const startTime = Date.now();
+  const endpoint = 'GET /api/stories';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const stories = await getStoriesByUser(user.id);
     return NextResponse.json({ stories });
   } catch (error) {
-    logger.error('Failed to fetch stories', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'GET /api/stories',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'DELETE /api/stories';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { id } = await req.json();
     if (!id) {
@@ -31,18 +43,25 @@ export async function DELETE(req: Request) {
     await deleteStoryByUser(user.id, id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    logger.error('Failed to delete story', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'DELETE /api/stories',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'PUT /api/stories';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { id, ...updates } = await req.json();
     if (!id) {
@@ -54,10 +73,13 @@ export async function PUT(req: Request) {
     }
     return NextResponse.json(updated);
   } catch (error) {
-    logger.error('Failed to update story', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'PUT /api/stories',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

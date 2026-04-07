@@ -5,16 +5,16 @@ import { addStoryByUser } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/user';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Failed to generate story';
-}
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/ai-story';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { words } = await request.json();
 
@@ -103,13 +103,13 @@ Ensure the story and translation follow the constraints and response format exac
     return NextResponse.json({ story, translation, saved });
 
   } catch (error: unknown) {
-    logger.error('Story Generation Error', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'POST /api/ai-story',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json(
-      { error: getErrorMessage(error) },
-      { status: 500 }
-    );
   }
 }

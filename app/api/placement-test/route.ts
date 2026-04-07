@@ -4,6 +4,7 @@ import { getProgress, setPlacementResult, getUserProfile } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/errorHandler';
 
 /**
  * POST /api/placement-test
@@ -19,9 +20,13 @@ import { logger } from '@/lib/logger';
 const PLACEMENT_LEVELS = [1, 3, 5, 7, 9]; // difficulties to test
 
 export async function POST(req: Request) {
+    const startTime = Date.now();
+    const endpoint = 'POST /api/placement-test';
+    let userId: string | undefined;
     try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
+        userId = user.id;
 
         const body = await req.json();
         const { action, languageCode, answers } = body;
@@ -114,11 +119,14 @@ Make sure:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
     } catch (error) {
-        logger.error('Placement Test Error', {
-            error: error instanceof Error ? error : new Error(String(error)),
-            endpoint: 'POST /api/placement-test',
+        const durationMs = Date.now() - startTime;
+        return handleApiError(error, {
+            endpoint,
+            userId,
+            statusCode: 500,
+            durationMs,
+            originalError: error instanceof Error ? error : undefined,
         });
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -127,16 +135,27 @@ Make sure:
  * Returns whether placement has been completed and current level
  */
 export async function GET() {
+    const startTime = Date.now();
+    const endpoint = 'GET /api/placement-test';
+    let userId: string | undefined;
     try {
         const { user, errorResponse } = await getAuthenticatedUser();
         if (errorResponse) return errorResponse;
+        userId = user.id;
 
         const progress = await getProgress(undefined, user.id);
         return NextResponse.json({
             completed: progress.placementCompleted ?? false,
             level: progress.currentDifficultyLevel ?? 3,
         });
-    } catch {
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    } catch (error) {
+        const durationMs = Date.now() - startTime;
+        return handleApiError(error, {
+            endpoint,
+            userId,
+            statusCode: 500,
+            durationMs,
+            originalError: error instanceof Error ? error : undefined,
+        });
     }
 }

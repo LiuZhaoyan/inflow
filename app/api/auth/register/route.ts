@@ -5,8 +5,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/auth/register';
+  let userId: string | undefined;
   try {
     const { email, password, username } = await req.json();
 
@@ -56,18 +60,20 @@ export async function POST(req: Request) {
       updatedAt: now,
     }).returning({ id: users.id, email: users.email });
 
+    userId = newUser.id;
+
     return NextResponse.json(
       { message: 'Account created', userId: newUser.id },
       { status: 201 },
     );
   } catch (error) {
-    logger.error('Register error', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'POST /api/auth/register',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 },
-    );
   }
 }

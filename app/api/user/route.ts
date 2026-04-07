@@ -3,6 +3,7 @@ import { logger } from '@/lib/logger';
 import { getUserProfile, updateUserProfile, updateProgress } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { handleApiError } from '@/lib/errorHandler';
 
 function normalizeRequiredLanguage(input: string | undefined | null, fallback: string) {
   const normalized = normalizeLanguageCode(input || fallback);
@@ -10,27 +11,37 @@ function normalizeRequiredLanguage(input: string | undefined | null, fallback: s
 }
 
 export async function GET() {
+  const startTime = Date.now();
+  const endpoint = 'GET /api/user';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const profile = await getUserProfile(user.id);
     logger.info('User profile retrieved', { userId: user.id, endpoint: 'GET /api/user' });
     return NextResponse.json({ profile });
   } catch (error) {
-    logger.error('Get user profile failed', {
-      endpoint: 'GET /api/user',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
       statusCode: 500,
-      ...(error instanceof Error && { error }),
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/user';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const body = await req.json();
     const username = typeof body?.username === 'string' ? body.username.trim() : '';
@@ -58,19 +69,25 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    logger.error('Create user profile failed', {
-      endpoint: 'POST /api/user',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
       statusCode: 500,
-      ...(error instanceof Error && { error }),
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
 export async function PUT(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'PUT /api/user';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const body = await req.json();
     const current = await getUserProfile(user.id);
@@ -109,11 +126,13 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    logger.error('Update user profile failed', {
-      endpoint: 'PUT /api/user',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
       statusCode: 500,
-      ...(error instanceof Error && { error }),
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

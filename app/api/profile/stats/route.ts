@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import { getVocabularyByUser, getBooksByUser, getProgress, getStoriesByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function GET() {
+  const startTime = Date.now();
+  const endpoint = 'GET /api/profile/stats';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const [vocabulary, books, progress, stories] = await Promise.all([
       getVocabularyByUser(user.id),
@@ -44,10 +49,13 @@ export async function GET() {
       },
     });
   } catch (error) {
-    logger.error('Failed to fetch profile stats', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'GET /api/profile/stats',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

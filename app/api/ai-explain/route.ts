@@ -3,6 +3,7 @@ import { chatCompletion, type ChatMessage } from '@/lib/aiClient';
 import { logger } from '@/lib/logger';
 import { detectLanguageHint, LanguageCode, normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { handleApiError } from '@/lib/errorHandler';
 
 interface RequestBody {
   text: string;
@@ -14,15 +15,10 @@ interface RequestBody {
   debug?: boolean;
 }
 
-function getErrorStatus(error: unknown): number | undefined {
-  if (typeof error === 'object' && error !== null && 'status' in error) {
-    const status = (error as { status?: unknown }).status;
-    return typeof status === 'number' ? status : undefined;
-  }
-  return undefined;
-}
-
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/ai-explain';
+  let userId: string | undefined;
   try {
     const { errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
@@ -127,23 +123,13 @@ export async function POST(request: Request) {
     });
 
   } catch (error: unknown) {
-    const statusCode = getErrorStatus(error) || 500;
-    logger.error('AI explain API error', {
-      endpoint: 'POST /api/ai-explain',
-      statusCode,
-      ...(error instanceof Error && { error }),
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-
-    if (statusCode === 429) {
-      return NextResponse.json(
-        { error: 'AI Service is busy (Rate Limit). Please try again later.' },
-        { status: 429, headers: { 'Retry-After': '10' } }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to fetch explanation from AI' },
-      { status: 500 }
-    );
   }
 }

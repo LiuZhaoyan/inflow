@@ -2,11 +2,7 @@ import { NextResponse } from 'next/server';
 import { requestTtsPersistent, requestTtsRealtime, requestTtsTemporaryUrl } from '@/lib/ttsService';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) return error.message;
-  return 'Failed to generate speech';
-}
+import { handleApiError } from '@/lib/errorHandler';
 
 function shouldUseRealtimeStream(): boolean {
   const flag = process.env.TTS_STREAM_BINARY_ENABLED;
@@ -20,9 +16,13 @@ function getAudioContentType(format: 'mp3' | 'pcm' | 'flac'): string {
 }
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/ai-tts';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { text, format: reqFormat, voiceId, stream=false } = await request.json();
     if (!text) {
@@ -68,17 +68,17 @@ export async function POST(request: Request) {
         }, user.id);
         return NextResponse.json({ url: publicUrl });
     } catch (error: unknown) {
-        throw new Error(getErrorMessage(error));
+        throw error;
     }
 
   } catch (error: unknown) {
-    logger.error('TTS Error:', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'POST /api/ai-tts',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json(
-      { error: getErrorMessage(error) },
-      { status: 500 }
-    );
   }
 }

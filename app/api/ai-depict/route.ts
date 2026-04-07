@@ -7,13 +7,12 @@ import {
 } from '@/lib/aiClient';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return 'Failed to generate image';
-}
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function POST(request: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/ai-depict';
+  let userId: string | undefined;
   try {
     const { errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
@@ -51,14 +50,14 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    logger.error('AI Depict Route Error', {
-      error: error instanceof Error ? error : new Error(String(error)),
-      endpoint: 'POST /api/ai-depict',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
     });
-    return NextResponse.json(
-      { error: getErrorMessage(error) },
-      { status: 500 }
-    );
   }
 }
 

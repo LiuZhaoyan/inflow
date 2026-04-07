@@ -2,11 +2,16 @@ import { NextResponse } from 'next/server';
 import { getProgress, deleteMasteredSentence } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
+import { handleApiError } from '@/lib/errorHandler';
 
 export async function GET(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'GET /api/mastered-sentences';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const url = new URL(req.url);
     const languageCodeParam = url.searchParams.get('languageCode');
@@ -17,15 +22,26 @@ export async function GET(req: Request) {
       ? sentences
       : sentences.filter(s => (s.languageCode || '') === normalized);
     return NextResponse.json({ sentences: filtered });
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch messages' }, { status: 500 });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
 }
 
 export async function DELETE(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'DELETE /api/mastered-sentences';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const { id, languageCode } = await req.json();
     if (!id) {
@@ -43,7 +59,14 @@ export async function DELETE(req: Request) {
       ? sentences
       : sentences.filter(s => (s.languageCode || '') === normalized);
     return NextResponse.json({ sentences: filtered });
-  } catch {
-    return NextResponse.json({ error: 'Failed to delete sentence' }, { status: 500 });
+  } catch (error) {
+    const durationMs = Date.now() - startTime;
+    return handleApiError(error, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: error instanceof Error ? error : undefined,
+    });
   }
 }

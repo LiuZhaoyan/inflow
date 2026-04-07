@@ -6,13 +6,18 @@ import { processDocument } from '@/lib/textProcessor';
 import { detectLanguageFromSentences, normalizeLanguageCode } from '@/lib/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/logger';
+import { handleApiError } from '@/lib/errorHandler';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
+  const startTime = Date.now();
+  const endpoint = 'POST /api/upload';
+  let userId: string | undefined;
   try {
     const { user, errorResponse } = await getAuthenticatedUser();
     if (errorResponse) return errorResponse;
+    userId = user.id;
 
     const formData = await req.formData();
     const files: File[] = [];
@@ -82,10 +87,13 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, books: savedBooks, files: uploadedFilenames });
   } catch (err) {
-    logger.error('Upload error', {
-      error: err instanceof Error ? err : new Error(String(err)),
-      endpoint: 'POST /api/upload',
+    const durationMs = Date.now() - startTime;
+    return handleApiError(err, {
+      endpoint,
+      userId,
+      statusCode: 500,
+      durationMs,
+      originalError: err instanceof Error ? err : undefined,
     });
-    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }

@@ -25,24 +25,7 @@ import {
     mapActionTexts,
 } from '@/lib/learnChatMessageProtocol';
 import type { LearnAction } from '@/lib/types/learnChat';
-
-function isRateLimitError(error: unknown) {
-    const err = error as {
-        status?: number;
-        code?: string;
-        response?: { status?: number; data?: { error?: { code?: string } } };
-        cause?: { status?: number; response?: { status?: number } };
-    };
-    const status =
-        err?.status ||
-        err?.response?.status ||
-        err?.cause?.status ||
-        err?.cause?.response?.status;
-
-    const code = err?.code || err?.response?.data?.error?.code;
-
-    return status === 429 || code === 'rate_limit' || code === 'rate_limited';
-}
+import { handleApiError } from '@/lib/errorHandler';
 
 interface ParsedAiResponse {
     response?: string;
@@ -281,31 +264,13 @@ Structure:
 
     } catch (error) {
         const durationMs = Date.now() - startTime;
-        let statusCode = 500;
-
-        if (isRateLimitError(error)) {
-            statusCode = 429;
-            logger.warn('Learn Chat rate limit exceeded', {
-                requestId: requestIdValue,
-                userId,
-                endpoint,
-                statusCode,
-                durationMs,
-            });
-            return NextResponse.json(
-                    { error: 'Rate limited' },
-                    { status: 429, headers: { 'Retry-After': '10' } }
-            );
-        }
-
-        logger.error('Learn Chat error', {
-            requestId: requestIdValue,
-            userId,
+        return handleApiError(error, {
             endpoint,
-            statusCode,
+            userId,
+            requestId: requestIdValue,
+            statusCode: 500,
             durationMs,
-            ...(error instanceof Error && { error }),
+            originalError: error instanceof Error ? error : undefined,
         });
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
