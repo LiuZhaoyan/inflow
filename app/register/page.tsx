@@ -78,16 +78,16 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-900 tracking-tight">Inflow</h1>
-          <p className="text-sm text-gray-500 mt-1">Create your account</p>
+          <h1 className="paper-title text-4xl text-[var(--ink-0)]">Inflow</h1>
+          <p className="paper-subtitle text-sm mt-2">Create your account</p>
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="paper-card p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                Name <span className="text-gray-400">(optional)</span>
+              <label htmlFor="username" className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-2)] mb-2 block">
+                Name <span className="text-[var(--ink-3)]">(optional)</span>
               </label>
               <input
                 id="username"
@@ -95,13 +95,13 @@ export default function RegisterPage() {
                 autoComplete="name"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="paper-input"
                 placeholder="Your name"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-2)] mb-2 block">
                 Email
               </label>
               <input
@@ -111,13 +111,13 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="paper-input"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-2)] mb-2 block">
                 Password
               </label>
               <input
@@ -127,13 +127,13 @@ export default function RegisterPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="paper-input"
                 placeholder="At least 6 characters"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPassword" className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-2)] mb-2 block">
                 Confirm password
               </label>
               <input
@@ -143,19 +143,21 @@ export default function RegisterPage() {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="paper-input"
                 placeholder="••••••••"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+              <div className="text-sm text-[var(--danger)] bg-[#fbe8e4] border border-[#efc7be] rounded-[12px] px-3 py-2">
+                {error}
+              </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="paper-btn-primary w-full"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -167,10 +169,10 @@ export default function RegisterPage() {
           </form>
         </div>
 
-        {/* Login link */}
-        <p className="text-center text-sm text-gray-500 mt-4">
+        {/* Sign-in link */}
+        <p className="text-center text-sm text-[var(--ink-2)] mt-4">
           Already have an account?{' '}
-          <Link href="/login" className="text-blue-600 font-medium hover:underline">
+          <Link href="/login" className="font-medium text-[var(--accent-1)] hover:text-[#7e4224] transition-colors">
             Sign in
           </Link>
         </p>

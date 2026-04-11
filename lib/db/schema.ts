@@ -9,6 +9,7 @@ export const users = sqliteTable('users', {
   nativeLanguage:      text('native_language').notNull().default('en'),
   targetLanguage:      text('target_language').notNull().default('ko'),
   currentLanguageCode: text('current_language_code').default('ko'),
+  role:                text('role').notNull().default('user'), // 'user' | 'admin'
   isOnboarded:         integer('is_onboarded', { mode: 'boolean' }).default(false),
   createdAt:           integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt:           integer('updated_at', { mode: 'timestamp' }).notNull(),
