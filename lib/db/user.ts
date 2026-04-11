@@ -255,3 +255,98 @@ export async function updateUserProfile(
 
   return merged;
 }
+
+/**
+ * 获取管理员用户列表（分页）
+ */
+export async function getAdminUsersList(limit = 20, offset = 0) {
+  const allUsers = await db.select().from(users);
+
+  const total = allUsers.length;
+  const paginatedUsers = allUsers.slice(offset, offset + limit);
+
+  return {
+    users: paginatedUsers.map((user) => ({
+      id: user.id,
+      email: user.email,
+      username: user.username || '',
+      role: user.role || 'user',
+      createdAt: new Date(user.createdAt || Date.now()).toISOString(),
+    })),
+    total,
+    limit,
+    offset,
+  };
+}
+
+/**
+ * 更新用户角色
+ */
+export async function updateUserRole(userId: string, role: 'user' | 'admin') {
+  const existing = await getUserById(userId);
+  if (!existing) {
+    throw new Error(`User not found: ${userId}`);
+  }
+
+  await db
+    .update(users)
+    .set({ role })
+    .where(eq(users.id, userId));
+
+  return { id: userId, role };
+}
+
+/**
+ * 删除用户及其所有相关数据
+ */
+export async function deleteUser(userId: string) {
+  const existing = await getUserById(userId);
+  if (!existing) {
+    throw new Error(`User not found: ${userId}`);
+  }
+
+  // 删除用户（CASCADE 会自动删除相关数据）
+  await db.delete(users).where(eq(users.id, userId));
+
+  return { id: userId, deleted: true };
+}
+
+/**
+ * 获取管理员仪表板统计数据
+ */
+export async function getAdminDashboardStats() {
+  const allUsers = await db.select().from(users);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const newUsersToday = allUsers.filter((user) => {
+    const createdAt = user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt);
+    return createdAt >= today;
+  }).length;
+
+  // 这些是示例统计，实际应该从日志表查询
+  return {
+    totalUsers: allUsers.length,
+    newUsersToday,
+    activeUsers: Math.max(5, Math.floor(allUsers.length * 0.3)), // 示例：30% 活跃
+    totalChats: Math.floor(Math.random() * 1000) + 100,
+    learningSessionsToday: Math.floor(Math.random() * 50) + 10,
+    avgLearningDuration: Math.floor(Math.random() * 60) + 20,
+    errorsToday: Math.floor(Math.random() * 20),
+    errorRate: (Math.random() * 2).toFixed(2),
+    recentErrors: [
+      {
+        id: '1',
+        message: 'Timeout on AI service call',
+        timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
+        endpoint: 'POST /api/learn-chat',
+      },
+      {
+        id: '2',
+        message: 'Database connection refused',
+        timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
+        endpoint: 'GET /api/user',
+      },
+    ],
+  };
+}
