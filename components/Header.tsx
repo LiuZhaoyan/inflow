@@ -22,7 +22,7 @@ export default function Header({ homeLink = true, rightText = "Beta v0.1", showP
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--line-0)] bg-[rgba(251,245,236,0.82)] backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-[var(--line-0)] bg-[rgba(233,222,205,0.9)] backdrop-blur-md">
       <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
         {homeLink ? (
           <Link

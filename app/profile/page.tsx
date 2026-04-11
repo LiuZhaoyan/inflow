@@ -131,7 +131,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="page-surface page-surface-operation text-[var(--foreground)] font-sans selection:bg-[#f1d6bd] selection:text-[#2d231c]">
+    <div className="page-surface page-surface-operation [--page-bg-color:#efe5d7] [--page-bg-image:linear-gradient(180deg,#f7efe3_0%,#ebdcc8_100%)] [--paper-note:#e3c9ad] [--paper-note-strong:#e8d2ba] text-[var(--foreground)] font-sans selection:bg-[#f1d6bd] selection:text-[#2d231c]">
       <Header showProfile={false} />
 
       <main className="max-w-5xl mx-auto px-4 md:px-5 pb-20 pt-10">
