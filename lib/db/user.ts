@@ -30,12 +30,15 @@ function mapDbUserToProfile(user: DbUser): UserProfile {
     targetLanguage,
   );
 
+  console.log('[DEBUG] mapDbUserToProfile:', { userId: user.id, dbRole: user.role, dbUser: user });
+
   return {
     id: user.id,
     username: typeof user.username === 'string' ? user.username.trim() : DEFAULT_USER.username,
     nativeLanguage,
     targetLanguage,
     currentLanguageCode,
+    role: (user.role as 'user' | 'admin') || 'user',
     isOnboarded: Boolean(user.isOnboarded),
     createdAt: toMillis(user.createdAt),
     updatedAt: toMillis(user.updatedAt),
@@ -58,6 +61,7 @@ function sanitizeProfile(input: Partial<UserProfile> | null | undefined): UserPr
     nativeLanguage,
     targetLanguage,
     currentLanguageCode,
+    role: (base.role as 'user' | 'admin') || 'user',
     isOnboarded: typeof base.isOnboarded === 'boolean' ? base.isOnboarded : DEFAULT_USER.isOnboarded,
     createdAt: typeof base.createdAt === 'number' ? base.createdAt : now,
     updatedAt: typeof base.updatedAt === 'number' ? base.updatedAt : now,
@@ -73,6 +77,7 @@ function profileToDbInsert(profile: UserProfile) {
     nativeLanguage: profile.nativeLanguage,
     targetLanguage: profile.targetLanguage,
     currentLanguageCode: profile.currentLanguageCode || profile.targetLanguage,
+    role: profile.role || 'user',
     isOnboarded: profile.isOnboarded,
     createdAt: new Date(profile.createdAt),
     updatedAt: new Date(profile.updatedAt),
@@ -333,7 +338,7 @@ export async function getAdminDashboardStats() {
     learningSessionsToday: Math.floor(Math.random() * 50) + 10,
     avgLearningDuration: Math.floor(Math.random() * 60) + 20,
     errorsToday: Math.floor(Math.random() * 20),
-    errorRate: (Math.random() * 2).toFixed(2),
+    errorRate: Math.random() * 2,
     recentErrors: [
       {
         id: '1',
