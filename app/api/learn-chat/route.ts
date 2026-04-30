@@ -133,21 +133,13 @@ Structure:
         // ── Update learning profile ──
         const updatedProfile = updateLearningProfileFromAction(
             progress.learningProfile ?? {
-                knownVocabulary: [], weakVocabulary: {}, masteredGrammar: [],
-                strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
-                totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
+                weakVocabulary: {}, grammarStatus: {}, learningPace: 'normal',
+                totalStudyTimeMs: 0,
             },
             learnAction,
             currentSentence || '',
             historyForDifficulty,
         );
-        // Track preferred context
-        if (context && !updatedProfile.preferredContexts.includes(context)) {
-            updatedProfile.preferredContexts.push(context);
-            if (updatedProfile.preferredContexts.length > 5) {
-                updatedProfile.preferredContexts.shift();
-            }
-        }
 
         await updateProgress({
             learningProfile: updatedProfile,
@@ -187,9 +179,8 @@ Structure:
     if (learnAction === 'explain' || learnAction === 'translate') {
         const updatedProfile = updateLearningProfileFromAction(
             progress.learningProfile ?? {
-                knownVocabulary: [], weakVocabulary: {}, masteredGrammar: [],
-                strugglingGrammar: [], preferredContexts: [], learningPace: 'normal',
-                totalSentencesMastered: 0, totalStudyTimeMs: 0, lastUpdated: Date.now(),
+                weakVocabulary: {}, grammarStatus: {}, learningPace: 'normal',
+                totalStudyTimeMs: 0,
             },
             learnAction,
             currentSentence || '',

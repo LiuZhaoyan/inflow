@@ -26,24 +26,19 @@ export interface StoredChat {
 
 export interface PerformanceMetrics {
     avgResponseTimeMs: number;
-    explainRequestRate: number;
-    translateRequestRate: number;
-    masterySpeed: number;           // sentences mastered per session
+    explainRequests: number;
+    translateRequests: number;
+    totalRequests: number;
     totalSessions: number;
     totalSentencesMastered: number;
     lastSessionAt: number;
 }
 
 export interface LearningProfile {
-    knownVocabulary: string[];
     weakVocabulary: Record<string, number>;  // token → mistake count
-    masteredGrammar: string[];
-    strugglingGrammar: string[];
-    preferredContexts: string[];
+    grammarStatus: Record<string, number>;    // grammar point -> mastery level
     learningPace: 'slow' | 'normal' | 'fast';
-    totalSentencesMastered: number;
     totalStudyTimeMs: number;
-    lastUpdated: number;
 }
 
 export interface PlacementResult {
@@ -53,22 +48,17 @@ export interface PlacementResult {
 }
 
 export const DEFAULT_LEARNING_PROFILE: LearningProfile = {
-    knownVocabulary: [],
     weakVocabulary: {},
-    masteredGrammar: [],
-    strugglingGrammar: [],
-    preferredContexts: [],
+    grammarStatus: {},
     learningPace: 'normal',
-    totalSentencesMastered: 0,
     totalStudyTimeMs: 0,
-    lastUpdated: Date.now(),
 };
 
 export const DEFAULT_PERFORMANCE_METRICS: PerformanceMetrics = {
     avgResponseTimeMs: 0,
-    explainRequestRate: 0,
-    translateRequestRate: 0,
-    masterySpeed: 0,
+    explainRequests: 0,
+    translateRequests: 0,
+    totalRequests: 0,
     totalSessions: 0,
     totalSentencesMastered: 0,
     lastSessionAt: 0,

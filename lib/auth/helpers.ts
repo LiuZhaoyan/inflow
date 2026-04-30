@@ -69,7 +69,6 @@ export async function getAuthenticatedUserWithRole(): Promise<{
     if (isAuthBypassEnabled()) {
       const bypassUser = getBypassUser();
       const role = (bypassUser.role as 'user' | 'admin') || 'user';
-      console.log('[DEBUG] getAuthenticatedUserWithRole (bypass):', { userId: user.id, role });
       return {
         user: {
           id: user.id,
@@ -83,9 +82,7 @@ export async function getAuthenticatedUserWithRole(): Promise<{
 
     // For normal session users, fetch role from database
     const profile = await getUserProfile(user.id);
-    console.log('[DEBUG] getUserProfile result:', { userId: user.id, profile });
     const role = (profile?.role as 'user' | 'admin') || 'user';
-    console.log('[DEBUG] Resolved role:', { userId: user.id, role, profileRole: profile?.role });
     return {
       user: {
         id: user.id,
@@ -95,8 +92,7 @@ export async function getAuthenticatedUserWithRole(): Promise<{
       },
       errorResponse: null,
     };
-  } catch (error) {
-    console.error('[DEBUG] Error in getAuthenticatedUserWithRole:', error);
+  } catch {
     return {
       user: null,
       errorResponse: NextResponse.json(
@@ -120,9 +116,7 @@ export async function requireAdminRole(): Promise<{
     return { user: null, errorResponse };
   }
 
-  console.log('[DEBUG] requireAdminRole - checking user:', { userId: user?.id, role: user?.role });
   if (user?.role !== 'admin') {
-    console.log('[DEBUG] requireAdminRole - DENIED:', { userId: user?.id, role: user?.role });
     return {
       user: null,
       errorResponse: NextResponse.json(
@@ -132,6 +126,5 @@ export async function requireAdminRole(): Promise<{
     };
   }
 
-  console.log('[DEBUG] requireAdminRole - ALLOWED:', { userId: user?.id, role: user?.role });
   return { user, errorResponse: null };
 }

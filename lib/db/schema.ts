@@ -37,7 +37,7 @@ export const learningProgress = sqliteTable(
     userId:                 text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
     languageCode:           text('language_code').notNull(),
     currentDifficultyLevel: integer('current_difficulty_level').default(3),
-    initialDifficultyLevel: integer('initial_difficulty_level').default(3),
+    initialDifficultyLevel: integer('initial_difficulty_level').default(1),
     placementCompleted:     integer('placement_completed', { mode: 'boolean' }).default(false),
     learningProfile:        text('learning_profile', { mode: 'json' }),
     performanceMetrics:     text('performance_metrics', { mode: 'json' }),

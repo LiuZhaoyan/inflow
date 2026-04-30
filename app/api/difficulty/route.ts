@@ -29,8 +29,10 @@ export async function GET(req: Request) {
             placementCompleted: progress.placementCompleted ?? false,
             stats: {
                 totalMastered: progress.masteredSentences?.length ?? 0,
-                knownVocabulary: progress.learningProfile?.knownVocabulary?.length ?? 0,
-                weakAreas: progress.learningProfile?.strugglingGrammar ?? [],
+                weakAreas: Object.entries(progress.learningProfile?.grammarStatus ?? {})
+                    .filter(([, level]) => Number(level) < 0)
+                    .map(([point]) => point),
+                grammarStatus: progress.learningProfile?.grammarStatus ?? {},
                 learningPace: progress.learningProfile?.learningPace ?? 'normal',
             },
         });

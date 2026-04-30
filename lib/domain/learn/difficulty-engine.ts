@@ -5,7 +5,7 @@
  * Uses a sliding-window approach over recent sessions to adapt in real-time.
  */
 
-import type { LearningProfile, PerformanceMetrics } from '../../types/learnTypes';
+import type { LearningProfile } from '../../types/learnTypes';
 import type { MasteredSentence, UserProgress } from '../../types/progress';
 
 // ── Difficulty context passed to the AI prompt ──────────────────────────
@@ -18,8 +18,7 @@ export interface DifficultyContext {
   recentTranslateRate: number;
   consecutiveMastered: number;
   weakAreas: string[];
-  knownVocabularyCount: number;
-  masteredGrammar: string[];
+  grammarStatus: Record<string, number>;
   reviewDue: string[];           // sentences due for spaced repetition
 }
 
@@ -131,9 +130,10 @@ export function calculateDifficultyContext(
     recentExplainRate: Math.round(metrics.explainRate * 100) / 100,
     recentTranslateRate: Math.round(metrics.translateRate * 100) / 100,
     consecutiveMastered: metrics.consecutiveSmooth,
-    weakAreas: profile?.strugglingGrammar ?? [],
-    knownVocabularyCount: profile?.knownVocabulary?.length ?? 0,
-    masteredGrammar: profile?.masteredGrammar ?? [],
+    weakAreas: Object.entries(profile?.grammarStatus ?? {})
+      .filter(([, level]) => Number(level) < 0)
+      .map(([point]) => point),
+    grammarStatus: profile?.grammarStatus ?? {},
     reviewDue,
   };
 }
@@ -192,18 +192,6 @@ export function updateLearningProfileFromAction(
   history: Array<{ role: string; content: string }>,
 ): LearningProfile {
   const updated = { ...existing };
-  const now = Date.now();
-
-  if (action === 'understand') {
-    // Extract basic vocabulary tokens (split by whitespace/punctuation for CJK-friendly approach)
-    const tokens = extractTokens(sentence);
-    const vocab = new Set(updated.knownVocabulary || []);
-    for (const t of tokens) vocab.add(t);
-    updated.knownVocabulary = Array.from(vocab);
-
-    // Track mastery speed
-    updated.totalSentencesMastered = (updated.totalSentencesMastered ?? 0) + 1;
-  }
 
   if (action === 'explain') {
     // The sentence the user needed help with – track weak vocabulary
@@ -217,14 +205,16 @@ export function updateLearningProfileFromAction(
     }
     updated.weakVocabulary = weakMap;
 
-    // If user asks for explain a lot, mark grammar as struggling
+    // If user asks for explain frequently, lower generic grammar mastery.
     const recentActions = analyseRecentActions(history);
-    if (recentActions.explainRate > 0.5 && !updated.strugglingGrammar?.includes('general')) {
-      updated.strugglingGrammar = [...(updated.strugglingGrammar || []), 'general'];
+    if (recentActions.explainRate > 0.5) {
+      const currentLevel = Number(updated.grammarStatus?.general ?? 0);
+      updated.grammarStatus = {
+        ...(updated.grammarStatus || {}),
+        general: currentLevel - 1,
+      };
     }
   }
-
-  updated.lastUpdated = now;
   return updated;
 }
 
@@ -260,13 +250,12 @@ export function buildPersonalizationPrompt(ctx: DifficultyContext): string {
   lines.push(`- Recent Explain Request Rate: ${(ctx.recentExplainRate * 100).toFixed(0)}%`);
   lines.push(`- Recent Translate Request Rate: ${(ctx.recentTranslateRate * 100).toFixed(0)}%`);
   lines.push(`- Consecutive Sentences Mastered Smoothly: ${ctx.consecutiveMastered}`);
-  lines.push(`- Known Vocabulary Count: ${ctx.knownVocabularyCount}`);
 
   if (ctx.weakAreas.length > 0) {
     lines.push(`- Weak Areas to Reinforce: ${ctx.weakAreas.join(', ')}`);
   }
-  if (ctx.masteredGrammar.length > 0) {
-    lines.push(`- Mastered Grammar: ${ctx.masteredGrammar.join(', ')}`);
+  if (Object.keys(ctx.grammarStatus).length > 0) {
+    lines.push(`- Grammar Status Tracked: ${Object.keys(ctx.grammarStatus).join(', ')}`);
   }
 
   lines.push('');

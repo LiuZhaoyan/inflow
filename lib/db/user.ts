@@ -30,8 +30,6 @@ function mapDbUserToProfile(user: DbUser): UserProfile {
     targetLanguage,
   );
 
-  console.log('[DEBUG] mapDbUserToProfile:', { userId: user.id, dbRole: user.role, dbUser: user });
-
   return {
     id: user.id,
     username: typeof user.username === 'string' ? user.username.trim() : DEFAULT_USER.username,
