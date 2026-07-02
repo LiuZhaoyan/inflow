@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import DashboardCard from '@/components/admin/DashboardCard';
-import { TrendingUp, AlertTriangle, Users } from 'lucide-react';
+import { TrendingUp, Users } from 'lucide-react';
 
 interface DashboardStats {
   totalUsers: number;
@@ -10,15 +10,6 @@ interface DashboardStats {
   activeUsers: number;
   totalChats: number;
   learningSessionsToday: number;
-  avgLearningDuration: number;
-  errorsToday: number;
-  errorRate: number;
-  recentErrors: Array<{
-    id: string;
-    message: string;
-    timestamp: string;
-    endpoint: string;
-  }>;
 }
 
 export default function AdminDashboard() {
@@ -118,56 +109,19 @@ export default function AdminDashboard() {
             <h2 className="text-[var(--text-title-sm)] font-display font-bold text-[var(--ink-0)] mb-4">
               Learning Activity
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DashboardCard
-                title="Chats Today"
+                title="Total Chat Messages"
                 value={stats.totalChats.toLocaleString()}
                 icon={TrendingUp}
                 color="accent"
               />
               <DashboardCard
-                title="Learning Sessions"
+                title="Learning Sessions Today"
                 value={stats.learningSessionsToday.toLocaleString()}
                 icon={TrendingUp}
                 color="success"
               />
-              <DashboardCard
-                title="Avg Duration"
-                value={`${Math.round(stats.avgLearningDuration)}m`}
-                icon={TrendingUp}
-                color="sage"
-                subtitle="per session"
-              />
-            </div>
-          </div>
-
-          {/* 错误监控卡片区 */}
-          <div>
-            <h2 className="text-[var(--text-title-sm)] font-display font-bold text-[var(--ink-0)] mb-4">
-              Error Monitoring
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <DashboardCard
-                title="Errors Today"
-                value={stats.errorsToday.toLocaleString()}
-                icon={AlertTriangle}
-                color={stats.errorsToday > 10 ? 'danger' : 'warning'}
-              />
-              <DashboardCard
-                title="Error Rate"
-                value={`${stats.errorRate.toFixed(2)}%`}
-                icon={AlertTriangle}
-                color={stats.errorRate > 1 ? 'danger' : 'warning'}
-              />
-              <div className="paper-card paper-panel-flat p-6 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs uppercase text-[var(--ink-2)] tracking-wider font-medium">
-                    System Status
-                  </p>
-                  <div className="w-3 h-3 bg-[var(--sage-0)] rounded-full animate-pulse" />
-                </div>
-                <p className="text-2xl font-bold text-[var(--ink-0)]">Healthy</p>
-              </div>
             </div>
           </div>
 
@@ -191,50 +145,6 @@ export default function AdminDashboard() {
               </a>
             </div>
           </div>
-
-          {/* 最近错误 */}
-          {stats.recentErrors.length > 0 && (
-            <div>
-              <h2 className="text-[var(--text-title-sm)] font-display font-bold text-[var(--ink-0)] mb-4">
-                Recent Errors
-              </h2>
-              <div className="paper-panel-flat rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--paper-1)] bg-[var(--paper-1)]">
-                      <th className="px-4 py-3 text-left font-semibold text-[var(--ink-0)]">
-                        Endpoint
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-[var(--ink-0)]">
-                        Message
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold text-[var(--ink-0)]">
-                        Time
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.recentErrors.slice(0, 5).map((err) => (
-                      <tr
-                        key={err.id}
-                        className="border-b border-[var(--paper-1)] hover:bg-[var(--paper-note)] transition-colors"
-                      >
-                        <td className="px-4 py-3 text-[var(--ink-1)] font-mono text-xs">
-                          {err.endpoint}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--ink-1)] truncate max-w-xs">
-                          {err.message}
-                        </td>
-                        <td className="px-4 py-3 text-[var(--ink-2)] text-xs">
-                          {new Date(err.timestamp).toLocaleTimeString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </>
       )}
     </div>

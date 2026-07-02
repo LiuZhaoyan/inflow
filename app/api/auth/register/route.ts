@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@/lib/db/connection';
 import { users } from '@/lib/db/schema';
 import { handleApiError } from '@/lib/core/error-handler';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(req: Request) {
   const startTime = Date.now();
@@ -22,14 +24,23 @@ export async function POST(req: Request) {
 
     const trimmedEmail = email.toLowerCase().trim();
 
-    if (password.length < 6) {
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Invalid email format' },
         { status: 400 },
       );
     }
 
-    // Check if user already exists
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters' },
+        { status: 400 },
+      );
+    }
+
+    const trimmedUsername = (username || '').trim();
+
+    // Check if user already exists by email
     const [existing] = await db
       .select({ id: users.id })
       .from(users)
@@ -43,6 +54,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Check username uniqueness (only if provided and non-empty)
+    if (trimmedUsername) {
+      const [existingUsername] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(eq(users.username, trimmedUsername), ne(users.username, '')))
+        .limit(1);
+
+      if (existingUsername) {
+        return NextResponse.json(
+          { error: 'This username is already taken' },
+          { status: 409 },
+        );
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const now = new Date();
 
@@ -50,7 +77,7 @@ export async function POST(req: Request) {
       id: uuidv4(),
       email: trimmedEmail,
       passwordHash,
-      username: (username || '').trim(),
+      username: trimmedUsername,
       nativeLanguage: 'en',
       targetLanguage: 'ko',
       currentLanguageCode: 'ko',

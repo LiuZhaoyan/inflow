@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
 // ───────── 用户表 ─────────
 export const users = sqliteTable('users', {
@@ -8,8 +8,8 @@ export const users = sqliteTable('users', {
   username:            text('username').notNull().default(''),
   nativeLanguage:      text('native_language').notNull().default('en'),
   targetLanguage:      text('target_language').notNull().default('ko'),
-  currentLanguageCode: text('current_language_code').default('ko'),
-  role:                text('role').notNull().default('user'), // 'user' | 'admin'
+  currentLanguageCode: text('current_language_code').notNull().default('ko'),
+  role:                text('role', { enum: ['user', 'admin'] }).notNull().default('user'),
   isOnboarded:         integer('is_onboarded', { mode: 'boolean' }).default(false),
   createdAt:           integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt:           integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -27,7 +27,15 @@ export const vocabulary = sqliteTable('vocabulary', {
   audioPath:       text('audio_path'),
   language:        text('language'),
   createdAt:       integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+  updatedAt:       integer('updated_at', { mode: 'timestamp' }),
+}, (table) => ({
+  userWordLanguageUnique: uniqueIndex('vocabulary_user_id_word_language_unique').on(
+    table.userId,
+    table.word,
+    table.language,
+  ),
+  userIdx: index('vocabulary_user_id_idx').on(table.userId),
+}));
 
 // ───────── 学习进度（每用户每语言一条） ─────────
 export const learningProgress = sqliteTable(
@@ -65,7 +73,13 @@ export const masteredSentences = sqliteTable('mastered_sentences', {
   masteredAt:      integer('mastered_at', { mode: 'timestamp' }).notNull(),
   reviewCount:     integer('review_count').default(0),
   lastReviewedAt:  integer('last_reviewed_at', { mode: 'timestamp' }),
-});
+  updatedAt:       integer('updated_at', { mode: 'timestamp' }),
+}, (table) => ({
+  userIdLanguageIdx: index('mastered_sentences_user_id_language_code_idx').on(
+    table.userId,
+    table.languageCode,
+  ),
+}));
 
 // ───────── 聊天记录 ─────────
 export const chatMessages = sqliteTable('chat_messages', {
@@ -84,6 +98,12 @@ export const chatMessages = sqliteTable('chat_messages', {
 },
   (table) => ({
     userRequestUnique: uniqueIndex('chat_messages_user_id_request_id_unique').on(table.userId, table.requestId),
+    userLanguageContextIdx: index('chat_messages_user_lang_ctx_idx').on(
+      table.userId,
+      table.languageCode,
+      table.context,
+      table.createdAt,
+    ),
   }),
 );
 
@@ -98,7 +118,10 @@ export const stories = sqliteTable('stories', {
   translationLanguage: text('translation_language'),
   audioPath:           text('audio_path'),
   createdAt:           integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+  updatedAt:           integer('updated_at', { mode: 'timestamp' }),
+}, (table) => ({
+  userIdx: index('stories_user_id_idx').on(table.userId),
+}));
 
 // ───────── 书籍（nullable userId = 公共） ─────────
 export const books = sqliteTable('books', {
@@ -111,6 +134,7 @@ export const books = sqliteTable('books', {
   contentPath: text('content_path'),
   preview:     text('preview', { mode: 'json' }).$type<string[]>(),
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt:   integer('updated_at', { mode: 'timestamp' }),
 });
 
 // ───────── 阅读进度 ─────────
@@ -122,4 +146,10 @@ export const readingProgress = sqliteTable('reading_progress', {
   sentenceIndex: integer('sentence_index').default(0),
   completedAt:   integer('completed_at', { mode: 'timestamp' }),
   lastReadAt:    integer('last_read_at', { mode: 'timestamp' }),
-});
+  updatedAt:     integer('updated_at', { mode: 'timestamp' }),
+}, (table) => ({
+  userBookUnique: uniqueIndex('reading_progress_user_id_book_id_unique').on(
+    table.userId,
+    table.bookId,
+  ),
+}));

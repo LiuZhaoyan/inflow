@@ -1,13 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { count, eq, gte } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { db } from './connection';
-import { users } from './schema';
+import { users, chatMessages } from './schema';
 import { normalizeLanguageCode } from '@/lib/core/language';
 import { DEFAULT_USER, type UserProfile } from '@/lib/types/user';
 
 const LEGACY_SINGLE_USER_ID = DEFAULT_USER.id;
 const LEGACY_SINGLE_USER_EMAIL = 'single-user@local';
+
+// Bcrypt hash of '!' — used as a placeholder for users without passwords (OAuth, bypass, etc.)
+// This ensures no real password can ever match while keeping the NOT NULL constraint valid.
+const UNMATCHABLE_PASSWORD_HASH = '$2b$12$PtAp57IfjeuKXvyWY/DILelzBO9q211kL2g786eeaTiXgAxmLiO9C';
 
 type DbUser = typeof users.$inferSelect;
 
@@ -70,12 +74,12 @@ function profileToDbInsert(profile: UserProfile) {
   return {
     id: profile.id,
     email: LEGACY_SINGLE_USER_EMAIL,
-    passwordHash: '',
+    passwordHash: UNMATCHABLE_PASSWORD_HASH,
     username: profile.username,
     nativeLanguage: profile.nativeLanguage,
     targetLanguage: profile.targetLanguage,
-    currentLanguageCode: profile.currentLanguageCode || profile.targetLanguage,
-    role: profile.role || 'user',
+    currentLanguageCode: profile.currentLanguageCode,
+    role: profile.role,
     isOnboarded: profile.isOnboarded,
     createdAt: new Date(profile.createdAt),
     updatedAt: new Date(profile.updatedAt),
@@ -136,7 +140,7 @@ export async function ensureUserExistsById(input: {
     .values({
       id: input.id,
       email,
-      passwordHash: '',
+      passwordHash: UNMATCHABLE_PASSWORD_HASH,
       username: (input.name || DEFAULT_USER.username || '').trim(),
       nativeLanguage: DEFAULT_USER.nativeLanguage,
       targetLanguage: DEFAULT_USER.targetLanguage,
@@ -250,7 +254,7 @@ export async function updateUserProfile(
       username: merged.username,
       nativeLanguage: merged.nativeLanguage,
       targetLanguage: merged.targetLanguage,
-      currentLanguageCode: merged.currentLanguageCode || merged.targetLanguage,
+      currentLanguageCode: merged.currentLanguageCode,
       isOnboarded: merged.isOnboarded,
       updatedAt: new Date(merged.updatedAt),
     })
@@ -263,10 +267,20 @@ export async function updateUserProfile(
  * 获取管理员用户列表（分页）
  */
 export async function getAdminUsersList(limit = 20, offset = 0) {
-  const allUsers = await db.select().from(users);
+  const [totalRow] = await db.select({ count: count() }).from(users);
+  const total = totalRow?.count ?? 0;
 
-  const total = allUsers.length;
-  const paginatedUsers = allUsers.slice(offset, offset + limit);
+  const paginatedUsers = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      username: users.username,
+      role: users.role,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .limit(limit)
+    .offset(offset);
 
   return {
     users: paginatedUsers.map((user) => ({
@@ -318,38 +332,52 @@ export async function deleteUser(userId: string) {
  * 获取管理员仪表板统计数据
  */
 export async function getAdminDashboardStats() {
-  const allUsers = await db.select().from(users);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const newUsersToday = allUsers.filter((user) => {
-    const createdAt = user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt);
-    return createdAt >= today;
-  }).length;
+  const [totalUsersRow] = await db.select({ count: count() }).from(users);
+  const totalUsers = totalUsersRow?.count ?? 0;
 
-  // 这些是示例统计，实际应该从日志表查询
+  const [newUsersTodayRow] = await db
+    .select({ count: count() })
+    .from(users)
+    .where(gte(users.createdAt, today));
+  const newUsersToday = newUsersTodayRow?.count ?? 0;
+
+  // Active users: users who sent at least one chat message in the last 7 days
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const [activeUsersRow] = await db
+    .select({ count: count() })
+    .from(
+      db.select({ userId: chatMessages.userId })
+        .from(chatMessages)
+        .where(gte(chatMessages.createdAt, sevenDaysAgo))
+        .groupBy(chatMessages.userId)
+        .as('active'),
+    );
+  const activeUsers = activeUsersRow?.count ?? 0;
+
+  // Total chat messages
+  const [totalChatsRow] = await db.select({ count: count() }).from(chatMessages);
+  const totalChats = totalChatsRow?.count ?? 0;
+
+  // Chat sessions today (unique user+language+context combos)
+  const [sessionsTodayRow] = await db
+    .select({ count: count() })
+    .from(
+      db.select({ userId: chatMessages.userId, languageCode: chatMessages.languageCode, context: chatMessages.context })
+        .from(chatMessages)
+        .where(gte(chatMessages.createdAt, today))
+        .groupBy(chatMessages.userId, chatMessages.languageCode, chatMessages.context)
+        .as('sessions'),
+    );
+  const learningSessionsToday = sessionsTodayRow?.count ?? 0;
+
   return {
-    totalUsers: allUsers.length,
+    totalUsers,
     newUsersToday,
-    activeUsers: Math.max(5, Math.floor(allUsers.length * 0.3)), // 示例：30% 活跃
-    totalChats: Math.floor(Math.random() * 1000) + 100,
-    learningSessionsToday: Math.floor(Math.random() * 50) + 10,
-    avgLearningDuration: Math.floor(Math.random() * 60) + 20,
-    errorsToday: Math.floor(Math.random() * 20),
-    errorRate: Math.random() * 2,
-    recentErrors: [
-      {
-        id: '1',
-        message: 'Timeout on AI service call',
-        timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
-        endpoint: 'POST /api/learn-chat',
-      },
-      {
-        id: '2',
-        message: 'Database connection refused',
-        timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
-        endpoint: 'GET /api/user',
-      },
-    ],
+    activeUsers,
+    totalChats,
+    learningSessionsToday,
   };
 }

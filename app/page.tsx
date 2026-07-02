@@ -153,8 +153,20 @@ export default function Home() {
         </div>
       )}
       
+      <nav className="home-nav">
+        <Link href="/" className="home-brand" aria-label="Inflow home">
+          <img src="/icon.svg" alt="" className="h-10 w-10 shrink-0" />
+          <span>Inflow</span>
+        </Link>
+        <div className="home-nav-links">
+          <Link href="#features" className="home-nav-link">Features</Link>
+          <Link href="#philosophy" className="home-nav-link">Philosophy</Link>
+          <Link href="/login" className="home-nav-link">Login</Link>
+        </div>
+      </nav>
+
       <main className="w-full px-6 lg:px-12 pb-20">
-        <section className="mt-12 pb-12 reveal-up md:mt-16 lg:mt-20">
+        <section id="philosophy" className="mt-10 pb-12 reveal-up md:mt-14 lg:mt-16">
           <div className="mx-auto max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
             <div>
               <h1 className="paper-title text-4xl md:text-6xl lg:text-7xl mt-4 mb-6 leading-[1.05] text-[var(--ink-0)]">
@@ -170,7 +182,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/learn"
-                  className="paper-btn-primary text-lg px-8 py-4"
+                  className="paper-btn-primary home-primary-cta text-lg px-8 py-4"
                 >
                   Start AI Tutor
                 </Link>
@@ -187,13 +199,6 @@ export default function Home() {
             </div>
 
             <div className="grid gap-6">
-              <div className="reveal-up flex items-center gap-5 px-1 py-2 stagger-1">
-                <img src="/icon.svg" alt="Inflow" className="h-32 w-32 md:h-40 md:w-40 lg:h-44 lg:w-44 shrink-0" />
-                <div>
-                  <h2 className="paper-title text-5xl md:text-6xl lg:text-7xl text-[var(--ink-0)]">Inflow</h2>
-                </div>
-              </div>
-
               <div className="paper-card-soft p-6 reveal-up stagger-1">
                 <div className="flex items-center gap-3">
                   <div className="h-11 w-11 rounded-full bg-[#eedfcd] flex items-center justify-center border border-[#dac4a6]">
@@ -201,10 +206,10 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="paper-title text-xl">AI Tutor</h3>
-                    <p className="paper-subtitle text-sm">Sentence-level coaching, always in context.</p>
+                    <p className="home-card-copy text-sm">Sentence-level coaching, always in context.</p>
                   </div>
                 </div>
-                <ul className="mt-4 space-y-2 text-sm text-[var(--ink-2)]">
+                <ul className="home-card-copy mt-4 space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent-0)]" />
                     Adaptive difficulty with immediate feedback.
@@ -226,7 +231,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl mt-8 pt-10 paper-divider">
+        <section id="features" className="mx-auto max-w-6xl mt-8 pt-10 paper-divider">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
             <h2 className="paper-title text-3xl">Your learning loop</h2>
             <p className="paper-subtitle text-sm">Build input, practice daily, retain vocabulary.</p>

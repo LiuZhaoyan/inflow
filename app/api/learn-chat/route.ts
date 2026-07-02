@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { NextResponse } from 'next/server';
 import { chatCompletion, ChatMessage } from '@/lib/ai/client';
 import { logger } from '@/lib/core/logger';
@@ -163,7 +164,8 @@ Structure:
             }
 
             await saveMasteredSentence({
-                id: Date.now().toString(),
+
+                id: uuidv4(),
                 content: currentSentence,
                 masteredAt: Date.now(),
                 difficultyLevel: difficultyCtx.currentLevel,

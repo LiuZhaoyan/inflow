@@ -3,8 +3,8 @@ export interface UserProfile {
   username: string;
   nativeLanguage: string;
   targetLanguage: string;
-  currentLanguageCode?: string;
-  role?: 'user' | 'admin';
+  currentLanguageCode: string;
+  role: 'user' | 'admin';
   isOnboarded: boolean;
   createdAt: number;
   updatedAt: number;
