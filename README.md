@@ -1,5 +1,5 @@
 <div align="center">
-   <img src="app/icon.svg" alt="Inflow Icon" width="64" height="64" />
+   <img src="src/app/icon.svg" alt="Inflow Icon" width="64" height="64" />
    <h1>Inflow</h1>
 </div>
 
@@ -35,7 +35,7 @@ Inflow is designed around the idea that language acquisition happens when we und
 - **AI Integration**: OpenAI-compatible chat + image APIs
 - **TTS**: PPInfra / MiniMax Speech (server-side)
 - **File Processing**: `epub2`, `cheerio`, `pdf-parse`
-- **Data Storage**: Local JSON-based database
+- **Data Storage**: Drizzle ORM + SQLite (better-sqlite3)
 
 ## 🚀 Getting Started
 
@@ -87,34 +87,46 @@ Inflow is designed around the idea that language acquisition happens when we und
 - `npm run build` – build for production
 - `npm run start` – run production server
 - `npm run lint` – lint codebase
+- `npm run db:generate` – generate Drizzle migration files
+- `npm run db:migrate` – apply migrations to SQLite database
+- `npm run db:studio` – open Drizzle Studio (DB browser)
 
 ## 📂 Project Structure
 
 ```
 inflow/
-├── app/                 # Next.js App Router pages and API routes
-│   ├── api/             # Backend API endpoints
-│   ├── about/
-│   ├── docs/
-│   ├── learn/
-│   ├── read/
-│   │   └── [id]/
-│   ├── library/
-│   └── vocabulary/
-├── components/
-├── data/                # Local JSON database and book metadata
-│   ├── books/
-│   ├── books.json
-│   ├── learn_progress.json
-│   ├── user_profile.json
-│   └── vocabulary.json
-├── lib/
-│   ├── db/
-├── materials/            # Sample public-domain books
-├── public/
-│   └── uploads/          # Images and audio outputs
-├── scripts/
-└── uploads/              # Raw uploaded files
+├── src/                     # Application source code
+│   ├── app/                 # Next.js App Router (pages + API routes)
+│   │   ├── api/             # Backend API endpoints
+│   │   ├── admin/           # Admin dashboard
+│   │   ├── learn/           # Guided practice chat
+│   │   ├── vocabulary/      # Vocabulary management
+│   │   ├── profile/         # User profile & stats
+│   │   ├── login/           # Authentication
+│   │   └── about/           # About page
+│   ├── components/          # React components (UI)
+│   ├── hooks/               # Custom React hooks
+│   ├── lib/                 # Shared libraries
+│   │   ├── ai/              # OpenAI-compatible client
+│   │   ├── auth/            # NextAuth configuration & permissions
+│   │   ├── db/              # Drizzle schema & database access
+│   │   ├── domain/          # Domain logic (difficulty engine, etc.)
+│   │   ├── http/            # HTTP utilities (retry, request logging)
+│   │   ├── media/           # Image & TTS services
+│   │   └── types/           # Shared TypeScript type definitions
+│   ├── instrumentation.ts   # Database initialization hook
+│   └── middleware.ts        # NextAuth middleware (route protection)
+├── drizzle/                 # Drizzle Kit migration files
+├── data/                    # SQLite database files (runtime)
+├── public/                  # Static assets
+│   └── uploads/             # Generated images & audio
+├── scripts/                 # Maintenance scripts
+├── materials/               # Sample public-domain books
+├── docs/                    # Development documentation
+├── uploads/                 # Raw uploaded files
+├── next.config.ts
+├── drizzle.config.ts
+└── tsconfig.json
 ```
 
 ## ✅ Supported Uploads
@@ -129,8 +141,8 @@ inflow/
 
 ## 💾 Storage Notes
 
-- Processed books and user data live under [data/](data/).
-- Uploaded files are saved in [uploads/](uploads/) and extracted media in [public/uploads/](public/uploads/).
+- Application data (users, progress, vocabulary, books) is stored in a SQLite database under [data/](data/), managed via Drizzle ORM.
+- Uploaded files are saved in [uploads/](uploads/) and generated media (images, audio) in [public/uploads/](public/uploads/).
 
 ## 📚 Contributing Materials
 
