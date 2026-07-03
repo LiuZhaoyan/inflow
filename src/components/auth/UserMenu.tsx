@@ -26,7 +26,7 @@ export default function UserMenu({ name, email }: UserMenuProps) {
       <Link
         href="/profile"
         onFocus={() => setOpen(true)}
-        className="flex items-center justify-center w-8 h-8 rounded-full bg-[#f3e8d7] text-[var(--ink-2)] border border-[var(--line-0)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)] transition-colors"
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ede9fe] text-[var(--ink-2)] border border-[var(--line-0)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)] transition-colors"
         title="Profile"
         aria-label="Profile"
       >

@@ -6,8 +6,8 @@ import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 import { LEVEL_LABELS } from '@/lib/domain/learn/difficulty-engine';
 
 const LEVEL_COLORS: Record<string, string> = {
-    struggling: 'paper-pill-soft text-[var(--accent-1)] bg-[rgba(188,106,64,0.12)]',
-    learning: 'paper-pill-soft text-[var(--ink-1)] bg-[rgba(67,52,43,0.08)]',
+    struggling: 'paper-pill-soft text-[var(--accent-1)] bg-[rgba(147,51,234,0.1)]',
+    learning: 'paper-pill-soft text-[var(--ink-1)] bg-[rgba(51,65,85,0.08)]',
     comfortable: 'paper-pill-soft text-[var(--success)] bg-[rgba(95,125,98,0.12)]',
     excellent: 'paper-pill-soft text-[var(--success)] bg-[rgba(95,125,98,0.18)]',
 };

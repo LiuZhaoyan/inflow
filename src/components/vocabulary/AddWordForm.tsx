@@ -28,7 +28,7 @@ export default function AddWordForm({
     <div className="paper-card p-6 reveal-up relative">
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#fbf4e8] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
+        className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#faf5ff] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
       >
         <X className="w-5 h-5" />
       </button>

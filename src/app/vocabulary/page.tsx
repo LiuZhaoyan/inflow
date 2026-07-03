@@ -60,7 +60,7 @@ export default function VocabularyPage() {
     : words.filter(w => w.language === selectedLanguage);
 
   return (
-    <div className="page-surface page-surface-reading text-[var(--foreground)] selection:bg-[#f1d6bd] selection:text-[#2d231c]">
+    <div className="page-surface page-surface-reading text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
       <Header />
 
       <main className="w-full px-6 lg:px-12 pb-20">

@@ -17,7 +17,7 @@ export default function SectionTitle({
       <h1 className="paper-title text-3xl md:text-4xl mb-3 leading-tight">
         {title}
         {highlight ? (
-          <span className="ml-1 text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-0)] to-[#8b4a2a]">
+          <span className="ml-1 text-transparent bg-clip-text bg-gradient-to-r from-[#9333ea] to-[#a855f7]">
             {highlight}
           </span>
         ) : null}

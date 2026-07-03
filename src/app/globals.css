@@ -2,34 +2,34 @@
 
 :root {
   /* Core palette */
-  --paper-0: #f8f2e8;
-  --paper-1: #f2e7d5;
-  --paper-2: #e7d6bf;
-  --paper-3: #d9c0a3;
-  --paper-note: #fffaf1;
-  --paper-note-strong: #fffdf8;
-  --ink-0: #241a14;
-  --ink-1: #43342b;
-  --ink-2: #6d5a4b;
-  --ink-3: #9c8878;
-  --accent-0: #bc6a40;
-  --accent-1: #8f4f2f;
-  --accent-2: #d7a46a;
+  --paper-0: #faf5ff;
+  --paper-1: #f3f0ff;
+  --paper-2: #ede9fe;
+  --paper-3: #ddd6fe;
+  --paper-note: #ffffff;
+  --paper-note-strong: #ffffff;
+  --ink-0: #1e1b2e;
+  --ink-1: #334155;
+  --ink-2: #475569;
+  --ink-3: #94a3b8;
+  --accent-0: #9333ea;
+  --accent-1: #7e22ce;
+  --accent-2: #c084fc;
   --sage-0: #5f7d62;
-  --berry-0: #b4584f;
-  --line-0: #dccbb4;
-  --line-1: #c9b195;
-  --line-2: rgba(97, 70, 48, 0.18);
-  --wash-0: rgba(255, 255, 255, 0.62);
-  --wash-1: rgba(255, 247, 235, 0.82);
+  --berry-0: #dc2626;
+  --line-0: #e9d5ff;
+  --line-1: #d8b4fe;
+  --line-2: rgba(147, 51, 234, 0.12);
+  --wash-0: rgba(255, 255, 255, 0.72);
+  --wash-1: rgba(250, 245, 255, 0.82);
 
   /* Semantic */
   --background: var(--paper-0);
   --foreground: var(--ink-0);
   --muted: var(--ink-2);
-  --card: var(--paper-note);
-  --card-strong: #fff6e8;
-  --ring: rgba(213, 153, 102, 0.55);
+  --card: #ffffff;
+  --card-strong: #faf5ff;
+  --ring: rgba(147, 51, 234, 0.35);
   --success: var(--sage-0);
   --danger: var(--berry-0);
 
@@ -65,10 +65,10 @@
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 32px;
-  --shadow-soft: 0 6px 24px rgba(82, 57, 33, 0.08);
-  --shadow-card: 0 12px 34px rgba(68, 44, 22, 0.12);
-  --shadow-lift: 0 18px 40px rgba(68, 44, 22, 0.16);
-  --shadow-press: 0 3px 10px rgba(68, 44, 22, 0.14);
+  --shadow-soft: 0 6px 24px rgba(147, 51, 234, 0.06);
+  --shadow-card: 0 10px 40px -10px rgba(147, 51, 234, 0.08);
+  --shadow-lift: 0 18px 40px rgba(147, 51, 234, 0.1);
+  --shadow-press: 0 3px 10px rgba(147, 51, 234, 0.08);
   --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.75);
 
   /* Motion */
@@ -130,8 +130,8 @@ body {
 }
 
 ::selection {
-  background: #f4d9bb;
-  color: #2b1f17;
+  background: #ede9fe;
+  color: #4c1d95;
 }
 
 @layer base {
@@ -173,7 +173,7 @@ body {
   }
 
   a:hover {
-    color: #7e4224;
+    color: #6b21a8;
   }
 
   a:focus-visible,
@@ -189,8 +189,8 @@ body {
 @layer components {
   .paper-shell {
     background:
-      linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(251, 243, 230, 0.86)),
-      linear-gradient(90deg, rgba(188, 106, 64, 0.04), transparent 22%, transparent 100%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 245, 255, 0.88)),
+      linear-gradient(90deg, rgba(147, 51, 234, 0.04), transparent 22%, transparent 100%);
     border: 1px solid var(--line-0);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-soft), var(--shadow-inset);
@@ -199,10 +199,10 @@ body {
   }
 
   .paper-card {
-    background: var(--card);
-    border: 1px solid var(--line-0);
+    background: #ffffff;
+    border: 1px solid #f3e8ff;
     border-radius: var(--radius-lg);
-    box-shadow: none;
+    box-shadow: 0 10px 40px -10px rgba(147, 51, 234, 0.08);
     position: relative;
     overflow: clip;
     transition:
@@ -212,10 +212,10 @@ body {
   }
 
   .paper-card-soft {
-    background: var(--card-strong);
-    border: 1px solid #e1d1ba;
+    background: #ffffff;
+    border: 1px solid #f3e8ff;
     border-radius: var(--radius-md);
-    box-shadow: none;
+    box-shadow: 0 10px 40px -10px rgba(147, 51, 234, 0.08);
     position: relative;
     overflow: clip;
     transition:
@@ -236,11 +236,6 @@ body {
     mix-blend-mode: screen;
   }
 
-  .paper-divider {
-    border-top: 1px dashed var(--line-1);
-    opacity: 0.9;
-  }
-
   .paper-chip {
     display: inline-flex;
     align-items: center;
@@ -259,12 +254,12 @@ body {
 
   .paper-input {
     width: 100%;
-    border: 1px solid var(--line-0);
+    border: 1px solid #e9d5ff;
     border-radius: var(--radius-md);
     min-height: 50px;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 250, 243, 0.42)),
-      #fffdf8;
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(250, 245, 255, 0.42)),
+      #ffffff;
     color: var(--ink-0);
     padding: 12px 14px;
     box-shadow: var(--shadow-inset);
@@ -285,7 +280,7 @@ body {
   .paper-input:focus {
     outline: none;
     border-color: var(--ring);
-    box-shadow: 0 0 0 4px rgba(215, 164, 106, 0.18), var(--shadow-inset);
+    box-shadow: 0 0 0 4px rgba(147, 51, 234, 0.12), var(--shadow-inset);
     transform: translateY(-1px);
   }
 
@@ -299,11 +294,11 @@ body {
     padding: 12px 18px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 45%),
-      linear-gradient(180deg, #cb7a4b 0%, #a85b34 100%);
-    color: #fff9f3;
+      linear-gradient(180deg, #9333ea 0%, #7e22ce 100%);
+    color: #ffffff;
     font-weight: 800;
     letter-spacing: 0.01em;
-    box-shadow: 0 10px 20px rgba(133, 74, 41, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    box-shadow: 0 10px 20px rgba(107, 33, 168, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
     transition:
       transform var(--duration-fast) var(--ease-out-soft),
       box-shadow var(--duration-base) ease,
@@ -314,7 +309,7 @@ body {
   .paper-btn-primary:hover {
     transform: translateY(-1px);
     filter: brightness(1.04) saturate(1.02);
-    box-shadow: 0 14px 24px rgba(133, 74, 41, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    box-shadow: 0 14px 24px rgba(107, 33, 168, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   }
 
   .paper-btn-primary:active {
@@ -359,7 +354,7 @@ body {
   }
 
   .home-nav-link {
-    color: #374151;
+    color: #475569;
     font-size: 0.95rem;
     font-weight: 700;
   }
@@ -383,7 +378,7 @@ body {
   }
 
   .home-card-copy {
-    color: #4b5563;
+    color: #475569;
     line-height: var(--leading-copy);
   }
 
@@ -393,7 +388,7 @@ body {
     justify-content: center;
     border-radius: var(--radius-md);
     padding: 10px 14px;
-    background: linear-gradient(180deg, rgba(255, 248, 239, 0.88), rgba(235, 211, 182, 0.96));
+    background: linear-gradient(180deg, rgba(250, 245, 255, 0.9), rgba(237, 233, 254, 0.96));
     color: var(--ink-1);
     font-weight: 700;
     box-shadow: var(--shadow-inset);
@@ -408,7 +403,7 @@ body {
   .paper-btn-ghost:hover {
     transform: translateY(-1px);
     border-color: var(--line-1);
-    background: linear-gradient(180deg, rgba(255, 250, 243, 0.94), rgba(239, 217, 190, 1));
+    background: linear-gradient(180deg, rgba(250, 245, 255, 0.96), rgba(237, 233, 254, 1));
     color: var(--accent-1);
   }
 
@@ -458,7 +453,7 @@ body {
     border-radius: var(--radius-md);
     min-height: 84px;
     padding: 12px;
-    background: var(--paper-note-strong);
+    background: #ffffff;
     color: var(--ink-1);
     transition:
       transform var(--duration-fast) var(--ease-out-soft),
@@ -483,16 +478,16 @@ body {
 
   .paper-action-tile-primary {
     background: var(--accent-0);
-    color: #fff9f3;
+    color: #ffffff;
   }
 
   .paper-action-tile-primary:hover {
     background: var(--accent-1);
-    color: #fffdf8;
+    color: #ffffff;
   }
 
   .paper-popover {
-    background: var(--paper-note);
+    background: #ffffff;
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-soft);
   }
@@ -512,12 +507,12 @@ body {
   }
 
   .paper-panel-flat {
-    background: var(--paper-note);
+    background: #ffffff;
     border-radius: var(--radius-xl);
   }
 
   .paper-panel-soft {
-    background: var(--paper-note-strong);
+    background: #faf5ff;
     border-radius: var(--radius-md);
   }
 
@@ -540,7 +535,7 @@ body {
   }
 
   .paper-pill-accent {
-    background: rgba(188, 106, 64, 0.12);
+    background: rgba(147, 51, 234, 0.1);
     color: var(--accent-1);
   }
 
@@ -550,13 +545,13 @@ body {
   }
 
   .paper-pill-ink {
-    background: rgba(67, 52, 43, 0.08);
+    background: rgba(51, 65, 85, 0.08);
     color: var(--ink-1);
   }
 
   .paper-alert-soft-danger {
     border-radius: var(--radius-sm);
-    background: rgba(180, 88, 79, 0.08);
+    background: rgba(220, 38, 38, 0.08);
     color: var(--danger);
   }
 
@@ -592,66 +587,66 @@ body {
   }
 
   .page-surface-home {
-    --page-bg-color: #f8f2e8;
+    --page-bg-color: #faf5ff;
     --page-bg-image:
-      radial-gradient(circle at 10% 14%, rgba(255, 255, 255, 0.72) 0%, transparent 34%),
-      radial-gradient(circle at 87% 12%, rgba(215, 164, 106, 0.28) 0%, transparent 28%),
-      radial-gradient(circle at 52% 118%, rgba(190, 151, 109, 0.22) 0%, transparent 34%),
-      linear-gradient(180deg, #fbf6ee 0%, #f2e4d0 54%, #eddcca 100%);
+      radial-gradient(circle at 10% 14%, rgba(255, 255, 255, 0.9) 0%, transparent 34%),
+      radial-gradient(circle at 87% 12%, rgba(147, 51, 234, 0.12) 0%, transparent 28%),
+      radial-gradient(circle at 52% 118%, rgba(168, 85, 247, 0.1) 0%, transparent 34%),
+      linear-gradient(180deg, #faf5ff 0%, #ffffff 54%, #f5f0ff 100%);
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 86px, rgba(188, 106, 64, 0.08) 86px 88px, transparent 88px 100%),
-      repeating-linear-gradient(180deg, transparent 0 33px, rgba(164, 139, 112, 0.06) 33px 34px);
-    --page-overlay-1-opacity: 0.55;
+      linear-gradient(90deg, transparent 0 86px, rgba(147, 51, 234, 0.04) 86px 88px, transparent 88px 100%),
+      repeating-linear-gradient(180deg, transparent 0 33px, rgba(147, 51, 234, 0.03) 33px 34px);
+    --page-overlay-1-opacity: 0.45;
     --page-overlay-2:
-      radial-gradient(circle at 18% 18%, rgba(120, 93, 61, 0.08) 0 1px, transparent 1.5px),
-      radial-gradient(circle at 77% 32%, rgba(120, 93, 61, 0.06) 0 1px, transparent 1.6px),
-      radial-gradient(circle at 62% 76%, rgba(120, 93, 61, 0.05) 0 1px, transparent 1.5px);
-    --page-overlay-2-opacity: 0.3;
+      radial-gradient(circle at 18% 18%, rgba(147, 51, 234, 0.05) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 77% 32%, rgba(147, 51, 234, 0.04) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 62% 76%, rgba(147, 51, 234, 0.03) 0 1px, transparent 1.5px);
+    --page-overlay-2-opacity: 0.25;
     --page-overlay-2-size: 180px 180px, 220px 220px, 240px 240px;
   }
 
   .page-surface-module {
-    --page-bg-color: #f7f0e5;
+    --page-bg-color: #faf5ff;
     --page-bg-image:
-      radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.5) 0%, transparent 30%),
-      radial-gradient(circle at 90% 0%, rgba(215, 164, 106, 0.14) 0%, transparent 24%),
-      linear-gradient(180deg, #faf5ed 0%, #f3e9dc 100%);
+      radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.8) 0%, transparent 30%),
+      radial-gradient(circle at 90% 0%, rgba(147, 51, 234, 0.08) 0%, transparent 24%),
+      linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 72px, rgba(188, 106, 64, 0.05) 72px 74px, transparent 74px 100%),
-      repeating-linear-gradient(180deg, transparent 0 34px, rgba(164, 139, 112, 0.035) 34px 35px);
-    --page-overlay-1-opacity: 0.38;
+      linear-gradient(90deg, transparent 0 72px, rgba(147, 51, 234, 0.03) 72px 74px, transparent 74px 100%),
+      repeating-linear-gradient(180deg, transparent 0 34px, rgba(147, 51, 234, 0.025) 34px 35px);
+    --page-overlay-1-opacity: 0.32;
     --page-overlay-2:
-      radial-gradient(circle at 24% 18%, rgba(120, 93, 61, 0.05) 0 1px, transparent 1.4px),
-      radial-gradient(circle at 72% 42%, rgba(120, 93, 61, 0.04) 0 1px, transparent 1.5px);
-    --page-overlay-2-opacity: 0.18;
+      radial-gradient(circle at 24% 18%, rgba(147, 51, 234, 0.03) 0 1px, transparent 1.4px),
+      radial-gradient(circle at 72% 42%, rgba(147, 51, 234, 0.025) 0 1px, transparent 1.5px);
+    --page-overlay-2-opacity: 0.14;
     --page-overlay-2-size: 210px 210px, 240px 240px;
   }
 
   .page-surface-operation {
-    --page-bg-color: #f8f2e8;
-    --page-bg-image: linear-gradient(180deg, #fcf8f2 0%, #f5ecdf 100%);
+    --page-bg-color: #faf5ff;
+    --page-bg-image: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 58px, rgba(188, 106, 64, 0.035) 58px 60px, transparent 60px 100%),
-      repeating-linear-gradient(180deg, transparent 0 35px, rgba(164, 139, 112, 0.028) 35px 36px);
-    --page-overlay-1-opacity: 0.24;
+      linear-gradient(90deg, transparent 0 58px, rgba(147, 51, 234, 0.025) 58px 60px, transparent 60px 100%),
+      repeating-linear-gradient(180deg, transparent 0 35px, rgba(147, 51, 234, 0.02) 35px 36px);
+    --page-overlay-1-opacity: 0.2;
     --page-overlay-2:
-      radial-gradient(circle at 18% 22%, rgba(120, 93, 61, 0.035) 0 1px, transparent 1.35px),
-      radial-gradient(circle at 82% 28%, rgba(120, 93, 61, 0.03) 0 1px, transparent 1.45px);
-    --page-overlay-2-opacity: 0.12;
+      radial-gradient(circle at 18% 22%, rgba(147, 51, 234, 0.025) 0 1px, transparent 1.35px),
+      radial-gradient(circle at 82% 28%, rgba(147, 51, 234, 0.02) 0 1px, transparent 1.45px);
+    --page-overlay-2-opacity: 0.1;
     --page-overlay-2-size: 220px 220px, 240px 240px;
   }
 
   .page-surface-reading {
-    --page-bg-color: #f9f3e8;
-    --page-bg-image: linear-gradient(180deg, #fdfaf4 0%, #f6ecdf 100%);
+    --page-bg-color: #faf5ff;
+    --page-bg-image: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 64px, rgba(188, 106, 64, 0.028) 64px 66px, transparent 66px 100%),
-      repeating-linear-gradient(180deg, transparent 0 36px, rgba(164, 139, 112, 0.024) 36px 37px);
-    --page-overlay-1-opacity: 0.2;
+      linear-gradient(90deg, transparent 0 64px, rgba(147, 51, 234, 0.02) 64px 66px, transparent 66px 100%),
+      repeating-linear-gradient(180deg, transparent 0 36px, rgba(147, 51, 234, 0.018) 36px 37px);
+    --page-overlay-1-opacity: 0.16;
     --page-overlay-2:
-      radial-gradient(circle at 26% 24%, rgba(120, 93, 61, 0.025) 0 1px, transparent 1.3px),
-      radial-gradient(circle at 74% 36%, rgba(120, 93, 61, 0.02) 0 1px, transparent 1.35px);
-    --page-overlay-2-opacity: 0.08;
+      radial-gradient(circle at 26% 24%, rgba(147, 51, 234, 0.018) 0 1px, transparent 1.3px),
+      radial-gradient(circle at 74% 36%, rgba(147, 51, 234, 0.014) 0 1px, transparent 1.35px);
+    --page-overlay-2-opacity: 0.06;
     --page-overlay-2-size: 240px 240px, 260px 260px;
   }
 }
@@ -749,16 +744,16 @@ body {
 
   .page-surface-home {
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 28px, rgba(188, 106, 64, 0.07) 28px 30px, transparent 30px 100%),
-      repeating-linear-gradient(180deg, transparent 0 27px, rgba(164, 139, 112, 0.05) 27px 28px);
+      linear-gradient(90deg, transparent 0 28px, rgba(147, 51, 234, 0.05) 28px 30px, transparent 30px 100%),
+      repeating-linear-gradient(180deg, transparent 0 27px, rgba(147, 51, 234, 0.035) 27px 28px);
   }
 
   .page-surface-module,
   .page-surface-operation,
   .page-surface-reading {
     --page-overlay-1:
-      linear-gradient(90deg, transparent 0 24px, rgba(188, 106, 64, 0.045) 24px 26px, transparent 26px 100%),
-      repeating-linear-gradient(180deg, transparent 0 28px, rgba(164, 139, 112, 0.03) 28px 29px);
+      linear-gradient(90deg, transparent 0 24px, rgba(147, 51, 234, 0.035) 24px 26px, transparent 26px 100%),
+      repeating-linear-gradient(180deg, transparent 0 28px, rgba(147, 51, 234, 0.025) 28px 29px);
   }
 }
 

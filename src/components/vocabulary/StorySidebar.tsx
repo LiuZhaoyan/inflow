@@ -113,7 +113,7 @@ export default function StorySidebar({
     <>
       <button
         onClick={onToggle}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-[#fffaf2] border border-[var(--line-0)] shadow-sm rounded-l-full px-3 py-2 text-sm text-[var(--ink-2)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)]"
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-white border border-[var(--line-0)] shadow-sm rounded-l-full px-3 py-2 text-sm text-[var(--ink-2)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)]"
         title={isOpen ? 'Hide Story' : 'Show Story'}
       >
         <span className="inline-flex items-center gap-1">
@@ -123,7 +123,7 @@ export default function StorySidebar({
       </button>
 
       <aside
-        className={`fixed inset-x-0 bottom-0 z-40 bg-[var(--card)] border-t border-[var(--line-0)] shadow-lg rounded-t-2xl m-0 overflow-hidden transition-transform duration-300 ${
+        className={`fixed inset-x-0 bottom-0 z-40 bg-white border-t border-[var(--line-0)] shadow-lg rounded-t-2xl m-0 overflow-hidden transition-transform duration-300 ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={{ height }}
@@ -132,7 +132,7 @@ export default function StorySidebar({
         {/* Resize handle */}
         <div
           onMouseDown={handleMouseDown}
-          className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center hover:bg-[#f2e6d3] transition-colors"
+          className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center hover:bg-[#ede9fe] transition-colors"
         >
           <GripHorizontal className="w-5 h-5 text-[var(--ink-2)]" />
         </div>
@@ -144,8 +144,8 @@ export default function StorySidebar({
                 onClick={() => setTab('current')}
                 className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors ${
                   tab === 'current'
-                    ? 'bg-[#f2e4d1] text-[var(--accent-1)]'
-                    : 'text-[var(--ink-2)] hover:text-[var(--ink-1)] hover:bg-[#f6eddf]'
+                    ? 'bg-[#ede9fe] text-[var(--accent-1)]'
+                    : 'text-[var(--ink-2)] hover:text-[var(--ink-1)] hover:bg-[#f3f0ff]'
                 }`}
               >
                 Current
@@ -154,14 +154,14 @@ export default function StorySidebar({
                 onClick={() => setTab('history')}
                 className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 ${
                   tab === 'history'
-                    ? 'bg-[#f2e4d1] text-[var(--accent-1)]'
-                    : 'text-[var(--ink-2)] hover:text-[var(--ink-1)] hover:bg-[#f6eddf]'
+                    ? 'bg-[#ede9fe] text-[var(--accent-1)]'
+                    : 'text-[var(--ink-2)] hover:text-[var(--ink-1)] hover:bg-[#f3f0ff]'
                 }`}
               >
                 <Clock size={14} />
                 History
                 {stories.length > 0 && (
-                  <span className="ml-0.5 text-xs bg-[#eadbc7] text-[var(--ink-2)] rounded-full px-1.5 py-0.5 leading-none">
+                  <span className="ml-0.5 text-xs bg-[#ddd6fe] text-[var(--ink-2)] rounded-full px-1.5 py-0.5 leading-none">
                     {stories.length}
                   </span>
                 )}
@@ -169,7 +169,7 @@ export default function StorySidebar({
               <button
                 onClick={handlePlayStoryAudio}
                 disabled={!story || isGeneratingStory || !activeStory?.id}
-                className={`p-2 rounded-full hover:bg-[#f1e1cc] text-[var(--accent-1)] transition-all ${playing ? 'animate-pulse opacity-50' : 'opacity-80 hover:opacity-100'} disabled:opacity-40 disabled:cursor-not-allowed`}
+                className={`p-2 rounded-full hover:bg-[#ede9fe] text-[var(--accent-1)] transition-all ${playing ? 'animate-pulse opacity-50' : 'opacity-80 hover:opacity-100'} disabled:opacity-40 disabled:cursor-not-allowed`}
                 title="Play story audio"
               >
                 <Volume2 size={18} />
@@ -200,7 +200,7 @@ export default function StorySidebar({
                       dangerouslySetInnerHTML={{
                         __html: story.replace(
                           /\*\*(.*?)\*\*/g,
-                          '<span class="text-[#8b4a2a] bg-[#f3e4d2] px-1.5 py-0.5 rounded font-bold mx-0.5 border border-[#dcc6a9]">$1</span>'
+                          '<span class="text-[#9333ea] bg-purple-100 px-1.5 py-0.5 rounded font-bold mx-0.5 border border-purple-200">$1</span>'
                         ),
                       }}
                     />
@@ -213,7 +213,7 @@ export default function StorySidebar({
                         dangerouslySetInnerHTML={{
                           __html: translation.replace(
                             /\*\*(.*?)\*\*/g,
-                            '<span class="text-[#8b4a2a] bg-[#f3e4d2] px-1.5 py-0.5 rounded font-bold mx-0.5 border border-[#dcc6a9]">$1</span>'
+                            '<span class="text-[#9333ea] bg-purple-100 px-1.5 py-0.5 rounded font-bold mx-0.5 border border-purple-200">$1</span>'
                           ),
                         }}
                       />
@@ -234,7 +234,7 @@ export default function StorySidebar({
                 stories.map(s => (
                   <div
                     key={s.id}
-                    className="group bg-[#fdf7ec] border border-[var(--line-0)] rounded-xl p-3 hover:border-[var(--line-1)] hover:bg-[#f7ebda] transition-colors cursor-pointer"
+                    className="group bg-[#faf5ff] border border-[var(--line-0)] rounded-xl p-3 hover:border-[var(--line-1)] hover:bg-[#f3f0ff] transition-colors cursor-pointer"
                     onClick={() => { onSelectStory(s); setTab('current'); }}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -242,7 +242,7 @@ export default function StorySidebar({
                         <p className="text-xs text-[var(--ink-2)] mb-1 flex items-center gap-2">
                           <span>{new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           {s.language && (
-                            <span className="bg-[#eadbc7] text-[var(--ink-2)] rounded-full px-1.5 py-0.5 text-[10px] font-medium">
+                            <span className="bg-[#ddd6fe] text-[var(--ink-2)] rounded-full px-1.5 py-0.5 text-[10px] font-medium">
                               {resolveLanguageLabel(s.language)}
                             </span>
                           )}
@@ -253,7 +253,7 @@ export default function StorySidebar({
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-1">
                           {s.words.slice(0, 5).map((w, i) => (
-                            <span key={i} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#f3e4d2] text-[#8b4a2a]">
+                            <span key={i} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-100 text-[#9333ea]">
                               {w}
                             </span>
                           ))}
@@ -264,7 +264,7 @@ export default function StorySidebar({
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); onDeleteStory(s.id); }}
-                        className="p-1 rounded-lg text-[var(--ink-2)] hover:text-[var(--danger)] hover:bg-[#fbe8e4] transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded-lg text-[var(--ink-2)] hover:text-[var(--danger)] hover:bg-[#fee2e2] transition-colors opacity-0 group-hover:opacity-100"
                         title="Delete story"
                       >
                         <Trash2 size={14} />

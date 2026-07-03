@@ -101,7 +101,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
                                 e.stopPropagation();
                                 onDelete(s.id);
                               }}
-                              className="rounded-full p-1.5 text-[var(--danger)] transition-colors opacity-60 group-hover:opacity-100 hover:bg-[rgba(180,88,79,0.08)]"
+                              className="rounded-full p-1.5 text-[var(--danger)] transition-colors opacity-60 group-hover:opacity-100 hover:bg-[rgba(220,38,38,0.08)]"
                               title="Delete sentence"
                             >
                               <Trash2 size={15} />

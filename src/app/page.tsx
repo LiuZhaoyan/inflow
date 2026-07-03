@@ -82,7 +82,7 @@ export default function Home() {
   };
 
   return (
-    <div className="page-surface page-surface-home text-[var(--foreground)] selection:bg-[#f1d6bd] selection:text-[#2d231c]">
+    <div className="page-surface page-surface-home text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
       {!profileLoading && showProfileModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="paper-card reveal-up w-full max-w-lg mx-4 p-6">
@@ -136,7 +136,7 @@ export default function Home() {
               </div>
 
               {profileError && (
-                <div className="text-sm text-[var(--danger)] bg-[#fbe8e4] border border-[#efc7be] rounded-[12px] px-3 py-2">
+                <div className="text-sm text-[var(--danger)] bg-[#fee2e2] border border-[#fecaca] rounded-[12px] px-3 py-2">
                   {profileError}
                 </div>
               )}
@@ -169,9 +169,9 @@ export default function Home() {
         <section id="philosophy" className="mt-10 pb-12 reveal-up md:mt-14 lg:mt-16">
           <div className="mx-auto max-w-6xl grid lg:grid-cols-[1.05fr_0.95fr] gap-12 items-center">
             <div>
-              <h1 className="paper-title text-4xl md:text-6xl lg:text-7xl mt-4 mb-6 leading-[1.05] text-[var(--ink-0)]">
+              <h1 className="paper-title text-4xl md:text-6xl lg:text-7xl mt-4 mb-6 leading-[1.05] text-[#2e2538]">
                 Acquire language, <br />
-                <span className="mt-3 inline-block text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-0)] to-[#8b4a2a] md:mt-4">
+                <span className="mt-3 inline-block text-[#9333ea] md:mt-4">
                   don&apos;t memorize it.
                 </span>
               </h1>
@@ -201,8 +201,8 @@ export default function Home() {
             <div className="grid gap-6">
               <div className="paper-card-soft p-6 reveal-up stagger-1">
                 <div className="flex items-center gap-3">
-                  <div className="h-11 w-11 rounded-full bg-[#eedfcd] flex items-center justify-center border border-[#dac4a6]">
-                    <MessageCircle className="h-5 w-5 text-[var(--accent-1)]" />
+                  <div className="h-11 w-11 rounded-full bg-purple-100 flex items-center justify-center border border-purple-200">
+                    <MessageCircle className="h-5 w-5 fill-purple-500 text-purple-700 drop-shadow-sm" />
                   </div>
                   <div>
                     <h3 className="paper-title text-xl">AI Tutor</h3>
@@ -221,7 +221,7 @@ export default function Home() {
                 </ul>
                 <Link
                   href="/learn"
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent-1)] hover:text-[#7f4527]"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#9333ea] hover:text-[#7e22ce]"
                 >
                   Practice now <ArrowRight size={16} />
                 </Link>
@@ -231,7 +231,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="features" className="mx-auto max-w-6xl mt-8 pt-10 paper-divider">
+        <section id="features" className="mx-auto max-w-6xl mt-16">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-6">
             <h2 className="paper-title text-3xl">Your learning loop</h2>
             <p className="paper-subtitle text-sm">Build input, practice daily, retain vocabulary.</p>
@@ -243,7 +243,7 @@ export default function Home() {
             >
               <div>
                 <div className="mb-3 flex items-center gap-3">
-                  <MessageCircle className="h-5 w-5 shrink-0 text-[var(--accent-1)] group-hover:scale-110 transition-transform" />
+                  <MessageCircle className="h-5 w-5 shrink-0 fill-purple-500 text-purple-700 drop-shadow-sm group-hover:scale-110 transition-transform" />
                   <h3 className="paper-title text-xl">AI Tutor Sessions</h3>
                 </div>
                 <p className="paper-subtitle text-sm">Work through sentences with feedback.</p>
@@ -256,7 +256,7 @@ export default function Home() {
             >
               <div>
                 <div className="mb-3 flex items-center gap-3">
-                  <Sparkles className="h-5 w-5 shrink-0 text-[var(--accent-1)] group-hover:scale-110 transition-transform" />
+                  <Sparkles className="h-5 w-5 shrink-0 fill-yellow-400 text-amber-600 drop-shadow-sm group-hover:scale-110 transition-transform" />
                   <h3 className="paper-title text-xl">Vocabulary Studio</h3>
                 </div>
                 <p className="paper-subtitle text-sm">AI flashcards and story practice.</p>

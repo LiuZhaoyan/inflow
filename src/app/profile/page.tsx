@@ -97,7 +97,7 @@ export default function ProfilePage() {
           byLanguage: stats.vocabulary.byLanguage,
           href: '/vocabulary',
           iconClassName: 'text-[var(--accent-1)]',
-          chipClassName: 'bg-[rgba(188,106,64,0.12)] text-[var(--accent-1)] border border-[rgba(188,106,64,0.16)]',
+          chipClassName: 'bg-[rgba(147,51,234,0.1)] text-[var(--accent-1)] border border-[rgba(147,51,234,0.14)]',
         },
         {
           key: 'sentences',
@@ -116,7 +116,7 @@ export default function ProfilePage() {
           total: stats.stories.total,
           href: '/vocabulary',
           iconClassName: 'text-[var(--ink-1)]',
-          chipClassName: 'bg-[rgba(67,52,43,0.08)] text-[var(--ink-1)] border border-[rgba(67,52,43,0.12)]',
+          chipClassName: 'bg-[rgba(51,65,85,0.08)] text-[var(--ink-1)] border border-[rgba(51,65,85,0.12)]',
         },
       ]
     : [];
@@ -131,7 +131,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="page-surface page-surface-operation [--page-bg-color:#efe5d7] [--page-bg-image:linear-gradient(180deg,#f7efe3_0%,#ebdcc8_100%)] [--paper-note:#e3c9ad] [--paper-note-strong:#e8d2ba] text-[var(--foreground)] font-sans selection:bg-[#f1d6bd] selection:text-[#2d231c]">
+    <div className="page-surface page-surface-operation text-[var(--foreground)] font-sans selection:bg-[#ede9fe] selection:text-[#4c1d95]">
       <Header showProfile={false} />
 
       <main className="max-w-5xl mx-auto px-4 md:px-5 pb-20 pt-10">

@@ -41,7 +41,7 @@ export default function WordGrid({
 
   if (words.length === 0) {
     return (
-      <div className="text-center py-20 bg-[#fdf7ec] rounded-2xl border border-dashed border-[var(--line-1)]">
+      <div className="text-center py-20 bg-[#faf5ff] rounded-2xl border border-dashed border-[var(--line-1)]">
         <h3 className="paper-title text-2xl">No words</h3>
         <p className="paper-subtitle max-w-sm mx-auto mt-2">Add a word or switch language filters.</p>
       </div>

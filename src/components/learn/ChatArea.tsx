@@ -54,7 +54,7 @@ export default function ChatArea({
                         <div className={`
                             max-w-[85%] rounded-2xl px-6 py-4 text-base md:text-lg leading-relaxed
                             ${msg.role === 'user'
-                                    ? 'bg-[var(--accent-0)] text-[#fff9f3] rounded-tr-none'
+                                    ? 'bg-[var(--accent-0)] text-white rounded-tr-none'
                                     : 'paper-panel-soft text-[var(--ink-1)] rounded-tl-none'}
                         `}>
                             {msg.content}

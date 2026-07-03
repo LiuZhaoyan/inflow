@@ -12,7 +12,7 @@ interface ProfileStoryCardProps {
 function highlightStoryText(content: string) {
   return content.replace(
     /\*\*(.*?)\*\*/g,
-    '<span class="text-[var(--accent-1)] bg-[rgba(188,106,64,0.12)] px-1 py-0.5 rounded font-bold">$1</span>'
+    '<span class="text-[var(--accent-1)] bg-[rgba(147,51,234,0.1)] px-1 py-0.5 rounded font-bold">$1</span>'
   );
 }
 
@@ -74,7 +74,7 @@ export default function ProfileStoryCard({ story, isExpanded, onToggle, onDelete
 
         <button
           onClick={onDelete}
-          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] opacity-0 transition-colors group-hover:opacity-100 hover:bg-[rgba(180,88,79,0.08)] hover:text-[var(--danger)]"
+          className="flex-shrink-0 rounded-lg p-1.5 text-[var(--ink-3)] opacity-0 transition-colors group-hover:opacity-100 hover:bg-[rgba(220,38,38,0.08)] hover:text-[var(--danger)]"
           title="Delete story"
         >
           <Trash2 size={14} />

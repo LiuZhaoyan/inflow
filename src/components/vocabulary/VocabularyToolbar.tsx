@@ -36,7 +36,7 @@ export default function VocabularyToolbar({
           </button>
           <button
             onClick={onCancelSelection}
-            className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#fbf4e8] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#faf5ff] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
           >
             <X className="w-5 h-5" />
           </button>

@@ -45,7 +45,7 @@ export default function ContextSwitcher({
                                 key={ctx}
                                 onClick={() => onSelectContext(ctx)}
                                 className={`cursor-pointer w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${ctx === selectedContext
-                                        ? 'bg-[rgba(188,106,64,0.12)] text-[var(--accent-1)]'
+                                        ? 'bg-[rgba(147,51,234,0.1)] text-[var(--accent-1)]'
                                         : 'text-[var(--ink-1)] hover:bg-[var(--paper-1)]'
                                     }`}
                             >

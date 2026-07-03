@@ -149,7 +149,7 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <div className="text-sm text-[var(--danger)] bg-[#fbe8e4] border border-[#efc7be] rounded-[12px] px-3 py-2">
+              <div className="text-sm text-[var(--danger)] bg-[#fee2e2] border border-[#fecaca] rounded-[12px] px-3 py-2">
                 {error}
               </div>
             )}
@@ -172,7 +172,7 @@ export default function RegisterPage() {
         {/* Sign-in link */}
         <p className="text-center text-sm text-[var(--ink-2)] mt-4">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-[var(--accent-1)] hover:text-[#7e4224] transition-colors">
+          <Link href="/login" className="font-medium text-[var(--accent-1)] hover:text-[#6b21a8] transition-colors">
             Sign in
           </Link>
         </p>
