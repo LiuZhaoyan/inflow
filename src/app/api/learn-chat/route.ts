@@ -30,6 +30,7 @@ import {
     getLearnChatMaxTokens,
     scheduleMasteredSentenceTts,
 } from '@/lib/domain/learn/learn-chat-performance';
+import { writeLearnChatPerfLog } from '@/lib/domain/learn/learn-chat-perf-logger';
 import type { LearnAction } from '@/lib/types/learnChat';
 import { handleApiError } from '@/lib/core/error-handler';
 
@@ -46,11 +47,37 @@ interface ParsedAiResponse {
     messageId?: string;
 }
 
+interface LearnChatPerfContext {
+    endpoint: string;
+    requestId?: string;
+    userId?: string;
+    action?: LearnAction;
+    targetLanguage?: string;
+}
+
+function countMessageChars(messages: ChatMessage[]): number {
+    return messages.reduce((sum, message) => sum + message.content.length, 0);
+}
+
 export async function POST(req: Request) {
   const startTime = Date.now();
   const endpoint = 'POST /api/learn-chat';
+  const perfContext: LearnChatPerfContext = { endpoint };
+  let lastPerfMark = startTime;
   let userId: string | undefined;
   let requestIdValue: string | undefined;
+
+  const logLearnChatPerf = (stage: string, extra: Record<string, unknown> = {}) => {
+    const now = Date.now();
+    writeLearnChatPerfLog({
+        ...perfContext,
+        stage,
+        stageMs: now - lastPerfMark,
+        totalMs: now - startTime,
+        ...extra,
+    });
+    lastPerfMark = now;
+  };
 
   try {
         const { user, errorResponse } = await getAuthenticatedUser();
@@ -61,15 +88,26 @@ export async function POST(req: Request) {
     const learnAction = action as LearnAction;
     const stableRequestId = typeof requestId === 'string' && requestId.trim() ? requestId.trim() : undefined;
     requestIdValue = stableRequestId;
+    perfContext.userId = userId;
+    perfContext.requestId = stableRequestId;
+    perfContext.action = learnAction;
+    logLearnChatPerf('auth_and_parse');
     const context = typeof rawContext === 'string' && rawContext.trim() ? rawContext.trim() : 'General';
     const userProfile = await getUserProfile(userId);
     const requestedLanguage = normalizeLanguageCode(languageCode);
     const fallbackLanguage = userProfile?.currentLanguageCode || userProfile?.targetLanguage || 'ko';
     const targetLanguage = requestedLanguage === 'auto' ? fallbackLanguage : requestedLanguage;
+    perfContext.targetLanguage = targetLanguage;
     const nativeLanguage = userProfile?.nativeLanguage || 'en';
     const progress = await getProgress(targetLanguage, userId);
     const history = await getChatHistory(userId, targetLanguage, context, 20);
     const historyForDifficulty = history.map((msg) => ({ role: msg.role, content: msg.content }));
+    logLearnChatPerf('load_profile_progress_history', {
+        context,
+        historyCount: history.length,
+        masteredSentenceCount: progress.masteredSentences.length,
+        currentDifficultyLevel: progress.currentDifficultyLevel,
+    });
 
     // Calculate difficulty context from progress + learning profile + history
     const difficultyCtx = calculateDifficultyContext(progress, progress.learningProfile, historyForDifficulty);
@@ -110,6 +148,11 @@ Structure:
     // Filter history to keep context manageable
     const messages: ChatMessage[] = buildLearnChatContextMessages(systemPrompt, history, 10);
     const actionTexts = mapActionTexts(learnAction, currentSentence, context, difficultyCtx.currentLevel);
+    logLearnChatPerf('build_prompt', {
+        promptChars: systemPrompt.length,
+        messageCount: messages.length,
+        messageChars: countMessageChars(messages),
+    });
 
     if (learnAction !== 'init') {
         const existingMessage = stableRequestId
@@ -126,6 +169,9 @@ Structure:
                 userAction: learnAction,
             });
         }
+        logLearnChatPerf('save_user_action', {
+            dedupedByRequestId: Boolean(existingMessage),
+        });
     }
 
     if (learnAction === 'understand') {
@@ -181,6 +227,9 @@ Structure:
                 },
             });
         }
+        logLearnChatPerf('understand_db_updates', {
+            savedMasteredSentence: Boolean(currentSentence),
+        });
     }
 
     // For explain/translate actions, also update learning profile
@@ -195,19 +244,29 @@ Structure:
             historyForDifficulty,
         );
         await updateProgress({ learningProfile: updatedProfile, lastUpdated: Date.now() }, userId, targetLanguage);
+        logLearnChatPerf('aux_profile_update');
     }
 
     messages.push({ role: 'user', content: actionTexts.modelText });
+    const maxTokens = getLearnChatMaxTokens(learnAction);
     logger.info('AI chat completion initiated', {
         requestId: stableRequestId,
         userId,
         endpoint,
         action: learnAction,
+        maxTokens,
     });
 
     const aiRes = await chatCompletion(messages, {
         temperature: 0.7,
-        maxTokens: getLearnChatMaxTokens(learnAction),
+        maxTokens,
+    });
+    logLearnChatPerf('ai_completion', {
+        model: 'deepseek/deepseek-v3.2',
+        maxTokens,
+        messageCount: messages.length,
+        messageChars: countMessageChars(messages),
+        responseChars: aiRes.length,
     });
     logger.info('AI response received', {
         requestId: stableRequestId,
@@ -231,6 +290,10 @@ Structure:
             original: currentSentence
         };
     }
+    logLearnChatPerf('parse_ai_json', {
+        responseType: data.type,
+        responseChars: data.response?.length ?? 0,
+    });
 
     const aiMessage = await saveChatMessage(userId, {
         languageCode: targetLanguage,
@@ -241,9 +304,16 @@ Structure:
         originalSentence: data.original,
         difficultyEstimate: typeof data.difficultyEstimate === 'number' ? data.difficultyEstimate : undefined,
     });
+    logLearnChatPerf('save_ai_message', {
+        aiMessageId: aiMessage.id,
+    });
 
     // Include current difficulty info in response
     const latestProgress = await getProgress(targetLanguage, userId);
+    logLearnChatPerf('latest_progress', {
+        latestDifficultyLevel: latestProgress.currentDifficultyLevel,
+        latestMasteredSentenceCount: latestProgress.masteredSentences.length,
+    });
     data.difficulty = {
         level: latestProgress.currentDifficultyLevel ?? 3,
         direction: difficultyCtx.direction,
@@ -259,11 +329,20 @@ Structure:
         statusCode: 200,
         durationMs,
     });
+    logLearnChatPerf('total', {
+        statusCode: 200,
+        durationMs,
+    });
 
     return NextResponse.json(data);
 
     } catch (error) {
         const durationMs = Date.now() - startTime;
+        logLearnChatPerf('error', {
+            statusCode: 500,
+            durationMs,
+            errorMessage: error instanceof Error ? error.message : String(error),
+        });
         return handleApiError(error, {
             endpoint,
             userId,
