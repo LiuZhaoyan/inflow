@@ -8,7 +8,7 @@ export default function ContentPage() {
           Content Management
         </h1>
         <p className="text-[var(--ink-2)] mt-2">
-          Manage books, stories, and vocabulary content.
+          Manage stories and vocabulary content.
         </p>
       </div>
 

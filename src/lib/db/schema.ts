@@ -1,6 +1,5 @@
 import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core';
 
-// ───────── 用户表 ─────────
 export const users = sqliteTable('users', {
   id:                  text('id').primaryKey(),
   email:               text('email').notNull().unique(),
@@ -15,7 +14,6 @@ export const users = sqliteTable('users', {
   updatedAt:           integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
-// ───────── 词汇表 ─────────
 export const vocabulary = sqliteTable('vocabulary', {
   id:              text('id').primaryKey(),
   userId:          text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -37,7 +35,6 @@ export const vocabulary = sqliteTable('vocabulary', {
   userIdx: index('vocabulary_user_id_idx').on(table.userId),
 }));
 
-// ───────── 学习进度（每用户每语言一条） ─────────
 export const learningProgress = sqliteTable(
   'learning_progress',
   {
@@ -59,7 +56,6 @@ export const learningProgress = sqliteTable(
   }),
 );
 
-// ───────── 掌握句子 ─────────
 export const masteredSentences = sqliteTable('mastered_sentences', {
   id:              text('id').primaryKey(),
   userId:          text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -81,7 +77,6 @@ export const masteredSentences = sqliteTable('mastered_sentences', {
   ),
 }));
 
-// ───────── 聊天记录 ─────────
 export const chatMessages = sqliteTable('chat_messages', {
   id:                 text('id').primaryKey(),
   userId:             text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -107,7 +102,6 @@ export const chatMessages = sqliteTable('chat_messages', {
   }),
 );
 
-// ───────── 故事 ─────────
 export const stories = sqliteTable('stories', {
   id:                  text('id').primaryKey(),
   userId:              text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
@@ -121,35 +115,4 @@ export const stories = sqliteTable('stories', {
   updatedAt:           integer('updated_at', { mode: 'timestamp' }),
 }, (table) => ({
   userIdx: index('stories_user_id_idx').on(table.userId),
-}));
-
-// ───────── 书籍（nullable userId = 公共） ─────────
-export const books = sqliteTable('books', {
-  id:          text('id').primaryKey(),
-  userId:      text('user_id').references(() => users.id, { onDelete: 'set null' }),
-  title:       text('title').notNull(),
-  level:       text('level'),
-  language:    text('language'),
-  metadata:    text('metadata', { mode: 'json' }),
-  contentPath: text('content_path'),
-  preview:     text('preview', { mode: 'json' }).$type<string[]>(),
-  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt:   integer('updated_at', { mode: 'timestamp' }),
-});
-
-// ───────── 阅读进度 ─────────
-export const readingProgress = sqliteTable('reading_progress', {
-  id:            text('id').primaryKey(),
-  userId:        text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  bookId:        text('book_id').notNull().references(() => books.id, { onDelete: 'cascade' }),
-  chapterIndex:  integer('chapter_index').default(0),
-  sentenceIndex: integer('sentence_index').default(0),
-  completedAt:   integer('completed_at', { mode: 'timestamp' }),
-  lastReadAt:    integer('last_read_at', { mode: 'timestamp' }),
-  updatedAt:     integer('updated_at', { mode: 'timestamp' }),
-}, (table) => ({
-  userBookUnique: uniqueIndex('reading_progress_user_id_book_id_unique').on(
-    table.userId,
-    table.bookId,
-  ),
 }));

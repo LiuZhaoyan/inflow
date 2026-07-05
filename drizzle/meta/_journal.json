@@ -43,6 +43,13 @@
       "when": 1777530213831,
       "tag": "0005_narrow_medusa",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1783242294849,
+      "tag": "0006_material_mephisto",
+      "breakpoints": true
     }
   ]
 }

@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 export interface ProfileStats {
   vocabulary: { total: number; byLanguage: Record<string, number> };
   sentences: { total: number; byLanguage: Record<string, number> };
-  books: { total: number };
   stories: { total: number };
 }
 

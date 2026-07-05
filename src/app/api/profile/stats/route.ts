@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getVocabularyByUser, getBooksByUser, getProgress, getStoriesByUser } from '@/lib/db';
+import { getVocabularyByUser, getProgress, getStoriesByUser } from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { handleApiError } from '@/lib/core/error-handler';
 
@@ -12,9 +12,8 @@ export async function GET() {
     if (errorResponse) return errorResponse;
     userId = user.id;
 
-    const [vocabulary, books, progress, stories] = await Promise.all([
+    const [vocabulary, progress, stories] = await Promise.all([
       getVocabularyByUser(user.id),
-      getBooksByUser(user.id),
       getProgress(undefined, user.id),
       getStoriesByUser(user.id),
     ]);
@@ -39,9 +38,6 @@ export async function GET() {
       sentences: {
         total: (progress.masteredSentences || []).length,
         byLanguage: sentencesByLanguage,
-      },
-      books: {
-        total: books.length,
       },
       stories: {
         total: stories.length,
