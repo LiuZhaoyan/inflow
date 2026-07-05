@@ -189,7 +189,7 @@ export default function Home() {
               </div>
               <div className="mt-5">
                 <Link
-                  href="/docs"
+                  href="/doc"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink-2)] hover:text-[var(--accent-1)] transition-colors"
                 >
                   <Info size={16} />
