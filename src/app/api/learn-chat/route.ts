@@ -7,6 +7,7 @@ import {
     getUserProfile,
     getChatMessageByRequestId,
     saveMasteredSentence,
+    updateMasteredSentenceAudioPath,
     setDifficultyLevel,
     updateProgress,
     getChatHistory,
@@ -25,6 +26,10 @@ import {
     buildLearnChatContextMessages,
     mapActionTexts,
 } from '@/lib/domain/learn/message-protocol';
+import {
+    getLearnChatMaxTokens,
+    scheduleMasteredSentenceTts,
+} from '@/lib/domain/learn/learn-chat-performance';
 import type { LearnAction } from '@/lib/types/learnChat';
 import { handleApiError } from '@/lib/core/error-handler';
 
@@ -149,31 +154,32 @@ Structure:
         }, userId, targetLanguage);
 
         if (currentSentence) {
-            let audioPath: string | undefined;
-            try {
-                audioPath = await requestTtsPersistent(currentSentence, {
-                    voiceId: 'audiobook_female_1',
-                    speed: 1.0
-                }, userId);
-            } catch {
-                logger.warn('Auto-TTS failed for mastered sentence', {
-                    requestId: stableRequestId,
-                    userId,
-                    endpoint,
-                });
-            }
+            const sentenceId = uuidv4();
 
             await saveMasteredSentence({
-
-                id: uuidv4(),
+                id: sentenceId,
                 content: currentSentence,
                 masteredAt: Date.now(),
                 difficultyLevel: difficultyCtx.currentLevel,
-                audioPath,
                 context,
                 messageId,
                 languageCode: targetLanguage
             }, userId, targetLanguage);
+
+            scheduleMasteredSentenceTts({
+                sentenceId,
+                sentence: currentSentence,
+                userId,
+                languageCode: targetLanguage,
+                requestId: stableRequestId,
+                endpoint,
+            }, {
+                requestTtsPersistent,
+                updateMasteredSentenceAudioPath,
+                warn: (message, meta) => {
+                    logger.warn(message, meta);
+                },
+            });
         }
     }
 
@@ -200,7 +206,8 @@ Structure:
     });
 
     const aiRes = await chatCompletion(messages, {
-        temperature: 0.7
+        temperature: 0.7,
+        maxTokens: getLearnChatMaxTokens(learnAction),
     });
     logger.info('AI response received', {
         requestId: stableRequestId,

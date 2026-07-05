@@ -242,6 +242,25 @@ export async function saveMasteredSentence(
   return saveMasteredSentenceByUser(userId, sentence, languageCode);
 }
 
+export async function updateMasteredSentenceAudioPath(
+  sentenceId: string,
+  audioPath: string,
+  userId: string,
+  languageCode?: string,
+) {
+  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
+  await db
+    .update(masteredSentences)
+    .set({ audioPath })
+    .where(
+      and(
+        eq(masteredSentences.id, sentenceId),
+        eq(masteredSentences.userId, userId),
+        eq(masteredSentences.languageCode, resolvedLanguageCode),
+      ),
+    );
+}
+
 export async function deleteMasteredSentenceByUser(
   userId: string,
   id: string,

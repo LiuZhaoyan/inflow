@@ -2,9 +2,12 @@ import { CheckCircle, HelpCircle, Languages } from 'lucide-react';
 
 interface ControlButtonsProps {
     loading: boolean;
-    cooldownActive: boolean;
-    cooldownRemainingMs: number;
-    hasQueuedAction: boolean;
+    understandCooldownActive: boolean;
+    understandCooldownRemainingMs: number;
+    hasQueuedUnderstand: boolean;
+    auxCooldownActive: boolean;
+    auxCooldownRemainingMs: number;
+    hasQueuedAux: boolean;
     currentSentence: string;
     onExplain: () => void;
     onTranslate: () => void;
@@ -13,23 +16,26 @@ interface ControlButtonsProps {
 
 export default function ControlButtons({
     loading,
-    cooldownActive,
-    cooldownRemainingMs,
-    hasQueuedAction,
+    understandCooldownActive,
+    understandCooldownRemainingMs,
+    hasQueuedUnderstand,
+    auxCooldownActive,
+    auxCooldownRemainingMs,
+    hasQueuedAux,
     currentSentence,
     onExplain,
     onTranslate,
     onUnderstand,
 }: ControlButtonsProps) {
-    const disabled = loading || cooldownActive || !currentSentence;
-    const cooldownSeconds = (cooldownRemainingMs / 1000).toFixed(1);
+    const understandCooldownSeconds = (understandCooldownRemainingMs / 1000).toFixed(1);
+    const auxCooldownSeconds = (auxCooldownRemainingMs / 1000).toFixed(1);
 
     return (
         <div className="space-y-2">
             <div className="grid grid-cols-3 gap-3 md:gap-4">
                 <button
                     onClick={onExplain}
-                    disabled={disabled}
+                    disabled={loading || auxCooldownActive || !currentSentence}
                     className="paper-action-tile"
                 >
                     <HelpCircle size={22} className="text-[var(--accent-1)]" />
@@ -38,7 +44,7 @@ export default function ControlButtons({
 
                 <button
                     onClick={onTranslate}
-                    disabled={disabled}
+                    disabled={loading || auxCooldownActive || !currentSentence}
                     className="paper-action-tile"
                 >
                     <Languages size={22} className="text-[var(--success)]" />
@@ -47,17 +53,23 @@ export default function ControlButtons({
 
                 <button
                     onClick={onUnderstand}
-                    disabled={disabled}
+                    disabled={loading || understandCooldownActive || !currentSentence}
                     className="paper-action-tile paper-action-tile-primary"
                 >
                     <CheckCircle size={22} className="text-white/90" />
                     <span className="text-xs md:text-sm font-bold">Got it!</span>
                 </button>
             </div>
-            {cooldownActive && (
+            {auxCooldownActive && (
                 <p className="text-xs text-[var(--ink-2)]">
-                    You should learn carefully in {cooldownSeconds}s...
-                    {hasQueuedAction ? ' Latest action queued.' : ''}
+                    Explain/Translate cooldown in {auxCooldownSeconds}s...
+                    {hasQueuedAux ? ' Latest action queued.' : ''}
+                </p>
+            )}
+            {understandCooldownActive && (
+                <p className="text-xs text-[var(--ink-2)]">
+                    Next sentence in {understandCooldownSeconds}s...
+                    {hasQueuedUnderstand ? ' Latest action queued.' : ''}
                 </p>
             )}
         </div>

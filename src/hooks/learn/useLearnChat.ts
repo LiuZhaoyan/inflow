@@ -22,8 +22,10 @@ import {
     mapLearnChatActionResponseToViewModel,
 } from '@/hooks/learn/services/learnChatMapper';
 
-const BASE_COOLDOWN_MS = 4000;
-const MAX_COOLDOWN_MS = 12000;
+const UNDERSTAND_BASE_COOLDOWN_MS = 2000;
+const UNDERSTAND_MAX_COOLDOWN_MS = 6000;
+const AUX_BASE_COOLDOWN_MS = 6000;
+const AUX_MAX_COOLDOWN_MS = 15000;
 const RETRY_AFTER_FALLBACK_MS = 10000;
 const SUCCESS_WINDOW_FOR_DECAY = 3;
 
@@ -52,8 +54,10 @@ export default function useLearnChat() {
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const loadingRef = useRef(false);
     const runActionNowRef = useRef<(payload: ActionPayload) => Promise<void>>(async () => {});
-    const notify429Ref = useRef<(retryAfterMs?: number) => void>(() => {});
-    const notifySuccessRef = useRef<() => void>(() => {});
+    const notify429UnderstandRef = useRef<(retryAfterMs?: number) => void>(() => {});
+    const notifySuccessUnderstandRef = useRef<() => void>(() => {});
+    const notify429AuxRef = useRef<(retryAfterMs?: number) => void>(() => {});
+    const notifySuccessAuxRef = useRef<() => void>(() => {});
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,18 +76,37 @@ export default function useLearnChat() {
     }, [persistence]);
 
     const {
-        isCooldownActive,
-        cooldownRemainingMs,
-        hasQueuedAction,
-        scheduleOrRun,
-        notify429,
-        notifySuccess,
-        flushQueuedIfReady,
-        clear,
+        isCooldownActive: isUnderstandCooldownActive,
+        cooldownRemainingMs: cooldownUnderstandRemainingMs,
+        hasQueuedAction: hasQueuedUnderstand,
+        scheduleOrRun: scheduleOrRunUnderstand,
+        notify429: notify429Understand,
+        notifySuccess: notifySuccessUnderstand,
+        flushQueuedIfReady: flushUnderstandIfReady,
+        clear: clearUnderstand,
     } = useCooldownGate<ActionPayload>({
         enabled: cooldownEnabled,
-        baseMs: BASE_COOLDOWN_MS,
-        maxMs: MAX_COOLDOWN_MS,
+        baseMs: UNDERSTAND_BASE_COOLDOWN_MS,
+        maxMs: UNDERSTAND_MAX_COOLDOWN_MS,
+        fallbackRetryAfterMs: RETRY_AFTER_FALLBACK_MS,
+        successWindowForDecay: SUCCESS_WINDOW_FOR_DECAY,
+        onRun: (payload) => runActionNowRef.current(payload),
+        isBlocked: () => loadingRef.current,
+    });
+
+    const {
+        isCooldownActive: isAuxCooldownActive,
+        cooldownRemainingMs: cooldownAuxRemainingMs,
+        hasQueuedAction: hasQueuedAux,
+        scheduleOrRun: scheduleOrRunAux,
+        notify429: notify429Aux,
+        notifySuccess: notifySuccessAux,
+        flushQueuedIfReady: flushAuxIfReady,
+        clear: clearAux,
+    } = useCooldownGate<ActionPayload>({
+        enabled: cooldownEnabled,
+        baseMs: AUX_BASE_COOLDOWN_MS,
+        maxMs: AUX_MAX_COOLDOWN_MS,
         fallbackRetryAfterMs: RETRY_AFTER_FALLBACK_MS,
         successWindowForDecay: SUCCESS_WINDOW_FOR_DECAY,
         onRun: (payload) => runActionNowRef.current(payload),
@@ -91,9 +114,11 @@ export default function useLearnChat() {
     });
 
     useEffect(() => {
-        notify429Ref.current = notify429;
-        notifySuccessRef.current = notifySuccess;
-    }, [notify429, notifySuccess]);
+        notify429UnderstandRef.current = notify429Understand;
+        notifySuccessUnderstandRef.current = notifySuccessUnderstand;
+        notify429AuxRef.current = notify429Aux;
+        notifySuccessAuxRef.current = notifySuccessAux;
+    }, [notify429Understand, notifySuccessUnderstand, notify429Aux, notifySuccessAux]);
 
     const loadMasteredSentences = useCallback(async (language: LanguageCode) => {
         try {
@@ -240,11 +265,19 @@ export default function useLearnChat() {
                 setCurrentSentence(viewModel.originalSentence);
             }
 
-            notifySuccessRef.current();
+            if (action === 'understand') {
+                notifySuccessUnderstandRef.current();
+            } else {
+                notifySuccessAuxRef.current();
+            }
         } catch (error) {
             const err = error as LearnChatApiError;
             if (err?.status === 429) {
-                notify429Ref.current(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
+                if (action === 'understand') {
+                    notify429UnderstandRef.current(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
+                } else {
+                    notify429AuxRef.current(err.retryAfterMs ?? RETRY_AFTER_FALLBACK_MS);
+                }
             }
 
             logger.error('useLearnChat: Failed to execute chat action', error);
@@ -274,8 +307,12 @@ export default function useLearnChat() {
 
     const scheduleOrRunAction = useCallback((payload: ActionPayload) => {
         if (!userProfile?.isOnboarded) return;
-        scheduleOrRun(payload);
-    }, [scheduleOrRun, userProfile?.isOnboarded]);
+        if (payload.action === 'understand') {
+            scheduleOrRunUnderstand(payload);
+        } else {
+            scheduleOrRunAux(payload);
+        }
+    }, [scheduleOrRunUnderstand, scheduleOrRunAux, userProfile?.isOnboarded]);
 
     const handleAction = useCallback((action: LearnAction, context?: string) => {
         scheduleOrRunAction({ action, context });
@@ -284,26 +321,29 @@ export default function useLearnChat() {
     useEffect(() => {
         const onVisibility = () => {
             if (document.hidden) return;
-            flushQueuedIfReady();
+            flushUnderstandIfReady();
+            flushAuxIfReady();
         };
 
         document.addEventListener('visibilitychange', onVisibility);
         return () => {
             document.removeEventListener('visibilitychange', onVisibility);
         };
-    }, [flushQueuedIfReady]);
+    }, [flushUnderstandIfReady, flushAuxIfReady]);
 
     useEffect(() => {
         return () => {
-            clear();
+            clearUnderstand();
+            clearAux();
         };
-    }, [clear]);
+    }, [clearUnderstand, clearAux]);
 
     const switchContext = useCallback((context: string) => {
         if (!userProfile?.isOnboarded) {
             return;
         }
-        clear();
+        clearUnderstand();
+        clearAux();
         setSelectedContext(context);
         setShowContextMenu(false);
         persistence.setLastContext(selectedLanguage, context);
@@ -320,7 +360,8 @@ export default function useLearnChat() {
             void handleAction('init', context);
         });
     }, [
-        clear,
+        clearUnderstand,
+        clearAux,
         handleAction,
         loadStoredChat,
         persistence,
@@ -329,7 +370,8 @@ export default function useLearnChat() {
     ]);
 
     const switchLanguage = useCallback((language: LanguageCode) => {
-        clear();
+        clearUnderstand();
+        clearAux();
         const normalized = normalizeLanguageCode(language);
         const fallback = normalizeLanguageCode(userProfile?.targetLanguage || 'en');
         const resolved = normalized === 'auto' ? (fallback === 'auto' ? 'en' : fallback) : normalized;
@@ -338,7 +380,7 @@ export default function useLearnChat() {
         if (userProfile?.isOnboarded) {
             updateCurrentLanguageCode(resolved).catch(() => {});
         }
-    }, [clear, persistence, userProfile?.isOnboarded, userProfile?.targetLanguage]);
+    }, [clearUnderstand, clearAux, persistence, userProfile?.isOnboarded, userProfile?.targetLanguage]);
 
     return {
         messages,
@@ -356,9 +398,12 @@ export default function useLearnChat() {
         difficultyLevel,
         difficultyDirection,
         difficultyPerformance,
-        isCooldownActive,
-        cooldownRemainingMs,
-        hasQueuedAction,
+        isUnderstandCooldownActive,
+        cooldownUnderstandRemainingMs,
+        hasQueuedUnderstand,
+        isAuxCooldownActive,
+        cooldownAuxRemainingMs,
+        hasQueuedAux,
         placementCompleted,
         placementLoading,
         setPlacementCompleted,
