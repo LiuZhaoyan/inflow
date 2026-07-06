@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from './connection';
 import { learningProgress, masteredSentences } from './schema';
 import { getUserProfile } from './user';
+import { normalizeLearningProfile } from '@/lib/types/learnTypes';
 import { DEFAULT_PROGRESS, type MasteredSentence, type UserProgress } from '@/lib/types/progress';
 
 const LEGACY_SINGLE_USER_ID = 'single-user';
@@ -34,11 +35,7 @@ function toCursorDate(cursor: Date | number | string | undefined): Date | undefi
 }
 
 function mergeProfile(raw: unknown) {
-  const safeRaw = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  return {
-    ...DEFAULT_PROGRESS.learningProfile,
-    ...safeRaw,
-  };
+  return normalizeLearningProfile(raw);
 }
 
 function mergeMetrics(raw: unknown) {
@@ -225,10 +222,7 @@ export async function updateProgressByUser(
       ...current.performanceMetrics,
       ...(newProgress.performanceMetrics || {}),
     },
-    learningProfile: {
-      ...current.learningProfile,
-      ...(newProgress.learningProfile || {}),
-    },
+    learningProfile: normalizeLearningProfile(newProgress.learningProfile || current.learningProfile),
     masteredSentences: newProgress.masteredSentences ?? current.masteredSentences,
     recentContext: newProgress.recentContext ?? current.recentContext,
     lastUpdated: now,

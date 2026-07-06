@@ -1,32 +1,44 @@
 /**
  * Difficulty Engine
  *
- * Calculates and adjusts difficulty levels based on user performance.
- * Uses a sliding-window approach over recent sessions to adapt in real-time.
+ * Keeps the learner profile intentionally small: support terms, recent
+ * comprehension signals, and a derived learning pace.
  */
 
-import type { LearningProfile } from '../../types/learnTypes';
+import {
+  normalizeLearningProfile,
+  type ComprehensionRating,
+  type LearningPace,
+  type LearningProfile,
+  type SupportTerm,
+  type SupportTermSource,
+} from '../../types/learnTypes';
 import type { MasteredSentence, UserProgress } from '../../types/progress';
 
-// ── Difficulty context passed to the AI prompt ──────────────────────────
 export interface DifficultyContext {
-  currentLevel: number;          // 1-10
-  levelLabel: string;            // e.g. "Beginner", "Advanced"
+  currentLevel: number;
+  levelLabel: string;
   performance: 'struggling' | 'learning' | 'comfortable' | 'excellent';
   direction: 'decrease' | 'maintain' | 'increase';
   recentExplainRate: number;
   recentTranslateRate: number;
   consecutiveMastered: number;
-  weakAreas: string[];
-  grammarStatus: Record<string, number>;
-  reviewDue: string[];           // sentences due for spaced repetition
+  supportTerms: SupportTerm[];
+  recentComprehension: LearningProfile['recentComprehension'];
+  reviewDue: string[];
 }
 
-// ── Constants ───────────────────────────────────────────────────────────
-const WINDOW_SIZE = 10;             // look at last N mastered sentences
-const INCREASE_THRESHOLD = 3;       // mastered N+ smoothly → increase
-const DECREASE_EXPLAIN_RATE = 0.6;  // explain rate above this → decrease
+export interface LearnerCorpusSummary {
+  vocabularyTerms?: string[];
+  masteredSentences?: string[];
+}
+
+const WINDOW_SIZE = 10;
+const INCREASE_THRESHOLD = 3;
+const DECREASE_EXPLAIN_RATE = 0.6;
 const DECREASE_TRANSLATE_RATE = 0.5;
+const MAX_SUPPORT_TERMS = 24;
+const MAX_COMPREHENSION_WINDOW = 12;
 
 export const LEVEL_LABELS: Record<number, string> = {
   1: 'Absolute Beginner',
@@ -45,12 +57,6 @@ export function getLevelLabel(level: number): string {
   return LEVEL_LABELS[Math.max(1, Math.min(10, Math.round(level)))] ?? 'Intermediate';
 }
 
-// ── Performance analysis ────────────────────────────────────────────────
-
-/**
- * Analyse the recent action history to compute explain / translate rates
- * `history` is the raw chat history array from the client.
- */
 export function analyseRecentActions(history: Array<{ role: string; content: string }>): {
   explainRate: number;
   translateRate: number;
@@ -65,19 +71,18 @@ export function analyseRecentActions(history: Array<{ role: string; content: str
   let currentSmooth = 0;
 
   for (const msg of safeHistory) {
-    if (msg.role === 'user') {
-      const c = (msg.content || '').toLowerCase();
-      if (c.includes('got it') || c.includes('understand')) {
-        sentences += 1;
-        currentSmooth += 1;
-        consecutiveSmooth = Math.max(consecutiveSmooth, currentSmooth);
-      } else if (c.includes('explain')) {
-        explains += 1;
-        currentSmooth = 0;
-      } else if (c.includes('translate')) {
-        translates += 1;
-        currentSmooth = 0;
-      }
+    if (msg.role !== 'user') continue;
+    const c = (msg.content || '').toLowerCase();
+    if (c.includes('got it') || c.includes('understand')) {
+      sentences += 1;
+      currentSmooth += 1;
+      consecutiveSmooth = Math.max(consecutiveSmooth, currentSmooth);
+    } else if (c.includes('explain')) {
+      explains += 1;
+      currentSmooth = 0;
+    } else if (c.includes('translate')) {
+      translates += 1;
+      currentSmooth = 0;
     }
   }
 
@@ -89,38 +94,39 @@ export function analyseRecentActions(history: Array<{ role: string; content: str
   };
 }
 
-// ── Core difficulty calculation ─────────────────────────────────────────
-
 export function calculateDifficultyContext(
   progress: UserProgress,
   profile: LearningProfile | null | undefined,
   history: Array<{ role: string; content: string }> = [],
 ): DifficultyContext {
+  const normalizedProfile = normalizeLearningProfile(profile);
   const currentLevel = progress.currentDifficultyLevel ?? 3;
   const metrics = analyseRecentActions(history);
   const recentMastered = (progress.masteredSentences || []).slice(-WINDOW_SIZE);
+  const comprehension = normalizedProfile.recentComprehension;
 
-  // Determine adjustment direction
   let direction: DifficultyContext['direction'] = 'maintain';
-
-  if (metrics.explainRate > DECREASE_EXPLAIN_RATE || metrics.translateRate > DECREASE_TRANSLATE_RATE) {
+  if (comprehension.tooHardStreak > 0) {
+    direction = 'decrease';
+  } else if (comprehension.tooEasyStreak >= 2) {
+    direction = 'increase';
+  } else if (metrics.explainRate > DECREASE_EXPLAIN_RATE || metrics.translateRate > DECREASE_TRANSLATE_RATE) {
     direction = 'decrease';
   } else if (metrics.consecutiveSmooth >= INCREASE_THRESHOLD && metrics.explainRate < 0.2) {
     direction = 'increase';
   }
 
-  // Performance label
   let performance: DifficultyContext['performance'] = 'learning';
-  if (metrics.explainRate > 0.5) {
+  if (comprehension.tooHardStreak > 0 || metrics.explainRate > 0.5) {
     performance = 'struggling';
-  } else if (metrics.explainRate < 0.15 && metrics.consecutiveSmooth >= 3) {
+  } else if (
+    comprehension.justRightStreak >= 3
+    || (metrics.explainRate < 0.15 && metrics.consecutiveSmooth >= 3)
+  ) {
     performance = 'excellent';
-  } else if (metrics.explainRate < 0.3) {
+  } else if (metrics.explainRate < 0.3 || comprehension.justRightStreak > 0) {
     performance = 'comfortable';
   }
-
-  // Spaced repetition – find sentences due for review
-  const reviewDue = computeReviewDue(recentMastered);
 
   return {
     currentLevel,
@@ -130,41 +136,27 @@ export function calculateDifficultyContext(
     recentExplainRate: Math.round(metrics.explainRate * 100) / 100,
     recentTranslateRate: Math.round(metrics.translateRate * 100) / 100,
     consecutiveMastered: metrics.consecutiveSmooth,
-    weakAreas: Object.entries(profile?.grammarStatus ?? {})
-      .filter(([, level]) => Number(level) < 0)
-      .map(([point]) => point),
-    grammarStatus: profile?.grammarStatus ?? {},
-    reviewDue,
+    supportTerms: normalizedProfile.supportTerms,
+    recentComprehension: comprehension,
+    reviewDue: computeReviewDue(recentMastered),
   };
 }
 
-/**
- * Given the current level and difficulty context, compute the new level.
- * Called server-side after each "understand" action.
- */
 export function computeNewDifficultyLevel(
   currentLevel: number,
   ctx: DifficultyContext,
 ): number {
-  let newLevel = currentLevel;
-
-  if (ctx.direction === 'increase') {
-    newLevel = Math.min(10, currentLevel + 1);
-  } else if (ctx.direction === 'decrease') {
-    newLevel = Math.max(1, currentLevel - 1);
-  }
-
-  return newLevel;
+  if (ctx.direction === 'increase') return Math.min(10, currentLevel + 1);
+  if (ctx.direction === 'decrease') return Math.max(1, currentLevel - 1);
+  return currentLevel;
 }
 
-// ── Spaced repetition ───────────────────────────────────────────────────
-
 const REVIEW_INTERVALS_MS = [
-  1 * 24 * 60 * 60 * 1000,   // 1 day
-  3 * 24 * 60 * 60 * 1000,   // 3 days
-  7 * 24 * 60 * 60 * 1000,   // 7 days
-  14 * 24 * 60 * 60 * 1000,  // 14 days
-  30 * 24 * 60 * 60 * 1000,  // 30 days
+  1 * 24 * 60 * 60 * 1000,
+  3 * 24 * 60 * 60 * 1000,
+  7 * 24 * 60 * 60 * 1000,
+  14 * 24 * 60 * 60 * 1000,
+  30 * 24 * 60 * 60 * 1000,
 ];
 
 function computeReviewDue(sentences: MasteredSentence[]): string[] {
@@ -180,116 +172,180 @@ function computeReviewDue(sentences: MasteredSentence[]): string[] {
     }
   }
 
-  return due.slice(0, 3); // return at most 3
+  return due.slice(0, 3);
 }
-
-// ── Learning profile updater ────────────────────────────────────────────
 
 export function updateLearningProfileFromAction(
   existing: LearningProfile,
   action: string,
   sentence: string,
-  history: Array<{ role: string; content: string }>,
 ): LearningProfile {
-  const updated = { ...existing };
+  const updated = normalizeLearningProfile(existing);
 
-  if (action === 'explain') {
-    // The sentence the user needed help with – track weak vocabulary
-    const tokens = extractTokens(sentence);
-    const weakMap: Record<string, number> = {};
-    for (const [k, v] of Object.entries(updated.weakVocabulary || {}) as Array<[string, number]>) {
-      weakMap[k] = v;
-    }
-    for (const t of tokens) {
-      weakMap[t] = (weakMap[t] || 0) + 1;
-    }
-    updated.weakVocabulary = weakMap;
-
-    // If user asks for explain frequently, lower generic grammar mastery.
-    const recentActions = analyseRecentActions(history);
-    if (recentActions.explainRate > 0.5) {
-      const currentLevel = Number(updated.grammarStatus?.general ?? 0);
-      updated.grammarStatus = {
-        ...(updated.grammarStatus || {}),
-        general: currentLevel - 1,
-      };
-    }
+  if (action === 'understand') {
+    return updateLearningProfileFromFeedback(updated, 'just_right', sentence);
   }
-  return updated;
+
+  if (action !== 'explain') return updated;
+
+  const supportTerms = addSupportTerms(
+    updated.supportTerms,
+    extractTokens(sentence),
+    'explain',
+    1,
+  );
+
+  return {
+    ...updated,
+    supportTerms,
+    learningPace: deriveLearningPace(updated.recentComprehension),
+  };
+}
+
+export function updateLearningProfileFromFeedback(
+  existing: LearningProfile,
+  rating: ComprehensionRating,
+  sentence: string,
+): LearningProfile {
+  const updated = normalizeLearningProfile(existing);
+  const now = Date.now();
+  const window = [
+    ...updated.recentComprehension.window,
+    { rating, at: now },
+  ].slice(-MAX_COMPREHENSION_WINDOW);
+
+  const recentComprehension = {
+    window,
+    tooHardStreak: rating === 'too_hard' ? updated.recentComprehension.tooHardStreak + 1 : 0,
+    tooEasyStreak: rating === 'too_easy' ? updated.recentComprehension.tooEasyStreak + 1 : 0,
+    justRightStreak: rating === 'just_right' ? updated.recentComprehension.justRightStreak + 1 : 0,
+  };
+
+  const supportTerms = rating === 'too_hard'
+    ? addSupportTerms(updated.supportTerms, extractTokens(sentence), 'too_hard', 2)
+    : updated.supportTerms;
+
+  return {
+    schemaVersion: 2,
+    supportTerms,
+    recentComprehension,
+    learningPace: deriveLearningPace(recentComprehension),
+  };
+}
+
+function deriveLearningPace(recentComprehension: LearningProfile['recentComprehension']): LearningPace {
+  if (recentComprehension.tooHardStreak >= 2) return 'slow';
+  if (recentComprehension.tooEasyStreak >= 2) return 'fast';
+  return 'normal';
+}
+
+function addSupportTerms(
+  existing: SupportTerm[],
+  terms: string[],
+  source: SupportTermSource,
+  increment: number,
+): SupportTerm[] {
+  const now = Date.now();
+  const byTerm = new Map<string, SupportTerm>();
+
+  for (const item of existing) {
+    byTerm.set(item.term.toLowerCase(), { ...item });
+  }
+
+  for (const term of terms) {
+    const key = term.toLowerCase();
+    const current = byTerm.get(key);
+    byTerm.set(key, {
+      term: current?.term ?? term,
+      score: (current?.score ?? 0) + increment,
+      lastSeenAt: now,
+      source: current?.source === 'legacy' ? source : (current?.source ?? source),
+    });
+  }
+
+  return Array.from(byTerm.values())
+    .sort((a, b) => b.score - a.score || b.lastSeenAt - a.lastSeenAt)
+    .slice(0, MAX_SUPPORT_TERMS);
 }
 
 function extractTokens(sentence: string): string[] {
   if (!sentence) return [];
-  // For CJK languages, split into individual characters / small chunks
-  // For latin-based, split by spaces
   const hasCJK = /[\u3000-\u9FFF\uAC00-\uD7AF]/.test(sentence);
   if (hasCJK) {
-    // Split into 2-character chunks for CJK (rough approximation of words)
     const chars = sentence.replace(/[\s\p{P}]/gu, '').split('');
     const tokens: string[] = [];
     for (let i = 0; i < chars.length; i += 2) {
       tokens.push(chars.slice(i, Math.min(i + 2, chars.length)).join(''));
     }
-    return tokens.filter(Boolean);
+    return tokens.filter(Boolean).slice(0, 8);
   }
   return sentence
     .toLowerCase()
-    .split(/[\s,.!?;:'"()\[\]{}]+/)
-    .filter(t => t.length > 1);
+    .split(/[\s,.!?;:'"()[\]{}]+/)
+    .filter((token) => token.length > 1)
+    .slice(0, 8);
 }
 
-// ── Build personalization block for the system prompt ───────────────────
-
-export function buildPersonalizationPrompt(ctx: DifficultyContext): string {
+export function buildPersonalizationPrompt(
+  ctx: DifficultyContext,
+  corpus: LearnerCorpusSummary = {},
+): string {
   const lines: string[] = [];
+  const supportTerms = ctx.supportTerms.slice(0, 8).map((item) => item.term);
+  const vocabularyTerms = (corpus.vocabularyTerms || []).slice(0, 12);
+  const masteredSentences = (corpus.masteredSentences || []).slice(0, 5);
 
-  lines.push(`\nDIFFICULTY & PERSONALIZATION:`);
+  lines.push('');
+  lines.push('LEARNER STATE:');
   lines.push(`- Current Difficulty Level: ${ctx.currentLevel}/10 (${ctx.levelLabel})`);
   lines.push(`- Recent Performance: ${ctx.performance}`);
   lines.push(`- Adjustment Direction: ${ctx.direction}`);
+  lines.push(`- Learning Pace: ${ctx.recentComprehension.tooHardStreak >= 2 ? 'slow' : ctx.recentComprehension.tooEasyStreak >= 2 ? 'fast' : 'normal'}`);
   lines.push(`- Recent Explain Request Rate: ${(ctx.recentExplainRate * 100).toFixed(0)}%`);
   lines.push(`- Recent Translate Request Rate: ${(ctx.recentTranslateRate * 100).toFixed(0)}%`);
   lines.push(`- Consecutive Sentences Mastered Smoothly: ${ctx.consecutiveMastered}`);
+  lines.push(`- Feedback Streaks: too_hard=${ctx.recentComprehension.tooHardStreak}, just_right=${ctx.recentComprehension.justRightStreak}, too_easy=${ctx.recentComprehension.tooEasyStreak}`);
 
-  if (ctx.weakAreas.length > 0) {
-    lines.push(`- Weak Areas to Reinforce: ${ctx.weakAreas.join(', ')}`);
+  lines.push('');
+  lines.push('KNOWN INPUT BASE:');
+  if (vocabularyTerms.length > 0) {
+    lines.push(`- Saved vocabulary to reuse: ${vocabularyTerms.join(', ')}`);
   }
-  if (Object.keys(ctx.grammarStatus).length > 0) {
-    lines.push(`- Grammar Status Tracked: ${Object.keys(ctx.grammarStatus).join(', ')}`);
+  if (masteredSentences.length > 0) {
+    lines.push('- Recently mastered sentences to anchor new input:');
+    for (const sentence of masteredSentences) {
+      lines.push(`  - "${sentence}"`);
+    }
+  }
+  if (supportTerms.length > 0) {
+    lines.push(`- Support terms needing gentle reinforcement: ${supportTerms.join(', ')}`);
+  }
+  if (vocabularyTerms.length === 0 && masteredSentences.length === 0 && supportTerms.length === 0) {
+    lines.push('- No strong known-input base yet. Use very common vocabulary for the level.');
   }
 
   lines.push('');
-  lines.push(`DIFFICULTY GUIDELINES:`);
-  lines.push(`Level 1-3 (Beginner):`);
-  lines.push(`  - Use present tense, simple subject-verb-object structure`);
-  lines.push(`  - Common vocabulary (top 500-1000 words)`);
-  lines.push(`  - Short sentences (3-8 words)`);
-  lines.push(`  - Basic greetings, numbers, simple daily actions`);
-  lines.push(`Level 4-6 (Intermediate):`);
-  lines.push(`  - Introduce past/future tenses, compound sentences`);
-  lines.push(`  - Expand vocabulary (top 3000 words)`);
-  lines.push(`  - Medium sentences (8-15 words)`);
-  lines.push(`  - Add conjunctions, particles, polite/informal registers`);
-  lines.push(`Level 7-10 (Advanced):`);
-  lines.push(`  - Complex grammar (conditionals, passive voice, causatives)`);
-  lines.push(`  - Nuanced vocabulary, idioms, colloquial expressions`);
-  lines.push(`  - Longer sentences (15+ words)`);
-  lines.push(`  - Cultural references, abstract topics, humor`);
+  lines.push('I+1 CONTRACT:');
+  lines.push('- Generate comprehensible input first: most of the sentence should be familiar or inferable.');
+  lines.push('- Add exactly one main new challenge point per new sentence.');
+  lines.push('- Prefer reusing known vocabulary/sentence patterns, then introduce the +1 as one new word, phrase, register shift, or sentence pattern.');
+  lines.push('- Do not combine multiple new grammar ideas with multiple unfamiliar words in the same sentence.');
+  lines.push('- If adjustment direction is "decrease", shorten the sentence and make the +1 more transparent.');
+  lines.push('- If adjustment direction is "increase", keep the known base but make the single +1 slightly richer.');
+  lines.push('- When explaining, explain only the useful challenge point and any support terms the learner likely needs.');
 
   lines.push('');
-  lines.push(`ADAPTIVE RULES:`);
-  lines.push(`- If adjustment direction is "decrease": make the next sentence noticeably easier`);
-  lines.push(`- If adjustment direction is "increase": make the next sentence slightly harder`);
-  lines.push(`- If adjustment direction is "maintain": keep the same difficulty`);
-  lines.push(`- NEVER jump more than 1 level at a time`);
-  lines.push(`- When explaining, adjust explanation complexity to match user level`);
+  lines.push('DIFFICULTY GUIDELINES:');
+  lines.push('Level 1-3: short daily sentences, common vocabulary, simple word order.');
+  lines.push('Level 4-6: one clause expansion, common connectors, tense/aspect or register nuance.');
+  lines.push('Level 7-10: natural phrasing, idioms, nuance, or cultural references, but still one main +1 point.');
 
   if (ctx.reviewDue.length > 0) {
     lines.push('');
-    lines.push(`REVIEW SENTENCES DUE (spaced repetition):`);
-    lines.push(`Consider incorporating vocabulary from these previously mastered sentences:`);
-    for (const s of ctx.reviewDue) {
-      lines.push(`  - "${s}"`);
+    lines.push('REVIEW DUE:');
+    lines.push('Consider incorporating vocabulary from these previously mastered sentences:');
+    for (const sentence of ctx.reviewDue) {
+      lines.push(`  - "${sentence}"`);
     }
   }
 

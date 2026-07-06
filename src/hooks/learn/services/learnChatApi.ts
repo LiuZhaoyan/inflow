@@ -28,6 +28,30 @@ export interface LearnChatActionResponse {
     response?: string;
     type?: string;
     original?: string;
+    iPlusOne?: {
+        challengeType?: string;
+        challengeLabel?: string;
+        familiarAnchors?: string[];
+    };
+    difficulty?: {
+        level?: number;
+        direction?: 'decrease' | 'maintain' | 'increase';
+        performance?: string;
+    };
+}
+
+export type LearnFeedbackRating = 'too_hard' | 'just_right' | 'too_easy';
+
+export interface LearnFeedbackRequest {
+    messageId: string | null;
+    sentence: string;
+    languageCode: string;
+    context?: string;
+    rating: LearnFeedbackRating;
+}
+
+export interface LearnFeedbackResponse {
+    learningProfileUpdated?: boolean;
     difficulty?: {
         level?: number;
         direction?: 'decrease' | 'maintain' | 'increase';
@@ -133,4 +157,18 @@ export async function postLearnChatAction(input: LearnChatActionRequest): Promis
     }
 
     return await res.json() as LearnChatActionResponse;
+}
+
+export async function postLearnFeedback(input: LearnFeedbackRequest): Promise<LearnFeedbackResponse> {
+    const res = await fetch('/api/learn-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+    });
+
+    if (!res.ok) {
+        throw createApiError('Feedback API Error', res.status);
+    }
+
+    return await res.json() as LearnFeedbackResponse;
 }

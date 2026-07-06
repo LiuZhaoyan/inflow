@@ -29,10 +29,8 @@ export async function GET(req: Request) {
             placementCompleted: progress.placementCompleted ?? false,
             stats: {
                 totalMastered: progress.masteredSentences?.length ?? 0,
-                weakAreas: Object.entries(progress.learningProfile?.grammarStatus ?? {})
-                    .filter(([, level]) => Number(level) < 0)
-                    .map(([point]) => point),
-                grammarStatus: progress.learningProfile?.grammarStatus ?? {},
+                supportTerms: progress.learningProfile?.supportTerms ?? [],
+                recentComprehension: progress.learningProfile?.recentComprehension,
                 learningPace: progress.learningProfile?.learningPace ?? 'normal',
             },
         });

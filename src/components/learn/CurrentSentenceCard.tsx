@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
-import { Volume2 } from 'lucide-react';
+import { CheckCircle, TrendingDown, TrendingUp, Volume2 } from 'lucide-react';
+import type { LearnFeedbackRating } from '@/hooks/learn/services/learnChatApi';
 
 interface CurrentSentenceCardProps {
     currentSentence: string;
@@ -10,9 +11,11 @@ interface CurrentSentenceCardProps {
     isAddingVocab: boolean;
     addVocabError: string | null;
     playing: boolean;
+    feedbackLoading: boolean;
     onSelectionEnd: () => void;
     onPlayAudio: (text: string) => void;
     onAddSelection: () => void;
+    onFeedback: (rating: LearnFeedbackRating) => void;
 }
 
 export default function CurrentSentenceCard({
@@ -24,9 +27,11 @@ export default function CurrentSentenceCard({
     isAddingVocab,
     addVocabError,
     playing,
+    feedbackLoading,
     onSelectionEnd,
     onPlayAudio,
     onAddSelection,
+    onFeedback,
 }: CurrentSentenceCardProps) {
     if (!currentSentence) {
         return (
@@ -51,6 +56,38 @@ export default function CurrentSentenceCard({
                     title="Play pronunciation"
                 >
                     <Volume2 size={24} />
+                </button>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <button
+                    type="button"
+                    onClick={() => onFeedback('too_hard')}
+                    disabled={feedbackLoading}
+                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    title="This sentence is too hard"
+                >
+                    <TrendingDown size={14} />
+                    Too hard
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onFeedback('just_right')}
+                    disabled={feedbackLoading}
+                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    title="This sentence feels just right"
+                >
+                    <CheckCircle size={14} />
+                    Just right
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onFeedback('too_easy')}
+                    disabled={feedbackLoading}
+                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    title="This sentence is too easy"
+                >
+                    <TrendingUp size={14} />
+                    Too easy
                 </button>
             </div>
             {selectionRect && selectedText && (

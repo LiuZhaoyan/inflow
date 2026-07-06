@@ -6,6 +6,7 @@ import {
     fetchPlacementStatus,
     fetchProfile,
     postLearnChatAction,
+    postLearnFeedback,
     updateCurrentLanguageCode,
     type LearnChatApiError,
 } from './learnChatApi';
@@ -113,6 +114,47 @@ test('postLearnChatAction throws LearnChatApiError with retryAfter on 429', asyn
                 return true;
             },
         );
+    } finally {
+        globalThis.fetch = originalFetch;
+    }
+});
+
+test('postLearnFeedback sends lightweight comprehension feedback', async () => {
+    let called = false;
+    mockFetch(async (input, init) => {
+        called = true;
+        assert.equal(String(input), '/api/learn-feedback');
+        assert.equal(init?.method, 'POST');
+        assert.ok(typeof init?.body === 'string');
+        assert.deepEqual(JSON.parse(String(init?.body)), {
+            messageId: 'm1',
+            sentence: 'hello',
+            languageCode: 'ko',
+            context: 'Daily Conversation',
+            rating: 'just_right',
+        });
+        return new Response(JSON.stringify({
+            learningProfileUpdated: true,
+            difficulty: {
+                level: 3,
+                direction: 'maintain',
+                performance: 'comfortable',
+            },
+        }), { status: 200 });
+    });
+
+    try {
+        const result = await postLearnFeedback({
+            messageId: 'm1',
+            sentence: 'hello',
+            languageCode: 'ko',
+            context: 'Daily Conversation',
+            rating: 'just_right',
+        });
+
+        assert.equal(called, true);
+        assert.equal(result.learningProfileUpdated, true);
+        assert.equal(result.difficulty?.performance, 'comfortable');
     } finally {
         globalThis.fetch = originalFetch;
     }

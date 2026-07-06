@@ -23,6 +23,7 @@ export default function LearnPage() {
         messages,
         currentSentence,
         loading,
+        feedbackLoading,
         selectedContext,
         selectedLanguage,
         showContextMenu,
@@ -48,6 +49,7 @@ export default function LearnPage() {
         handleAction,
         switchContext,
         handleDeleteMasteredSentence,
+        handleFeedback,
     } = useLearnChat();
 
     const {
@@ -202,9 +204,11 @@ export default function LearnPage() {
                             isAddingVocab={isAddingVocab}
                             addVocabError={addVocabError}
                             playing={playing}
+                            feedbackLoading={feedbackLoading}
                             onSelectionEnd={handleSelectionEnd}
                             onPlayAudio={playAudio}
                             onAddSelection={addSelectionToVocabulary}
+                            onFeedback={handleFeedback}
                         />
 
                         <ControlButtons

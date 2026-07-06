@@ -14,7 +14,9 @@ import {
     fetchChatHistory,
     fetchMasteredSentences,
     postLearnChatAction,
+    postLearnFeedback,
     updateCurrentLanguageCode,
+    type LearnFeedbackRating,
     type LearnChatApiError,
 } from '@/hooks/learn/services/learnChatApi';
 import {
@@ -40,6 +42,8 @@ export default function useLearnChat() {
     const [masteredSentences, setMasteredSentences] = useState<MasteredSentence[]>([]);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [profileLoading, setProfileLoading] = useState(true);
+    const [feedbackLoading, setFeedbackLoading] = useState(false);
+    const [feedbackSubmittedFor, setFeedbackSubmittedFor] = useState<string | null>(null);
 
     // Difficulty & placement state
     const [difficultyLevel, setDifficultyLevel] = useState(3);
@@ -199,6 +203,42 @@ export default function useLearnChat() {
             setMasteredSentences(previous);
         }
     }, [masteredSentences, selectedLanguage]);
+
+    const handleFeedback = useCallback(async (rating: LearnFeedbackRating) => {
+        const feedbackKey = currentSentenceMessageId ?? currentSentence;
+        if (!currentSentence || feedbackLoading || feedbackSubmittedFor === feedbackKey || !userProfile?.isOnboarded) return;
+
+        setFeedbackLoading(true);
+        try {
+            const result = await postLearnFeedback({
+                messageId: currentSentenceMessageId,
+                sentence: currentSentence,
+                languageCode: selectedLanguage,
+                context: selectedContext ?? undefined,
+                rating,
+            });
+
+            if (result.difficulty) {
+                setDifficultyLevel(result.difficulty.level ?? difficultyLevel);
+                setDifficultyDirection(result.difficulty.direction ?? 'maintain');
+                setDifficultyPerformance(result.difficulty.performance ?? 'learning');
+            }
+            setFeedbackSubmittedFor(feedbackKey);
+        } catch (error) {
+            logger.error('useLearnChat: Failed to submit comprehension feedback', error);
+        } finally {
+            setFeedbackLoading(false);
+        }
+    }, [
+        currentSentence,
+        currentSentenceMessageId,
+        difficultyLevel,
+        feedbackLoading,
+        feedbackSubmittedFor,
+        selectedContext,
+        selectedLanguage,
+        userProfile?.isOnboarded,
+    ]);
 
     const runActionNow = useCallback(async (payload: ActionPayload) => {
         const { action, context } = payload;
@@ -387,6 +427,7 @@ export default function useLearnChat() {
         currentSentence,
         currentSentenceMessageId,
         loading,
+        feedbackLoading: feedbackLoading || feedbackSubmittedFor === (currentSentenceMessageId ?? currentSentence),
         selectedContext,
         selectedLanguage,
         showContextMenu,
@@ -413,5 +454,6 @@ export default function useLearnChat() {
         switchContext,
         switchLanguage,
         handleDeleteMasteredSentence,
+        handleFeedback,
     };
 }

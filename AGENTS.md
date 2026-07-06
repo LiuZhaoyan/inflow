@@ -10,6 +10,8 @@ Inflow is a Next.js 16 App Router project using TypeScript and React 19. Applica
 - `npm run build`: create a production build and run framework checks.
 - `npm run start`: serve the production build locally.
 - `npm run lint`: run ESLint with the Next.js core-web-vitals and TypeScript rules.
+- `npm run typecheck`: refresh Next.js generated route types with `next typegen`, then run `tsc --noEmit --pretty false`.
+- `npm test`: run TypeScript unit tests through the `tsx` runner.
 - `npm run db:generate`: generate Drizzle migration files from schema changes.
 - `npm run db:migrate`: apply pending migrations to the SQLite database.
 - `npm run db:studio`: open Drizzle Studio for database inspection.
@@ -23,13 +25,17 @@ Inflow is a Next.js 16 App Router project using TypeScript and React 19. Applica
 
 ## Testing Guidelines
 
-- Existing tests use Node's built-in `node:test` module with `node:assert/strict`
-- keep test files beside the code they cover using `*.test.ts`, such as `src/hooks/learn/utils/requestId.test.ts` 
+- Tests use Node's built-in `node:test` module with `node:assert/strict`, executed via `npm test` and the `tsx` TypeScript runner.
+- Keep test files beside the code they cover using `*.test.ts`, such as `src/hooks/learn/utils/requestId.test.ts`.
+- Use ESM-style static imports in tests; avoid top-level dynamic `await import(...)` unless a test specifically needs runtime import behavior.
+- Do not run `.ts` tests with bare `node --test`; the repository relies on `tsx` to load TypeScript.
 - Prefer focused unit tests for utilities, mappers, cooldown logic, and domain algorithms
 
 ## Commit & Pull Request Guidelines
 
 - Recent history uses concise subjects with conventional prefixes such as `feat:`, `chore:`, and `refactor:`. Keep commits focused and use imperative, specific summaries, for example `feat: add placement test retry state`.
+- For non-trivial commits, include a short commit body after the subject that summarizes the main behavior changes, schema/data compatibility notes, and test or tooling updates.
+- Prefer 2-4 concise bullet-style body lines when a commit touches multiple layers, such as API, UI, domain logic, and tests.
 
 ## Security & Configuration Tips
 

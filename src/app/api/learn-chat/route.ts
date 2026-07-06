@@ -12,6 +12,7 @@ import {
     updateProgress,
     getChatHistory,
     saveChatMessage,
+    getVocabularyByUser,
 } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/core/language';
 import { requestTtsPersistent } from '@/lib/media/tts-service';
@@ -45,6 +46,11 @@ interface ParsedAiResponse {
         performance: 'struggling' | 'learning' | 'comfortable' | 'excellent';
     };
     messageId?: string;
+    iPlusOne?: {
+        challengeType?: 'vocabulary' | 'grammar' | 'register' | 'sentence_pattern';
+        challengeLabel?: string;
+        familiarAnchors?: string[];
+    };
 }
 
 interface LearnChatPerfContext {
@@ -101,17 +107,28 @@ export async function POST(req: Request) {
     const nativeLanguage = userProfile?.nativeLanguage || 'en';
     const progress = await getProgress(targetLanguage, userId);
     const history = await getChatHistory(userId, targetLanguage, context, 20);
+    const vocabulary = await getVocabularyByUser(userId, {
+        languageCode: targetLanguage,
+        limit: 20,
+    });
     const historyForDifficulty = history.map((msg) => ({ role: msg.role, content: msg.content }));
     logLearnChatPerf('load_profile_progress_history', {
         context,
         historyCount: history.length,
+        vocabularyCount: vocabulary.length,
         masteredSentenceCount: progress.masteredSentences.length,
         currentDifficultyLevel: progress.currentDifficultyLevel,
     });
 
     // Calculate difficulty context from progress + learning profile + history
     const difficultyCtx = calculateDifficultyContext(progress, progress.learningProfile, historyForDifficulty);
-    const personalizationBlock = buildPersonalizationPrompt(difficultyCtx);
+    const personalizationBlock = buildPersonalizationPrompt(difficultyCtx, {
+        vocabularyTerms: vocabulary.map((word) => word.word).filter(Boolean),
+        masteredSentences: progress.masteredSentences
+            .slice(0, 10)
+            .map((sentence) => sentence.content)
+            .filter(Boolean),
+    });
 
     const systemPrompt = `You are a personalized language tutor. 
 Target Language Code: ${targetLanguage}
@@ -141,7 +158,12 @@ Structure:
   "response": "The content to display to the user (the explanation, translation, or the NEW sentence)",
   "type": "sentence" | "explanation" | "translation",
   "original": "If type is explanation/translation, keep the original sentence here. If type is sentence, put the new sentence here.",
-  "difficultyEstimate": <number 1-10 estimating the difficulty of the sentence you generated>
+  "difficultyEstimate": <number 1-10 estimating the difficulty of the sentence you generated>,
+  "iPlusOne": {
+    "challengeType": "vocabulary" | "grammar" | "register" | "sentence_pattern",
+    "challengeLabel": "short label for the single main +1 challenge",
+    "familiarAnchors": ["known words or sentence patterns reused"]
+  }
 }
 `;
 
@@ -184,13 +206,9 @@ Structure:
 
         // ── Update learning profile ──
         const updatedProfile = updateLearningProfileFromAction(
-            progress.learningProfile ?? {
-                weakVocabulary: {}, grammarStatus: {}, learningPace: 'normal',
-                totalStudyTimeMs: 0,
-            },
+            progress.learningProfile,
             learnAction,
             currentSentence || '',
-            historyForDifficulty,
         );
 
         await updateProgress({
@@ -235,13 +253,9 @@ Structure:
     // For explain/translate actions, also update learning profile
     if (learnAction === 'explain' || learnAction === 'translate') {
         const updatedProfile = updateLearningProfileFromAction(
-            progress.learningProfile ?? {
-                weakVocabulary: {}, grammarStatus: {}, learningPace: 'normal',
-                totalStudyTimeMs: 0,
-            },
+            progress.learningProfile,
             learnAction,
             currentSentence || '',
-            historyForDifficulty,
         );
         await updateProgress({ learningProfile: updatedProfile, lastUpdated: Date.now() }, userId, targetLanguage);
         logLearnChatPerf('aux_profile_update');

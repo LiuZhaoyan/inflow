@@ -1,12 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-
-type PerformanceModule = typeof import('./learn-chat-performance');
-
-const {
+import {
   getLearnChatMaxTokens,
   scheduleMasteredSentenceTts,
-} = await import(new URL('./learn-chat-performance.ts', import.meta.url).href) as PerformanceModule;
+} from './learn-chat-performance';
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
