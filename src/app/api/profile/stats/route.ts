@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getVocabularyByUser, getProgress, getStoriesByUser } from '@/lib/db';
+import {
+  getMasteredSentenceStatsByUser,
+  getStoryStatsByUser,
+  getVocabularyStatsByUser,
+} from '@/lib/db';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { handleApiError } from '@/lib/core/error-handler';
 
@@ -12,35 +16,23 @@ export async function GET() {
     if (errorResponse) return errorResponse;
     userId = user.id;
 
-    const [vocabulary, progress, stories] = await Promise.all([
-      getVocabularyByUser(user.id),
-      getProgress(undefined, user.id),
-      getStoriesByUser(user.id),
+    const [vocabulary, sentences, stories] = await Promise.all([
+      getVocabularyStatsByUser(user.id),
+      getMasteredSentenceStatsByUser(user.id),
+      getStoryStatsByUser(user.id),
     ]);
-
-    const vocabByLanguage: Record<string, number> = {};
-    vocabulary.forEach(w => {
-      const lang = w.language || 'unknown';
-      vocabByLanguage[lang] = (vocabByLanguage[lang] || 0) + 1;
-    });
-
-    const sentencesByLanguage: Record<string, number> = {};
-    (progress.masteredSentences || []).forEach(s => {
-      const lang = s.languageCode || 'unknown';
-      sentencesByLanguage[lang] = (sentencesByLanguage[lang] || 0) + 1;
-    });
 
     return NextResponse.json({
       vocabulary: {
-        total: vocabulary.length,
-        byLanguage: vocabByLanguage,
+        total: vocabulary.total,
+        byLanguage: vocabulary.byLanguage,
       },
       sentences: {
-        total: (progress.masteredSentences || []).length,
-        byLanguage: sentencesByLanguage,
+        total: sentences.total,
+        byLanguage: sentences.byLanguage,
       },
       stories: {
-        total: stories.length,
+        total: stories.total,
       },
     });
   } catch (error) {

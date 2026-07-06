@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, lt, type SQL } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from './connection';
 import { learningProgress, masteredSentences } from './schema';
@@ -11,6 +11,26 @@ function toMillis(value: Date | number | null | undefined): number {
   if (typeof value === 'number') return value;
   if (value instanceof Date) return value.getTime();
   return Date.now();
+}
+
+function normalizeStoredLanguageCode(language?: string | null): string {
+  const normalized = (language || '').trim().toLowerCase();
+  if (!normalized || normalized === 'auto') return 'unknown';
+  return normalized;
+}
+
+function normalizeSentenceFingerprint(value?: string | null): string {
+  return (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function toCursorDate(cursor: Date | number | string | undefined): Date | undefined {
+  if (!cursor) return undefined;
+  if (cursor instanceof Date) return cursor;
+  if (typeof cursor === 'number') return new Date(cursor);
+  const numeric = Number(cursor);
+  if (Number.isFinite(numeric)) return new Date(numeric);
+  const parsed = new Date(cursor);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
 function mergeProfile(raw: unknown) {
@@ -58,6 +78,17 @@ function buildRecentContext(sentences: MasteredSentence[]) {
   }
 
   return recentContext;
+}
+
+export interface MasteredSentenceQueryOptions {
+  languageCode?: string;
+  limit?: number;
+  cursor?: Date | number | string;
+}
+
+export interface MasteredSentenceStats {
+  total: number;
+  byLanguage: Record<string, number>;
 }
 
 async function resolveLanguageCode(userId: string, languageCode?: string): Promise<string> {
@@ -108,14 +139,7 @@ export async function initProgressDb() {
 
 export async function getProgressByUser(userId: string, languageCode: string): Promise<UserProgress> {
   const row = await ensureProgressRow(userId, languageCode);
-
-  const sentenceRows = await db
-    .select()
-    .from(masteredSentences)
-    .where(and(eq(masteredSentences.userId, userId), eq(masteredSentences.languageCode, languageCode)))
-    .orderBy(desc(masteredSentences.masteredAt));
-
-  const mastered = sentenceRows.map(mapMasteredSentence);
+  const mastered = await getMasteredSentencesByUser(userId, { languageCode });
 
   return {
     targetLanguage: languageCode,
@@ -128,6 +152,56 @@ export async function getProgressByUser(userId: string, languageCode: string): P
     placementCompleted: Boolean(row.placementCompleted),
     lastUpdated: toMillis(row.lastUpdated),
   };
+}
+
+export async function getMasteredSentencesByUser(
+  userId: string,
+  options: MasteredSentenceQueryOptions = {},
+): Promise<MasteredSentence[]> {
+  const conditions: SQL[] = [eq(masteredSentences.userId, userId)];
+  const languageCode = normalizeStoredLanguageCode(options.languageCode);
+  if (options.languageCode && languageCode !== 'all') {
+    conditions.push(eq(masteredSentences.languageCode, languageCode));
+  }
+  const cursorDate = toCursorDate(options.cursor);
+  if (cursorDate) {
+    conditions.push(lt(masteredSentences.masteredAt, cursorDate));
+  }
+
+  let query = db
+    .select()
+    .from(masteredSentences)
+    .where(and(...conditions))
+    .orderBy(desc(masteredSentences.masteredAt))
+    .$dynamic();
+
+  if (options.limit && options.limit > 0) {
+    query = query.limit(Math.min(options.limit, 100));
+  }
+
+  const rows = await query;
+  return rows.map(mapMasteredSentence);
+}
+
+export async function getMasteredSentenceStatsByUser(userId: string): Promise<MasteredSentenceStats> {
+  const rows = await db
+    .select({
+      language: masteredSentences.languageCode,
+      total: count(),
+    })
+    .from(masteredSentences)
+    .where(eq(masteredSentences.userId, userId))
+    .groupBy(masteredSentences.languageCode);
+
+  const byLanguage: Record<string, number> = {};
+  let total = 0;
+  for (const row of rows) {
+    const rowTotal = Number(row.total);
+    byLanguage[row.language || 'unknown'] = rowTotal;
+    total += rowTotal;
+  }
+
+  return { total, byLanguage };
 }
 
 export async function getProgress(languageCode?: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProgress> {
@@ -193,32 +267,19 @@ export async function saveMasteredSentenceByUser(
   languageCode?: string,
 ) {
   const resolvedLanguageCode =
-    languageCode
-    || sentence.languageCode
-    || await resolveLanguageCode(userId);
+    normalizeStoredLanguageCode(languageCode || sentence.languageCode || await resolveLanguageCode(userId));
   await ensureProgressRow(userId, resolvedLanguageCode);
+  const contentHash = normalizeSentenceFingerprint(sentence.content);
+  const contextHash = normalizeSentenceFingerprint(sentence.context);
 
-  const [exists] = await db
-    .select({ id: masteredSentences.id })
-    .from(masteredSentences)
-    .where(
-      and(
-        eq(masteredSentences.userId, userId),
-        eq(masteredSentences.content, sentence.content),
-        sentence.context ? eq(masteredSentences.context, sentence.context) : isNull(masteredSentences.context),
-        eq(masteredSentences.languageCode, resolvedLanguageCode),
-      ),
-    )
-    .limit(1);
-
-  if (exists) return;
-
-  await db.insert(masteredSentences).values({
+  const [created] = await db.insert(masteredSentences).values({
     id: sentence.id || uuidv4(),
     userId,
     content: sentence.content,
+    contentHash,
     translation: sentence.translation,
     context: sentence.context,
+    contextHash,
     languageCode: resolvedLanguageCode,
     difficultyLevel: sentence.difficultyLevel,
     audioPath: sentence.audioPath,
@@ -226,12 +287,38 @@ export async function saveMasteredSentenceByUser(
     masteredAt: new Date(sentence.masteredAt || Date.now()),
     reviewCount: sentence.reviewCount || 0,
     lastReviewedAt: sentence.lastReviewedAt ? new Date(sentence.lastReviewedAt) : null,
-  });
+  })
+    .onConflictDoNothing({
+      target: [
+        masteredSentences.userId,
+        masteredSentences.languageCode,
+        masteredSentences.contentHash,
+        masteredSentences.contextHash,
+      ],
+    })
+    .returning();
 
-  await db
-    .update(learningProgress)
-    .set({ lastUpdated: new Date() })
-    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, resolvedLanguageCode)));
+  if (created) {
+    await db
+      .update(learningProgress)
+      .set({ lastUpdated: new Date() })
+      .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, resolvedLanguageCode)));
+
+    return mapMasteredSentence(created);
+  }
+
+  const [existing] = await db
+    .select()
+    .from(masteredSentences)
+    .where(and(
+      eq(masteredSentences.userId, userId),
+      eq(masteredSentences.languageCode, resolvedLanguageCode),
+      eq(masteredSentences.contentHash, contentHash),
+      eq(masteredSentences.contextHash, contextHash),
+    ))
+    .limit(1);
+
+  return existing ? mapMasteredSentence(existing) : null;
 }
 
 export async function saveMasteredSentence(

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, lt, type SQL } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { db } from './connection';
@@ -17,6 +17,22 @@ function toMillis(value: Date | number | null | undefined): number {
   return Date.now();
 }
 
+function normalizeStoredLanguageCode(language?: string | null): string {
+  const normalized = (language || '').trim().toLowerCase();
+  if (!normalized || normalized === 'auto') return 'unknown';
+  return normalized;
+}
+
+function toCursorDate(cursor: Date | number | string | undefined): Date | undefined {
+  if (!cursor) return undefined;
+  if (cursor instanceof Date) return cursor;
+  if (typeof cursor === 'number') return new Date(cursor);
+  const numeric = Number(cursor);
+  if (Number.isFinite(numeric)) return new Date(numeric);
+  const parsed = new Date(cursor);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 function mapRowToWord(row: typeof vocabulary.$inferSelect): VocabularyWord {
   return {
     id: row.id,
@@ -31,14 +47,66 @@ function mapRowToWord(row: typeof vocabulary.$inferSelect): VocabularyWord {
   };
 }
 
-export async function getVocabularyByUser(userId: string): Promise<VocabularyWord[]> {
-  const rows = await db
+export interface VocabularyQueryOptions {
+  languageCode?: string;
+  limit?: number;
+  cursor?: Date | number | string;
+}
+
+export interface VocabularyStats {
+  total: number;
+  byLanguage: Record<string, number>;
+}
+
+export async function getVocabularyByUser(
+  userId: string,
+  options: VocabularyQueryOptions = {},
+): Promise<VocabularyWord[]> {
+  const conditions: SQL[] = [eq(vocabulary.userId, userId)];
+  const languageCode = normalizeStoredLanguageCode(options.languageCode);
+  if (options.languageCode && languageCode !== 'all') {
+    conditions.push(eq(vocabulary.language, languageCode));
+  }
+  const cursorDate = toCursorDate(options.cursor);
+  if (cursorDate) {
+    conditions.push(lt(vocabulary.createdAt, cursorDate));
+  }
+
+  let query = db
     .select()
     .from(vocabulary)
-    .where(eq(vocabulary.userId, userId))
-    .orderBy(desc(vocabulary.createdAt));
+    .where(and(...conditions))
+    .orderBy(desc(vocabulary.createdAt))
+    .$dynamic();
+
+  if (options.limit && options.limit > 0) {
+    query = query.limit(Math.min(options.limit, 100));
+  }
+
+  const rows = await query;
 
   return rows.map(mapRowToWord);
+}
+
+export async function getVocabularyStatsByUser(userId: string): Promise<VocabularyStats> {
+  const rows = await db
+    .select({
+      language: vocabulary.language,
+      total: count(),
+    })
+    .from(vocabulary)
+    .where(eq(vocabulary.userId, userId))
+    .groupBy(vocabulary.language);
+
+  const byLanguage: Record<string, number> = {};
+  let total = 0;
+  for (const row of rows) {
+    const rowTotal = Number(row.total);
+    byLanguage[row.language || 'unknown'] = rowTotal;
+    total += rowTotal;
+  }
+
+  return { total, byLanguage };
 }
 
 export async function getVocabulary(userId: string = LEGACY_SINGLE_USER_ID): Promise<VocabularyWord[]> {
@@ -62,7 +130,7 @@ export async function addWordByUser(
       translation: word.translation,
       imagePath: word.imagePath,
       audioPath: word.audioPath,
-      language: word.language,
+      language: normalizeStoredLanguageCode(word.language),
       createdAt: now,
     })
     .returning();
@@ -158,7 +226,9 @@ export async function updateWordByUser(
         translation: updates.translation ?? prev.translation,
         imagePath: updates.imagePath ?? prev.imagePath,
         audioPath: updates.audioPath ?? prev.audioPath,
-        language: updates.language ?? prev.language,
+        language: updates.language === undefined
+          ? prev.language
+          : normalizeStoredLanguageCode(updates.language),
       })
       .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)))
       .returning();

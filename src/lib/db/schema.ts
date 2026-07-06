@@ -12,7 +12,9 @@ export const users = sqliteTable('users', {
   isOnboarded:         integer('is_onboarded', { mode: 'boolean' }).default(false),
   createdAt:           integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt:           integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
+}, (table) => ({
+  createdAtIdx: index('users_created_at_idx').on(table.createdAt),
+}));
 
 export const vocabulary = sqliteTable('vocabulary', {
   id:              text('id').primaryKey(),
@@ -23,7 +25,7 @@ export const vocabulary = sqliteTable('vocabulary', {
   translation:     text('translation'),
   imagePath:       text('image_path'),
   audioPath:       text('audio_path'),
-  language:        text('language'),
+  language:        text('language').notNull().default('unknown'),
   createdAt:       integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt:       integer('updated_at', { mode: 'timestamp' }),
 }, (table) => ({
@@ -33,6 +35,15 @@ export const vocabulary = sqliteTable('vocabulary', {
     table.language,
   ),
   userIdx: index('vocabulary_user_id_idx').on(table.userId),
+  userLanguageCreatedAtIdx: index('vocabulary_user_language_created_at_idx').on(
+    table.userId,
+    table.language,
+    table.createdAt,
+  ),
+  userCreatedAtIdx: index('vocabulary_user_created_at_idx').on(
+    table.userId,
+    table.createdAt,
+  ),
 }));
 
 export const learningProgress = sqliteTable(
@@ -60,9 +71,11 @@ export const masteredSentences = sqliteTable('mastered_sentences', {
   id:              text('id').primaryKey(),
   userId:          text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   content:         text('content').notNull(),
+  contentHash:     text('content_hash').notNull(),
   translation:     text('translation'),
   context:         text('context'),
-  languageCode:    text('language_code'),
+  contextHash:     text('context_hash').notNull(),
+  languageCode:    text('language_code').notNull().default('unknown'),
   difficultyLevel: integer('difficulty_level'),
   audioPath:       text('audio_path'),
   messageId:       text('message_id'),
@@ -74,6 +87,17 @@ export const masteredSentences = sqliteTable('mastered_sentences', {
   userIdLanguageIdx: index('mastered_sentences_user_id_language_code_idx').on(
     table.userId,
     table.languageCode,
+  ),
+  userLanguageMasteredAtIdx: index('mastered_sentences_user_language_mastered_at_idx').on(
+    table.userId,
+    table.languageCode,
+    table.masteredAt,
+  ),
+  userLanguageContentContextUnique: uniqueIndex('mastered_sentences_user_language_content_context_unique').on(
+    table.userId,
+    table.languageCode,
+    table.contentHash,
+    table.contextHash,
   ),
 }));
 
@@ -99,6 +123,7 @@ export const chatMessages = sqliteTable('chat_messages', {
       table.context,
       table.createdAt,
     ),
+    userCreatedAtIdx: index('chat_messages_user_created_at_idx').on(table.userId, table.createdAt),
   }),
 );
 
@@ -115,4 +140,5 @@ export const stories = sqliteTable('stories', {
   updatedAt:           integer('updated_at', { mode: 'timestamp' }),
 }, (table) => ({
   userIdx: index('stories_user_id_idx').on(table.userId),
+  userCreatedAtIdx: index('stories_user_created_at_idx').on(table.userId, table.createdAt),
 }));

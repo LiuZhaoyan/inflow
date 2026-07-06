@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import { db } from './connection';
@@ -38,6 +38,15 @@ export async function getStoriesByUser(userId: string): Promise<Story[]> {
     .orderBy(desc(stories.createdAt));
 
   return rows.map(mapRowToStory);
+}
+
+export async function getStoryStatsByUser(userId: string): Promise<{ total: number }> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(stories)
+    .where(eq(stories.userId, userId));
+
+  return { total: Number(row?.total ?? 0) };
 }
 
 export async function getStories(userId: string = LEGACY_SINGLE_USER_ID): Promise<Story[]> {

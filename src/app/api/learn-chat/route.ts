@@ -202,7 +202,7 @@ Structure:
         if (currentSentence) {
             const sentenceId = uuidv4();
 
-            await saveMasteredSentence({
+            const savedSentence = await saveMasteredSentence({
                 id: sentenceId,
                 content: currentSentence,
                 masteredAt: Date.now(),
@@ -213,7 +213,7 @@ Structure:
             }, userId, targetLanguage);
 
             scheduleMasteredSentenceTts({
-                sentenceId,
+                sentenceId: savedSentence?.id || sentenceId,
                 sentence: currentSentence,
                 userId,
                 languageCode: targetLanguage,

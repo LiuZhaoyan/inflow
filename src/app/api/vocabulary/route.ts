@@ -12,6 +12,12 @@ import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { logger } from '@/lib/core/logger';
 import { handleApiError } from '@/lib/core/error-handler';
 
+function normalizeVocabularyLanguage(language?: string | null): string {
+  const normalized = (language || '').trim().toLowerCase();
+  if (!normalized || normalized === 'auto') return 'unknown';
+  return normalized;
+}
+
 async function generateDefinition(word: string, nativeLanguage: string): Promise<string> {
   try {
     const messages: ChatMessage[] = [
@@ -55,13 +61,16 @@ export async function GET(request: Request) {
     if (errorResponse) return errorResponse;
     userId = user.id;
 
-    const vocab = await getVocabularyByUser(user.id);
     const url = new URL(request.url);
     const languageCode = (url.searchParams.get('languageCode') || '').trim().toLowerCase();
-    if (!languageCode || languageCode === 'all') {
-      return NextResponse.json(vocab);
-    }
-    return NextResponse.json(vocab.filter(w => (w.language || '') === languageCode));
+    const limit = Number(url.searchParams.get('limit') || 0);
+    const cursor = url.searchParams.get('cursor') || undefined;
+    const vocab = await getVocabularyByUser(user.id, {
+      languageCode: !languageCode || languageCode === 'all' ? undefined : languageCode,
+      limit: Number.isFinite(limit) && limit > 0 ? limit : undefined,
+      cursor,
+    });
+    return NextResponse.json(vocab);
   } catch (error) {
     const durationMs = Date.now() - startTime;
     return handleApiError(error, {
@@ -97,6 +106,7 @@ export async function POST(request: Request) {
         wordData.language = hint.code;
       }
     }
+    wordData.language = normalizeVocabularyLanguage(wordData.language);
 
     if (!wordData.definition || String(wordData.definition).trim() === '') {
       const profile = await getUserProfile(user.id);
