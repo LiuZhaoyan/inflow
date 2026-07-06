@@ -16,7 +16,7 @@ import { handleApiError } from '@/lib/core/error-handler';
  *   3. Client calls with action='answer' + answers[] → API computes level and saves
  */
 
-const PLACEMENT_LEVELS = [1, 3, 5, 7, 9]; // difficulties to test
+const PLACEMENT_LEVELS = [1, 3, 5, 7, 9]; // initial calibration anchors
 
 export async function POST(req: Request) {
     const startTime = Date.now();
@@ -37,31 +37,31 @@ export async function POST(req: Request) {
         const nativeLanguage = userProfile?.nativeLanguage || 'en';
 
         if (action === 'start') {
-            // Ask AI to generate 5 sentences at different difficulty levels
+            // Ask AI to generate 5 sentences at initial calibration anchors.
             const messages: ChatMessage[] = [
                 {
                     role: 'system',
-                    content: `You are a language assessment tool. Generate exactly 5 sentences in the target language at different difficulty levels for a placement test.
+                    content: `You are a language assessment tool. Generate exactly 5 sentences in the target language at different initial calibration anchors for a placement test.
 
 Target Language Code: ${targetLanguage}
 User Native Language Code: ${nativeLanguage}
 
-Generate one sentence for each difficulty level: 1 (absolute beginner), 3 (beginner), 5 (intermediate), 7 (advanced), 9 (near-native).
+Generate one sentence for each calibration anchor: 1 (foundation), 3 (early flow), 5 (building flow), 7 (expanding flow), 9 (nuanced flow).
 
 RESPONSE FORMAT:
 Return a valid JSON array (no markdown). Each element:
 {
-  "level": <number 1-9>,
+  "level": <one of 1, 3, 5, 7, 9>,
   "sentence": "<sentence in target language>",
   "translation": "<translation in ${nativeLanguage}>"
 }
 
 Make sure:
-- Level 1: very basic greeting or single concept (e.g. "Hello" equivalent)
-- Level 3: simple daily sentence with basic grammar
-- Level 5: compound sentence with past/future tense
-- Level 7: complex sentence with subordinate clauses, idioms
-- Level 9: sophisticated expression with nuanced vocabulary, cultural references`
+- Anchor 1: very basic greeting or single concept (e.g. "Hello" equivalent)
+- Anchor 3: simple daily sentence with basic grammar
+- Anchor 5: compound sentence with past/future tense
+- Anchor 7: complex sentence with subordinate clauses or idioms
+- Anchor 9: sophisticated expression with nuanced vocabulary or cultural references`
                 },
                 {
                     role: 'user',
@@ -78,8 +78,8 @@ Make sure:
                 // Fallback: return a basic set
                 sentences = PLACEMENT_LEVELS.map(level => ({
                     level,
-                    sentence: `[Placement sentence level ${level}]`,
-                    translation: `[Translation for level ${level}]`,
+                    sentence: `[Placement sentence anchor ${level}]`,
+                    translation: `[Translation for anchor ${level}]`,
                 }));
             }
 
@@ -102,15 +102,15 @@ Make sure:
                 computedLevel = 1;
             } else {
                 const maxUnderstood = Math.max(...understood);
-                // Set difficulty slightly above the highest understood level
-                computedLevel = Math.min(10, maxUnderstood + 1);
+                // Start slightly above the highest understood calibration anchor.
+                computedLevel = maxUnderstood + 1;
             }
 
             await setPlacementResult(computedLevel, userId, targetLanguage);
 
             return NextResponse.json({
                 level: computedLevel,
-                message: `Your starting difficulty has been set to ${computedLevel}/10.`,
+                message: `Your starting challenge index has been set to ${computedLevel}.`,
             });
         }
 

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { CheckCircle, XCircle, Loader2, ArrowRight, GraduationCap } from 'lucide-react';
-import { LEVEL_LABELS } from '@/lib/domain/learn/difficulty-engine';
+import { getLevelLabel } from '@/lib/domain/learn/difficulty-engine';
 
 interface PlacementSentence {
     level: number;
@@ -87,10 +87,10 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                     </div>
                     <h2 className="paper-title text-2xl">Placement Test</h2>
                     <p className="paper-subtitle text-sm mt-2 mb-1 mx-auto">
-                        We&apos;ll show you 5 sentences of increasing difficulty.
+                        We&apos;ll show you 5 sentences across calibration anchors.
                     </p>
                     <p className="paper-subtitle text-sm mb-6 mx-auto">
-                        For each one, tell us if you can understand it — this helps us set the right starting level.
+                        For each one, tell us if you can understand it - this helps us set the right starting challenge.
                     </p>
                     {error && (
                         <div className="paper-alert-soft-danger text-sm px-3 py-2 mb-4">
@@ -108,7 +108,7 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                             onClick={onSkip}
                             className="paper-btn-flat w-full text-sm"
                         >
-                            Skip — start as beginner
+                            Skip - start gently
                         </button>
                     </div>
                 </div>
@@ -142,7 +142,7 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                             Question {currentIndex + 1} of {sentences.length}
                         </span>
                         <span className="text-xs text-[var(--ink-3)]">
-                            Difficulty: {sentence.level}/10
+                            Calibration anchor: {sentence.level}
                         </span>
                     </div>
 
@@ -212,14 +212,13 @@ export default function PlacementTest({ languageCode, onComplete, onSkip }: Plac
                         <GraduationCap size={28} />
                     </div>
                     <h2 className="paper-title text-2xl">Assessment Complete!</h2>
-                    <p className="text-sm text-[var(--ink-2)] mt-2">Your starting level has been set to:</p>
+                    <p className="text-sm text-[var(--ink-2)] mt-2">Your starting challenge has been set to:</p>
 
                     <div className="mt-4 mb-2">
                         <span className="text-5xl font-extrabold text-[var(--accent-1)]">{resultLevel}</span>
-                        <span className="text-lg text-[var(--ink-3)] ml-1">/10</span>
                     </div>
                     <p className="text-sm font-semibold text-[var(--ink-1)] mb-1">
-                        {LEVEL_LABELS[resultLevel] ?? 'Intermediate'}
+                        {getLevelLabel(resultLevel)}
                     </p>
                     <p className="text-xs text-[var(--ink-3)] mb-6">
                         This will automatically adjust as you learn.

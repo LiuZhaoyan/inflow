@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getProgress, setDifficultyLevel } from '@/lib/db';
 import { getLevelLabel } from '@/lib/domain/learn/difficulty-engine';
+import { isValidChallengeIndex } from '@/lib/domain/learn/challenge-index';
 import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { handleApiError } from '@/lib/core/error-handler';
 
 /**
  * GET /api/difficulty
- * Returns current difficulty level, label, user level, and learning stats
+ * Returns the current adaptive challenge index, label, and learning stats.
  */
 export async function GET(req: Request) {
     const startTime = Date.now();
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
 
 /**
  * PUT /api/difficulty
- * Manually adjust difficulty level
+ * Manually adjust adaptive challenge index.
  * Body: { level: number }
  */
 export async function PUT(req: Request) {
@@ -61,8 +62,8 @@ export async function PUT(req: Request) {
         userId = user.id;
 
         const { level } = await req.json();
-        if (typeof level !== 'number' || level < 1 || level > 10) {
-            return NextResponse.json({ error: 'Level must be between 1 and 10' }, { status: 400 });
+        if (!isValidChallengeIndex(level)) {
+            return NextResponse.json({ error: 'Level must be a finite integer greater than or equal to 1' }, { status: 400 });
         }
 
         const url = new URL(req.url);

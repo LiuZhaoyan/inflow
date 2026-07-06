@@ -21,8 +21,8 @@ export interface MasteredSentence {
 
 export interface UserProgress {
   targetLanguage: string;
-  currentDifficultyLevel: number; // 1-10 adaptive difficulty
-  initialDifficultyLevel: number; // set by placement test
+  currentDifficultyLevel: number; // unbounded adaptive challenge index, lower bound 1
+  initialDifficultyLevel: number; // initial calibration anchor set by placement test
   masteredSentences: MasteredSentence[];
   recentContext: string[];
   performanceMetrics: PerformanceMetrics;

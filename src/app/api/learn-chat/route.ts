@@ -8,7 +8,6 @@ import {
     getChatMessageByRequestId,
     saveMasteredSentence,
     updateMasteredSentenceAudioPath,
-    setDifficultyLevel,
     updateProgress,
     getChatHistory,
     saveChatMessage,
@@ -122,6 +121,7 @@ export async function POST(req: Request) {
 
     // Calculate difficulty context from progress + learning profile + history
     const difficultyCtx = calculateDifficultyContext(progress, progress.learningProfile, historyForDifficulty);
+    let responseDifficultyCtx = difficultyCtx;
     const personalizationBlock = buildPersonalizationPrompt(difficultyCtx, {
         vocabularyTerms: vocabulary.map((word) => word.word).filter(Boolean),
         masteredSentences: progress.masteredSentences
@@ -146,7 +146,7 @@ CONTEXT RULES:
 ${personalizationBlock}
 
 PROTOCOL:
-1. If action is 'init': Output a simple greeting and the first practice sentence in the target language. Match the sentence to the current difficulty level.
+1. If action is 'init': Output a simple greeting and the first practice sentence in the target language. Match the sentence to the current adaptive i+1 guidance.
 2. If action is 'explain': Provide a brief explanation of key vocabulary or grammar in the 'currentSentence' using the native language. Tailor explanation depth to the user's level.
 3. If action is 'translate': Provide the translation of 'currentSentence' in the user's native language.
 4. If action is 'understand': The user understood 'currentSentence'. Output a NEW sentence. It can be a variation or a logical follow-up. Follow the difficulty adjustment direction.
@@ -158,7 +158,7 @@ Structure:
   "response": "The content to display to the user (the explanation, translation, or the NEW sentence)",
   "type": "sentence" | "explanation" | "translation",
   "original": "If type is explanation/translation, keep the original sentence here. If type is sentence, put the new sentence here.",
-  "difficultyEstimate": <number 1-10 estimating the difficulty of the sentence you generated>,
+  "difficultyEstimate": <integer estimating the adaptive challenge index of the sentence you generated>,
   "iPlusOne": {
     "challengeType": "vocabulary" | "grammar" | "register" | "sentence_pattern",
     "challengeLabel": "short label for the single main +1 challenge",
@@ -198,18 +198,23 @@ Structure:
 
     if (learnAction === 'understand') {
 
-        // ── Update difficulty level ──
-        const newLevel = computeNewDifficultyLevel(progress.currentDifficultyLevel ?? 3, difficultyCtx);
-        if (newLevel !== (progress.currentDifficultyLevel ?? 3)) {
-            await setDifficultyLevel(newLevel, userId, targetLanguage);
-        }
-
-        // ── Update learning profile ──
+        // Update the learner profile first so a single Got it records just_right
+        // without bypassing the conservative i+1 growth rules.
         const updatedProfile = updateLearningProfileFromAction(
             progress.learningProfile,
             learnAction,
             currentSentence || '',
         );
+        const updatedDifficultyCtx = calculateDifficultyContext(
+            {
+                ...progress,
+                learningProfile: updatedProfile,
+            },
+            updatedProfile,
+            historyForDifficulty,
+        );
+        const newLevel = computeNewDifficultyLevel(progress.currentDifficultyLevel ?? 3, updatedDifficultyCtx);
+        responseDifficultyCtx = updatedDifficultyCtx;
 
         await updateProgress({
             learningProfile: updatedProfile,
@@ -330,8 +335,8 @@ Structure:
     });
     data.difficulty = {
         level: latestProgress.currentDifficultyLevel ?? 3,
-        direction: difficultyCtx.direction,
-        performance: difficultyCtx.performance,
+        direction: responseDifficultyCtx.direction,
+        performance: responseDifficultyCtx.performance,
     };
     data.messageId = aiMessage.id;
 

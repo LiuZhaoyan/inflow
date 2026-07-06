@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildPersonalizationPrompt,
   calculateDifficultyContext,
+  computeNewDifficultyLevel,
   updateLearningProfileFromAction,
   updateLearningProfileFromFeedback,
 } from './difficulty-engine';
@@ -51,6 +52,56 @@ test('calculateDifficultyContext lets lightweight feedback affect direction', ()
   assert.equal(calculateDifficultyContext(DEFAULT_PROGRESS, easyTwice).direction, 'increase');
 });
 
+test('computeNewDifficultyLevel can rise above 10 and never falls below 1', () => {
+  const easyOnce = updateLearningProfileFromFeedback(DEFAULT_LEARNING_PROFILE, 'too_easy', 'easy');
+  const easyTwice = updateLearningProfileFromFeedback(easyOnce, 'too_easy', 'easy again');
+  const increaseCtx = calculateDifficultyContext(
+    { ...DEFAULT_PROGRESS, currentDifficultyLevel: 10 },
+    easyTwice,
+  );
+
+  assert.equal(computeNewDifficultyLevel(10, increaseCtx), 11);
+
+  const hardProfile = updateLearningProfileFromFeedback(
+    DEFAULT_LEARNING_PROFILE,
+    'too_hard',
+    'This one is hard',
+  );
+  const decreaseCtx = calculateDifficultyContext(
+    { ...DEFAULT_PROGRESS, currentDifficultyLevel: 1 },
+    hardProfile,
+  );
+
+  assert.equal(computeNewDifficultyLevel(1, decreaseCtx), 1);
+});
+
+test('difficulty only increases after stable positive feedback', () => {
+  const tooEasyOnce = updateLearningProfileFromFeedback(DEFAULT_LEARNING_PROFILE, 'too_easy', 'easy');
+  const tooEasyTwice = updateLearningProfileFromFeedback(tooEasyOnce, 'too_easy', 'still easy');
+
+  assert.equal(calculateDifficultyContext(DEFAULT_PROGRESS, tooEasyOnce).direction, 'maintain');
+  assert.equal(calculateDifficultyContext(DEFAULT_PROGRESS, tooEasyTwice).direction, 'increase');
+
+  const understoodOnce = updateLearningProfileFromAction(
+    DEFAULT_LEARNING_PROFILE,
+    'understand',
+    'I understood this.',
+  );
+  const understoodTwice = updateLearningProfileFromAction(
+    understoodOnce,
+    'understand',
+    'I understood this too.',
+  );
+  const understoodThrice = updateLearningProfileFromAction(
+    understoodTwice,
+    'understand',
+    'Still clear.',
+  );
+
+  assert.equal(calculateDifficultyContext(DEFAULT_PROGRESS, understoodOnce).direction, 'maintain');
+  assert.equal(calculateDifficultyContext(DEFAULT_PROGRESS, understoodThrice).direction, 'increase');
+});
+
 test('buildPersonalizationPrompt summarizes known input without deprecated fields', () => {
   const profile = updateLearningProfileFromFeedback(
     DEFAULT_LEARNING_PROFILE,
@@ -67,6 +118,8 @@ test('buildPersonalizationPrompt summarizes known input without deprecated field
   assert.match(prompt, /ticket, gate/);
   assert.match(prompt, /I have a ticket/);
   assert.match(prompt, /I\+1 CONTRACT/);
+  assert.equal(prompt.includes('/10'), false);
+  assert.equal(prompt.includes('Level 7-10'), false);
   assert.equal(prompt.includes('grammarStatus'), false);
   assert.equal(prompt.includes('totalStudyTimeMs'), false);
 });

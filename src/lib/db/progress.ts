@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from './connection';
 import { learningProgress, masteredSentences } from './schema';
 import { getUserProfile } from './user';
+import { normalizeChallengeIndex } from '@/lib/domain/learn/challenge-index';
 import { normalizeLearningProfile } from '@/lib/types/learnTypes';
 import { DEFAULT_PROGRESS, type MasteredSentence, type UserProgress } from '@/lib/types/progress';
 
@@ -442,7 +443,7 @@ export async function getDifficultyLevel(userId: string = LEGACY_SINGLE_USER_ID,
 export async function setDifficultyLevel(level: number, userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
   const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
   const progress = await updateProgressByUser(userId, resolvedLanguageCode, {
-    currentDifficultyLevel: Math.max(1, Math.min(10, level)),
+    currentDifficultyLevel: normalizeChallengeIndex(level, DEFAULT_PROGRESS.currentDifficultyLevel),
   });
   return progress.currentDifficultyLevel;
 }
@@ -453,11 +454,11 @@ export async function setPlacementResult(
   languageCode?: string,
 ) {
   const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
-  const clamped = Math.max(1, Math.min(10, level));
+  const challengeIndex = normalizeChallengeIndex(level, DEFAULT_PROGRESS.currentDifficultyLevel);
 
   return updateProgressByUser(userId, resolvedLanguageCode, {
-    currentDifficultyLevel: clamped,
-    initialDifficultyLevel: clamped,
+    currentDifficultyLevel: challengeIndex,
+    initialDifficultyLevel: challengeIndex,
     placementCompleted: true,
   });
 }

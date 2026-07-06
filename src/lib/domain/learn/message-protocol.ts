@@ -22,8 +22,8 @@ export function mapActionTexts(
     return {
       displayText: '',
       modelText: context
-        ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context at difficulty level ${level ?? 3}/10.`
-        : `Start the session. Generate a sentence at difficulty level ${level ?? 3}/10.`,
+        ? `Start the session. The user chose the context: "${context}". Generate a sentence relevant to this context at adaptive challenge index ${level ?? 3}.`
+        : `Start the session. Generate a sentence at adaptive challenge index ${level ?? 3}.`,
     };
   }
 
@@ -43,7 +43,7 @@ export function mapActionTexts(
 
   return {
     displayText: 'I got it!',
-    modelText: `I understand this sentence: "${currentSentence || ''}". Give me the next one at the appropriate difficulty level.`,
+    modelText: `I understand this sentence: "${currentSentence || ''}". Give me the next one using the current adaptive i+1 guidance.`,
   };
 }
 

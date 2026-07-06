@@ -14,6 +14,7 @@ import {
   type SupportTermSource,
 } from '../../types/learnTypes';
 import type { MasteredSentence, UserProgress } from '../../types/progress';
+import { normalizeChallengeIndex } from './challenge-index';
 
 export interface DifficultyContext {
   currentLevel: number;
@@ -34,27 +35,21 @@ export interface LearnerCorpusSummary {
 }
 
 const WINDOW_SIZE = 10;
-const INCREASE_THRESHOLD = 3;
 const DECREASE_EXPLAIN_RATE = 0.6;
 const DECREASE_TRANSLATE_RATE = 0.5;
 const MAX_SUPPORT_TERMS = 24;
 const MAX_COMPREHENSION_WINDOW = 12;
-
-export const LEVEL_LABELS: Record<number, string> = {
-  1: 'Absolute Beginner',
-  2: 'Beginner',
-  3: 'Upper Beginner',
-  4: 'Lower Intermediate',
-  5: 'Intermediate',
-  6: 'Upper Intermediate',
-  7: 'Lower Advanced',
-  8: 'Advanced',
-  9: 'Upper Advanced',
-  10: 'Near-Native',
-};
+const JUST_RIGHT_INCREASE_STREAK = 3;
+const TOO_EASY_INCREASE_STREAK = 2;
 
 export function getLevelLabel(level: number): string {
-  return LEVEL_LABELS[Math.max(1, Math.min(10, Math.round(level)))] ?? 'Intermediate';
+  const challengeIndex = normalizeChallengeIndex(level);
+  if (challengeIndex <= 1) return 'Foundation';
+  if (challengeIndex <= 3) return 'Early Flow';
+  if (challengeIndex <= 6) return 'Building Flow';
+  if (challengeIndex <= 10) return 'Expanding Flow';
+  if (challengeIndex <= 15) return 'Nuanced Flow';
+  return 'Open Flow';
 }
 
 export function analyseRecentActions(history: Array<{ role: string; content: string }>): {
@@ -100,7 +95,7 @@ export function calculateDifficultyContext(
   history: Array<{ role: string; content: string }> = [],
 ): DifficultyContext {
   const normalizedProfile = normalizeLearningProfile(profile);
-  const currentLevel = progress.currentDifficultyLevel ?? 3;
+  const currentLevel = normalizeChallengeIndex(progress.currentDifficultyLevel ?? 3);
   const metrics = analyseRecentActions(history);
   const recentMastered = (progress.masteredSentences || []).slice(-WINDOW_SIZE);
   const comprehension = normalizedProfile.recentComprehension;
@@ -108,11 +103,11 @@ export function calculateDifficultyContext(
   let direction: DifficultyContext['direction'] = 'maintain';
   if (comprehension.tooHardStreak > 0) {
     direction = 'decrease';
-  } else if (comprehension.tooEasyStreak >= 2) {
+  } else if (comprehension.tooEasyStreak >= TOO_EASY_INCREASE_STREAK) {
     direction = 'increase';
   } else if (metrics.explainRate > DECREASE_EXPLAIN_RATE || metrics.translateRate > DECREASE_TRANSLATE_RATE) {
     direction = 'decrease';
-  } else if (metrics.consecutiveSmooth >= INCREASE_THRESHOLD && metrics.explainRate < 0.2) {
+  } else if (comprehension.justRightStreak >= JUST_RIGHT_INCREASE_STREAK && metrics.explainRate < 0.2) {
     direction = 'increase';
   }
 
@@ -146,9 +141,10 @@ export function computeNewDifficultyLevel(
   currentLevel: number,
   ctx: DifficultyContext,
 ): number {
-  if (ctx.direction === 'increase') return Math.min(10, currentLevel + 1);
-  if (ctx.direction === 'decrease') return Math.max(1, currentLevel - 1);
-  return currentLevel;
+  const challengeIndex = normalizeChallengeIndex(currentLevel);
+  if (ctx.direction === 'increase') return challengeIndex + 1;
+  if (ctx.direction === 'decrease') return Math.max(1, challengeIndex - 1);
+  return challengeIndex;
 }
 
 const REVIEW_INTERVALS_MS = [
@@ -297,7 +293,7 @@ export function buildPersonalizationPrompt(
 
   lines.push('');
   lines.push('LEARNER STATE:');
-  lines.push(`- Current Difficulty Level: ${ctx.currentLevel}/10 (${ctx.levelLabel})`);
+  lines.push(`- Adaptive Challenge Index: ${ctx.currentLevel} (${ctx.levelLabel})`);
   lines.push(`- Recent Performance: ${ctx.performance}`);
   lines.push(`- Adjustment Direction: ${ctx.direction}`);
   lines.push(`- Learning Pace: ${ctx.recentComprehension.tooHardStreak >= 2 ? 'slow' : ctx.recentComprehension.tooEasyStreak >= 2 ? 'fast' : 'normal'}`);
@@ -335,10 +331,11 @@ export function buildPersonalizationPrompt(
   lines.push('- When explaining, explain only the useful challenge point and any support terms the learner likely needs.');
 
   lines.push('');
-  lines.push('DIFFICULTY GUIDELINES:');
-  lines.push('Level 1-3: short daily sentences, common vocabulary, simple word order.');
-  lines.push('Level 4-6: one clause expansion, common connectors, tense/aspect or register nuance.');
-  lines.push('Level 7-10: natural phrasing, idioms, nuance, or cultural references, but still one main +1 point.');
+  lines.push('CHALLENGE TUNING GUIDELINES:');
+  lines.push('- Treat the challenge index as an open-ended internal position, not a learner-facing score.');
+  lines.push('- Lower indexes should use shorter daily sentences, common vocabulary, and very transparent word order.');
+  lines.push('- Middle indexes can add one clause expansion, common connectors, tense/aspect, register, or word-choice nuance.');
+  lines.push('- Higher indexes can use more natural phrasing, idioms, discourse nuance, or cultural references while preserving one main +1 point.');
 
   if (ctx.reviewDue.length > 0) {
     lines.push('');
