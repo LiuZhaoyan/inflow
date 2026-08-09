@@ -14,6 +14,7 @@ export interface Msg {
     id: string;
     role: 'user' | 'ai';
     content: string;
+    userAction?: LearnAction;
 }
 
 export interface StoredChat {
@@ -193,3 +194,4 @@ export function normalizeLearningProfile(raw: unknown): LearningProfile {
         learningPace: normalizeLearningPace(source.learningPace),
     };
 }
+import type { LearnAction } from '@/lib/types/learnChat';

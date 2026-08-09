@@ -4,14 +4,14 @@ import { mapChatHistoryRowsToViewModel, mapLearnChatActionResponseToViewModel } 
 
 test('mapChatHistoryRowsToViewModel maps rows and derives sentence state', () => {
     const result = mapChatHistoryRowsToViewModel([
-        { id: 'u1', role: 'user', content: 'hi' },
+        { id: 'u1', role: 'user', content: 'Explain please', userAction: 'explain' },
         { id: 'a1', role: 'ai', content: 'Old sentence', messageType: 'sentence' },
         { id: 'a2', role: 'ai', content: 'Latest sentence', messageType: 'sentence' },
     ]);
 
     assert.deepEqual(result.messages, [
-        { id: 'u1', role: 'user', content: 'hi' },
-        { id: 'a1', role: 'ai', content: 'Old sentence' },
+        { id: 'u1', role: 'user', content: 'Explain please', userAction: 'explain' },
+        { id: 'a1', role: 'ai', content: 'Old sentence', userAction: 'explain' },
         { id: 'a2', role: 'ai', content: 'Latest sentence' },
     ]);
     assert.equal(result.currentSentence, 'Latest sentence');

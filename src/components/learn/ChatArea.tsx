@@ -18,10 +18,16 @@ export default function ChatArea({
     messageRefs,
     messagesEndRef,
 }: ChatAreaProps) {
+    const actionLabels = {
+        explain: 'Explanation',
+        translate: 'Translation',
+    } as const;
+    const visibleMessages = messages.filter((msg) => !(msg.role === 'user' && msg.userAction));
+
     return (
         <main className="flex-1 overflow-y-auto px-6 py-4 scroll-smooth">
-            <div className="max-w-5xl mx-auto space-y-6 pb-4">
-                {(messages.length === 0 && !loading) && (
+            <div className="max-w-3xl mx-auto space-y-6 pb-4">
+                {(visibleMessages.length === 0 && !loading) && (
                     <div className="flex flex-col items-center justify-center py-10 space-y-6">
                         <div className="text-center space-y-2">
                             <h2 className="paper-title text-2xl">Choose a Context</h2>
@@ -41,7 +47,7 @@ export default function ChatArea({
                         </div>
                     </div>
                 )}
-                {messages.map((msg) => (
+                {visibleMessages.map((msg) => (
                     <div
                         key={msg.id}
                         ref={(el) => {
@@ -51,13 +57,20 @@ export default function ChatArea({
                         }}
                         className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                        <div className={`
-                            max-w-[85%] rounded-2xl px-6 py-4 text-base md:text-lg leading-relaxed
-                            ${msg.role === 'user'
-                                    ? 'bg-[var(--accent-0)] text-white rounded-tr-none'
-                                    : 'paper-panel-soft text-[var(--ink-1)] rounded-tl-none'}
-                        `}>
-                            {msg.content}
+                        <div className="max-w-[85%]">
+                            {msg.role === 'ai' && msg.userAction && actionLabels[msg.userAction as keyof typeof actionLabels] && (
+                                <div className="mb-1 pl-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--accent-1)]">
+                                    {actionLabels[msg.userAction as keyof typeof actionLabels]}
+                                </div>
+                            )}
+                            <div className={`
+                                rounded-2xl px-6 py-4 text-base md:text-lg leading-relaxed
+                                ${msg.role === 'user'
+                                        ? 'bg-[var(--accent-0)] text-white rounded-tr-none'
+                                        : 'paper-panel-soft text-[var(--ink-1)] rounded-tl-none'}
+                            `}>
+                                {msg.content}
+                            </div>
                         </div>
                     </div>
                 ))}

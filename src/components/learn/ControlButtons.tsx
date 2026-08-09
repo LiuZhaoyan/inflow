@@ -34,7 +34,7 @@ export default function ControlButtons({
     return (
         <div className="space-y-2.5">
             {/* Supporting tools */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_1fr_1.35fr]">
                 <motion.button
                     onClick={onExplain}
                     disabled={loading || auxCooldownActive || !currentSentence}
@@ -58,20 +58,20 @@ export default function ControlButtons({
                     <ArrowRightLeft size={19} className="text-teal-600" />
                     <span>Translate</span>
                 </motion.button>
-            </div>
 
-            {/* Primary action */}
-            <motion.button
-                onClick={onUnderstand}
-                disabled={loading || understandCooldownActive || !currentSentence}
-                className="flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-[#5b21b6] bg-[var(--accent-1)] px-6 text-base font-extrabold text-white shadow-[0_4px_0_#5b21b6] transition-[filter,box-shadow] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
-                whileHover={{ y: -1 }}
-                whileTap={{ y: 3 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-            >
-                <Flame size={21} className="text-white/90" />
-                <span>Got it!</span>
-            </motion.button>
+                {/* Primary action */}
+                <motion.button
+                    onClick={onUnderstand}
+                    disabled={loading || understandCooldownActive || !currentSentence}
+                    className="col-span-2 flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-2.5 rounded-xl border border-[#5b21b6] bg-[var(--accent-1)] px-6 text-base font-extrabold text-white shadow-[0_4px_0_#5b21b6] transition-[filter,box-shadow] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1"
+                    whileHover={{ y: -1 }}
+                    whileTap={{ y: 3 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                >
+                    <Flame size={21} className="text-white/90" />
+                    <span>Got it!</span>
+                </motion.button>
+            </div>
 
             {/* Cooldown messages — animated in/out */}
             <AnimatePresence>

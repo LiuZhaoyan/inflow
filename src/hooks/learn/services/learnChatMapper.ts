@@ -21,11 +21,15 @@ export interface LearnChatActionViewModel {
 }
 
 export function mapChatHistoryRowsToViewModel(rows: ChatHistoryRow[]): StoredChatViewModel {
-    const messages: Msg[] = rows.map((row) => ({
-        id: row.id,
-        role: row.role,
-        content: row.content,
-    }));
+    const messages: Msg[] = rows.map((row, index) => {
+        const action = row.userAction ?? (row.role === 'ai' ? rows[index - 1]?.userAction : undefined);
+        return {
+            id: row.id,
+            role: row.role,
+            content: row.content,
+            ...(action ? { userAction: action } : {}),
+        };
+    });
 
     const sentenceState = deriveCurrentSentence(rows);
 

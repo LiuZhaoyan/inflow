@@ -263,7 +263,7 @@ export default function useLearnChat() {
         if (action !== 'init') {
             const text = mapActionTexts(action, sentenceInProgress, effectiveContext, difficultyLevel).displayText;
 
-            setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: text }]);
+            setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: text, userAction: action }]);
         }
 
         try {
@@ -281,6 +281,7 @@ export default function useLearnChat() {
                 id: aiMessageId,
                 role: 'ai',
                 content: viewModel.response,
+                userAction: action,
             }]);
 
             if (viewModel.difficulty) {
