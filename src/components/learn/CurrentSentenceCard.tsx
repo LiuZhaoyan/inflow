@@ -40,30 +40,32 @@ export default function CurrentSentenceCard({
     }
 
     return (
-        <div className="paper-panel-flat rounded-[var(--radius-lg)] p-5 text-center relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent-0)]"></div>
-            <span className="paper-chip text-[var(--accent-1)] justify-center mb-1 block">Current Challenge</span>
-            <div
-                ref={sentenceRef}
-                onMouseUp={onSelectionEnd}
-                onTouchEnd={onSelectionEnd}
-                className="flex items-center justify-center gap-3"
-            >
-                <p className="text-lg md:text-xl font-medium text-[var(--ink-0)] leading-normal">{currentSentence}</p>
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--line-0)] bg-[var(--paper-1)] p-5 text-center shadow-[0_4px_0_var(--line-0)]">
+            <div className="absolute bottom-5 left-0 top-5 w-1 rounded-r-full bg-[var(--accent-0)]" />
+            <span className="paper-chip mb-4 inline-flex border-l-2 border-[var(--accent-0)] pl-2 text-[var(--accent-1)]">Current Challenge</span>
+            <div className="relative mx-auto max-w-3xl pr-12">
+                <div
+                    ref={sentenceRef}
+                    onMouseUp={onSelectionEnd}
+                    onTouchEnd={onSelectionEnd}
+                >
+                    <p className="font-serif text-left text-xl font-medium leading-relaxed text-[var(--ink-0)] sm:text-center sm:text-2xl">{currentSentence}</p>
+                </div>
                 <button
                     onClick={() => onPlayAudio(currentSentence)}
-                    className={`paper-btn-flat min-h-0 rounded-full p-2 text-[var(--accent-1)] ${playing ? 'animate-pulse opacity-50' : 'opacity-80 hover:opacity-100'}`}
+                    className={`absolute right-0 top-1/2 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl border border-[var(--line-0)] bg-[var(--paper-note)] text-[var(--accent-1)] shadow-[0_2px_0_var(--line-0)] transition-colors hover:bg-white hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] ${playing ? 'animate-pulse opacity-50' : 'opacity-80 hover:opacity-100'}`}
                     title="Play pronunciation"
+                    aria-label="Play pronunciation"
                 >
-                    <Volume2 size={24} />
+                    <Volume2 size={20} />
                 </button>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-1 border-t border-[var(--line-0)] pt-3" role="group" aria-label="Sentence difficulty feedback">
                 <button
                     type="button"
                     onClick={() => onFeedback('too_hard')}
                     disabled={feedbackLoading}
-                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    className="flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--ink-2)] transition-colors hover:bg-white hover:text-[var(--accent-1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
                     title="This sentence is too hard"
                 >
                     <TrendingDown size={14} />
@@ -73,7 +75,7 @@ export default function CurrentSentenceCard({
                     type="button"
                     onClick={() => onFeedback('just_right')}
                     disabled={feedbackLoading}
-                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    className="flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--ink-2)] transition-colors hover:bg-white hover:text-[var(--accent-1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
                     title="This sentence feels just right"
                 >
                     <CheckCircle size={14} />
@@ -83,7 +85,7 @@ export default function CurrentSentenceCard({
                     type="button"
                     onClick={() => onFeedback('too_easy')}
                     disabled={feedbackLoading}
-                    className="paper-btn-flat min-h-0 px-3 py-1.5 text-xs font-semibold"
+                    className="flex min-h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-[var(--ink-2)] transition-colors hover:bg-white hover:text-[var(--accent-1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
                     title="This sentence is too easy"
                 >
                     <TrendingUp size={14} />

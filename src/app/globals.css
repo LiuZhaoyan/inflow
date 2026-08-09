@@ -187,17 +187,6 @@ body {
 }
 
 @layer components {
-  .paper-shell {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(250, 245, 255, 0.88)),
-      linear-gradient(90deg, rgba(147, 51, 234, 0.04), transparent 22%, transparent 100%);
-    border: 1px solid var(--line-0);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-soft), var(--shadow-inset);
-    position: relative;
-    overflow: clip;
-  }
-
   .paper-card {
     background: #ffffff;
     border: 1px solid #f3e8ff;
@@ -225,8 +214,7 @@ body {
   }
 
   .paper-card::before,
-  .paper-card-soft::before,
-  .paper-shell::before {
+  .paper-card-soft::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -444,48 +432,6 @@ body {
     cursor: not-allowed;
   }
 
-  .paper-action-tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    border-radius: var(--radius-md);
-    min-height: 84px;
-    padding: 12px;
-    background: #ffffff;
-    color: var(--ink-1);
-    transition:
-      transform var(--duration-fast) var(--ease-out-soft),
-      background-color var(--duration-base) ease,
-      color var(--duration-base) ease;
-    cursor: pointer;
-  }
-
-  .paper-action-tile:hover {
-    transform: translateY(-1px);
-    background: var(--paper-1);
-  }
-
-  .paper-action-tile:active {
-    transform: translateY(1px) scale(0.992);
-  }
-
-  .paper-action-tile:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .paper-action-tile-primary {
-    background: var(--accent-0);
-    color: #ffffff;
-  }
-
-  .paper-action-tile-primary:hover {
-    background: var(--accent-1);
-    color: #ffffff;
-  }
-
   .paper-popover {
     background: #ffffff;
     border-radius: var(--radius-md);
@@ -603,23 +549,6 @@ body {
       radial-gradient(circle at 62% 76%, rgba(147, 51, 234, 0.03) 0 1px, transparent 1.5px);
     --page-overlay-2-opacity: 0.25;
     --page-overlay-2-size: 180px 180px, 220px 220px, 240px 240px;
-  }
-
-  .page-surface-module {
-    --page-bg-color: #faf5ff;
-    --page-bg-image:
-      radial-gradient(circle at 12% 10%, rgba(255, 255, 255, 0.8) 0%, transparent 30%),
-      radial-gradient(circle at 90% 0%, rgba(147, 51, 234, 0.08) 0%, transparent 24%),
-      linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
-    --page-overlay-1:
-      linear-gradient(90deg, transparent 0 72px, rgba(147, 51, 234, 0.03) 72px 74px, transparent 74px 100%),
-      repeating-linear-gradient(180deg, transparent 0 34px, rgba(147, 51, 234, 0.025) 34px 35px);
-    --page-overlay-1-opacity: 0.32;
-    --page-overlay-2:
-      radial-gradient(circle at 24% 18%, rgba(147, 51, 234, 0.03) 0 1px, transparent 1.4px),
-      radial-gradient(circle at 72% 42%, rgba(147, 51, 234, 0.025) 0 1px, transparent 1.5px);
-    --page-overlay-2-opacity: 0.14;
-    --page-overlay-2-size: 210px 210px, 240px 240px;
   }
 
   .page-surface-operation {
@@ -748,7 +677,6 @@ body {
       repeating-linear-gradient(180deg, transparent 0 27px, rgba(147, 51, 234, 0.035) 27px 28px);
   }
 
-  .page-surface-module,
   .page-surface-operation,
   .page-surface-reading {
     --page-overlay-1:
