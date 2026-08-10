@@ -1,6 +1,6 @@
 import { appendFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { logger } from '@/lib/core/logger';
+import { logger, anonymizeUserId } from '@/lib/core/logger';
 
 const LOG_DIR = path.join(process.cwd(), 'logs');
 const LOG_FILE = path.join(LOG_DIR, 'learn-chat-perf.jsonl');
@@ -28,13 +28,6 @@ function ensureLogDir(): Promise<void> {
     ensureLogDirPromise = mkdir(LOG_DIR, { recursive: true }).then(() => undefined);
   }
   return ensureLogDirPromise;
-}
-
-function anonymizeUserId(userId: string): string {
-  if (!userId || userId.length <= 8) {
-    return '****';
-  }
-  return `${userId.slice(0, 4)}****${userId.slice(-4)}`;
 }
 
 function sanitizeEntry(entry: LearnChatPerfLogEntry): LearnChatPerfLogEntry {
@@ -70,8 +63,4 @@ export function writeLearnChatPerfLog(entry: LearnChatPerfLogEntry): void {
   if (shouldMirrorToConsole()) {
     logger.info(`${LOG_TAG} ${entry.stage}`, safeEntry);
   }
-}
-
-export function getLearnChatPerfLogPath(): string {
-  return LOG_FILE;
 }

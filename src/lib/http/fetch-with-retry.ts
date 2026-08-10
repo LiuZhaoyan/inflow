@@ -10,6 +10,7 @@
  */
 
 import { logger } from '@/lib/core/logger';
+import { parseRetryAfterMs } from '@/hooks/learn/utils/cooldownPolicy';
 
 export interface FetchRetryOptions {
     /** Maximum number of retry attempts (default: 3). */
@@ -22,14 +23,6 @@ export interface FetchRetryOptions {
 
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_DELAY_MS = 15_000;
-
-function parseRetryAfter(res: Response, fallback: number): number {
-    const header = res.headers.get('Retry-After');
-    if (!header) return fallback;
-    const seconds = Number(header);
-    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
-    return fallback;
-}
 
 function delay(ms: number, signal?: AbortSignal | null): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -63,7 +56,7 @@ export async function fetchWithRetry(
         // Last attempt exhausted — return the 429 as-is so caller can handle it.
         if (attempt === maxRetries) return res;
 
-        const waitMs = parseRetryAfter(res, defaultDelayMs);
+        const waitMs = parseRetryAfterMs(res.headers.get('Retry-After'), defaultDelayMs);
         options?.onRetry?.(attempt + 1, waitMs);
         logger.warn(
             `fetchWithRetry: 429 received – retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})`,

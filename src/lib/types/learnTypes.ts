@@ -8,20 +8,12 @@ export const CONTEXT_OPTIONS = [
     'Emergency'
 ] as const;
 
-export type ContextOption = typeof CONTEXT_OPTIONS[number];
-
 export interface Msg {
     id: string;
     role: 'user' | 'ai';
     content: string;
     userAction?: LearnAction;
     messageType?: string;
-}
-
-export interface StoredChat {
-    messages: Msg[];
-    currentSentence: string;
-    updatedAt: number;
 }
 
 export interface PerformanceMetrics {
@@ -62,12 +54,6 @@ export interface LearningProfile {
     supportTerms: SupportTerm[];
     recentComprehension: RecentComprehension;
     learningPace: LearningPace;
-}
-
-export interface PlacementResult {
-    level: number;
-    confidence: number;
-    assessedAt: number;
 }
 
 export const DEFAULT_LEARNING_PROFILE: LearningProfile = {

@@ -3,7 +3,6 @@ import type { MasteredSentence } from '@/lib/types/progress';
 import type { UserProfile } from '@/lib/types/user';
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 import { parseRetryAfterMs } from '@/hooks/learn/utils/cooldownPolicy';
-import { generateRequestId } from '@/hooks/learn/utils/requestId';
 
 const RETRY_AFTER_FALLBACK_MS = 10000;
 
@@ -137,7 +136,7 @@ export async function fetchChatHistory(language: string, context: string): Promi
 }
 
 export async function postLearnChatAction(input: LearnChatActionRequest): Promise<LearnChatActionResponse> {
-    const requestId = generateRequestId();
+    const requestId = crypto.randomUUID();
     const res = await fetchWithRetry('/api/learn-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -6,7 +6,7 @@ interface DashboardCardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  color?: 'accent' | 'success' | 'sage' | 'warning' | 'danger';
+  color?: 'accent' | 'success' | 'sage';
   trend?: string;
   subtitle?: string;
 }
@@ -34,16 +34,6 @@ export default function DashboardCard({
       bg: 'bg-[var(--sage-0)] bg-opacity-10',
       text: 'text-[var(--sage-0)]',
       border: 'border-[var(--sage-0)]',
-    },
-    warning: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-700',
-      border: 'border-yellow-200',
-    },
-    danger: {
-      bg: 'bg-[var(--berry-0)] bg-opacity-10',
-      text: 'text-[var(--berry-0)]',
-      border: 'border-[var(--berry-0)]',
     },
   };
 

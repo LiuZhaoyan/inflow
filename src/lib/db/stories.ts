@@ -49,11 +49,6 @@ export async function getStoryStatsByUser(userId: string): Promise<{ total: numb
   return { total: Number(row?.total ?? 0) };
 }
 
-export async function getStories(userId: string = LEGACY_SINGLE_USER_ID): Promise<Story[]> {
-  await initStoriesDb();
-  return getStoriesByUser(userId);
-}
-
 export async function addStoryByUser(
   userId: string,
   story: Omit<Story, 'id' | 'createdAt'>,
@@ -74,13 +69,6 @@ export async function addStoryByUser(
     .returning();
 
   return mapRowToStory(created);
-}
-
-export async function addStory(
-  story: Omit<Story, 'id' | 'createdAt'>,
-  userId: string = LEGACY_SINGLE_USER_ID,
-): Promise<Story> {
-  return addStoryByUser(userId, story);
 }
 
 async function safeUnlink(filePath: string) {
@@ -124,10 +112,6 @@ export async function deleteStoryByUser(userId: string, id: string): Promise<voi
     .where(and(eq(stories.id, id), eq(stories.userId, userId)));
 }
 
-export async function deleteStory(id: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<void> {
-  return deleteStoryByUser(userId, id);
-}
-
 export async function updateStoryByUser(
   userId: string,
   id: string,
@@ -163,12 +147,4 @@ export async function updateStoryByUser(
     .returning();
 
   return mapRowToStory(updated);
-}
-
-export async function updateStory(
-  id: string,
-  updates: Partial<Story>,
-  userId: string = LEGACY_SINGLE_USER_ID,
-): Promise<Story | null> {
-  return updateStoryByUser(userId, id, updates);
 }

@@ -158,43 +158,6 @@ export async function ensureUserExistsById(input: {
   return byEmail ? sanitizeProfile(mapDbUserToProfile(byEmail)) : null;
 }
 
-export async function createUser(input: {
-  email: string;
-  password: string;
-  username?: string;
-  nativeLanguage?: string;
-  targetLanguage?: string;
-  currentLanguageCode?: string;
-}) {
-  const now = new Date();
-  const email = input.email.toLowerCase().trim();
-  const targetLanguage = sanitizeLanguage(input.targetLanguage, DEFAULT_USER.targetLanguage);
-  const currentLanguageCode = sanitizeLanguage(
-    input.currentLanguageCode || targetLanguage,
-    targetLanguage,
-  );
-
-  const passwordHash = await bcrypt.hash(input.password, 12);
-
-  const [created] = await db
-    .insert(users)
-    .values({
-      id: uuidv4(),
-      email,
-      passwordHash,
-      username: (input.username || '').trim(),
-      nativeLanguage: sanitizeLanguage(input.nativeLanguage, DEFAULT_USER.nativeLanguage),
-      targetLanguage,
-      currentLanguageCode,
-      isOnboarded: false,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
-
-  return mapDbUserToProfile(created);
-}
-
 export async function getUserProfile(): Promise<UserProfile>;
 export async function getUserProfile(userId: string): Promise<UserProfile | null>;
 export async function getUserProfile(userId: string = LEGACY_SINGLE_USER_ID): Promise<UserProfile | null> {

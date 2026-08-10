@@ -135,23 +135,3 @@ export async function clearChatHistory(
       ),
     );
 }
-
-export async function getRecentChatMessages(userId: string, limit: number = 100): Promise<ChatHistoryMessage[]> {
-  const rows = await db
-    .select()
-    .from(chatMessages)
-    .where(eq(chatMessages.userId, userId))
-    .orderBy(desc(chatMessages.createdAt))
-    .limit(limit);
-
-  return rows.map(mapRow).sort((a, b) => a.createdAt - b.createdAt);
-}
-
-export async function deleteChatMessageById(userId: string, messageId: string): Promise<boolean> {
-  const rows = await db
-    .delete(chatMessages)
-    .where(and(eq(chatMessages.userId, userId), eq(chatMessages.id, messageId)))
-    .returning({ id: chatMessages.id });
-
-  return rows.length > 0;
-}

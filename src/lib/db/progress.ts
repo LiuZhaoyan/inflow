@@ -396,33 +396,6 @@ export async function deleteMasteredSentence(
   return deleteMasteredSentenceByUser(userId, id, languageCode);
 }
 
-export async function resetProgress(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
-
-  await db
-    .delete(masteredSentences)
-    .where(and(eq(masteredSentences.userId, userId), eq(masteredSentences.languageCode, resolvedLanguageCode)));
-
-  await db
-    .update(learningProgress)
-    .set({
-      currentDifficultyLevel: DEFAULT_PROGRESS.currentDifficultyLevel,
-      initialDifficultyLevel: DEFAULT_PROGRESS.initialDifficultyLevel,
-      placementCompleted: DEFAULT_PROGRESS.placementCompleted,
-      learningProfile: DEFAULT_PROGRESS.learningProfile,
-      performanceMetrics: DEFAULT_PROGRESS.performanceMetrics,
-      lastUpdated: new Date(),
-    })
-    .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, resolvedLanguageCode)));
-
-  return getProgressByUser(userId, resolvedLanguageCode);
-}
-
-export async function getLearningProfile(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
-  const progress = await getProgress(languageCode, userId);
-  return progress.learningProfile ?? DEFAULT_PROGRESS.learningProfile;
-}
-
 export async function updateLearningProfile(
   profile: UserProgress['learningProfile'],
   userId: string = LEGACY_SINGLE_USER_ID,
@@ -433,11 +406,6 @@ export async function updateLearningProfile(
     learningProfile: profile,
   });
   return progress.learningProfile;
-}
-
-export async function getDifficultyLevel(userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string): Promise<number> {
-  const progress = await getProgress(languageCode, userId);
-  return progress.currentDifficultyLevel ?? DEFAULT_PROGRESS.currentDifficultyLevel;
 }
 
 export async function setDifficultyLevel(level: number, userId: string = LEGACY_SINGLE_USER_ID, languageCode?: string) {
@@ -461,20 +429,4 @@ export async function setPlacementResult(
     initialDifficultyLevel: challengeIndex,
     placementCompleted: true,
   });
-}
-
-export async function updatePerformanceMetrics(
-  metrics: Partial<UserProgress['performanceMetrics']>,
-  userId: string = LEGACY_SINGLE_USER_ID,
-  languageCode?: string,
-) {
-  const resolvedLanguageCode = languageCode || await resolveLanguageCode(userId);
-  const progress = await getProgressByUser(userId, resolvedLanguageCode);
-  const updated = await updateProgressByUser(userId, resolvedLanguageCode, {
-    performanceMetrics: {
-      ...progress.performanceMetrics,
-      ...metrics,
-    },
-  });
-  return updated.performanceMetrics;
 }
