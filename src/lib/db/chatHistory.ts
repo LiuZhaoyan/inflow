@@ -135,3 +135,18 @@ export async function clearChatHistory(
       ),
     );
 }
+
+export async function deleteChatMessagesBySentence(
+  userId: string,
+  sentence: string,
+): Promise<number> {
+  const result = await db
+    .delete(chatMessages)
+    .where(
+      and(
+        eq(chatMessages.userId, userId),
+        eq(chatMessages.originalSentence, sentence),
+      ),
+    );
+  return result.changes;
+}

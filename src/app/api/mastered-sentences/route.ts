@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { deleteMasteredSentence, getMasteredSentencesByUser } from '@/lib/db';
+import { deleteMasteredSentence, getMasteredSentencesByUser, deleteChatMessagesBySentence } from '@/lib/db';
 import { normalizeLanguageCode } from '@/lib/core/language';
 import { getAuthenticatedUser } from '@/lib/auth/helpers';
 import { handleApiError } from '@/lib/core/error-handler';

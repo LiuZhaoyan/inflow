@@ -1,15 +1,14 @@
 'use client';
 import { useState } from 'react';
-import { ChevronLeft, Book, Volume2, Trash2 } from 'lucide-react';
+import { ChevronLeft, Book, Volume2 } from 'lucide-react';
 import { MasteredSentence } from '@/lib/types/progress';
 
 interface Props {
   sentences: MasteredSentence[];
-  onDelete?: (id: string) => void;
   onSelect?: (sentence: MasteredSentence) => void;
 }
 
-export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect }: Props) {
+export default function MasteredSentencesSidebar({ sentences, onSelect }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const sentenceGroups = sentences.slice().reverse().reduce<{ date: string; sentences: MasteredSentence[] }[]>((groups, sentence) => {
@@ -117,18 +116,6 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
                           >
                             <Volume2 size={15} />
                           </button>
-                          {onDelete && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDelete(s.id);
-                              }}
-                              className="rounded-full p-1.5 text-[var(--danger)] transition-colors opacity-60 hover:bg-[rgba(220,38,38,0.08)] group-hover:opacity-100"
-                              title="Delete sentence"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
                         </div>
                       </div>
                     ))}

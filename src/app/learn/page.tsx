@@ -51,7 +51,6 @@ export default function LearnPage() {
         setShowContextMenu,
         handleAction,
         switchContext,
-        handleDeleteMasteredSentence,
         handleFeedback,
     } = useLearnChat();
 
@@ -138,7 +137,6 @@ export default function LearnPage() {
             {/* Sidebar Component */}
             <MasteredSentencesSidebar
                 sentences={selectedContext ? masteredSentences.filter(s => s.context === selectedContext) : []}
-                onDelete={handleDeleteMasteredSentence}
                 onSelect={(sentence) => {
                     const targetId = sentence.messageId;
                     if (targetId && messageRefs.current[targetId]) {

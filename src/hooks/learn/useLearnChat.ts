@@ -188,6 +188,7 @@ export default function useLearnChat() {
     ]);
 
     const handleDeleteMasteredSentence = useCallback(async (id: string) => {
+        const sentence = masteredSentences.find(s => s.id === id);
         const previous = masteredSentences;
         setMasteredSentences(prev => prev.filter(s => s.id !== id));
 
@@ -196,11 +197,29 @@ export default function useLearnChat() {
             if (nextSentences) {
                 setMasteredSentences(nextSentences);
             }
+
+            // Clean up related chat messages from local state
+            if (sentence?.content) {
+                setMessages(prev => prev.filter(msg =>
+                    !(msg.role === 'ai' && msg.content === sentence.content)));
+            }
+
+            // Reload chat history to sync with backend
+            if (selectedContext) {
+                const stored = await loadStoredChat(selectedLanguage, selectedContext);
+                if (stored) {
+                    setMessages(stored.messages);
+                    if (!currentSentence || currentSentence === sentence?.content) {
+                        setCurrentSentence(stored.currentSentence);
+                        setCurrentSentenceMessageId(stored.currentSentenceMessageId);
+                    }
+                }
+            }
         } catch (error) {
             logger.error('useLearnChat: Failed to delete mastered sentence', error);
             setMasteredSentences(previous);
         }
-    }, [masteredSentences, selectedLanguage]);
+    }, [masteredSentences, selectedLanguage, selectedContext, currentSentence, loadStoredChat]);
 
     const handleFeedback = useCallback(async (rating: LearnFeedbackRating) => {
         const feedbackKey = currentSentenceMessageId ?? currentSentence;

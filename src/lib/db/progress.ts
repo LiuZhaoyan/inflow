@@ -6,6 +6,7 @@ import { getUserProfile } from './user';
 import { normalizeChallengeIndex } from '@/lib/domain/learn/challenge-index';
 import { normalizeLearningProfile } from '@/lib/types/learnTypes';
 import { DEFAULT_PROGRESS, type MasteredSentence, type UserProgress } from '@/lib/types/progress';
+import { deleteChatMessagesBySentence } from './chatHistory';
 
 const LEGACY_SINGLE_USER_ID = 'single-user';
 
@@ -348,6 +349,15 @@ export async function deleteMasteredSentenceByUser(
   id: string,
   languageCode?: string,
 ) {
+  // Get sentence content before deletion for chat message cleanup
+  let sentenceContent: string | null = null;
+  const [fetched] = await db
+    .select({ content: masteredSentences.content })
+    .from(masteredSentences)
+    .where(and(eq(masteredSentences.id, id), eq(masteredSentences.userId, userId)))
+    .limit(1);
+  sentenceContent = fetched?.content ?? null;
+
   if (languageCode) {
     await db
       .delete(masteredSentences)
@@ -362,6 +372,10 @@ export async function deleteMasteredSentenceByUser(
       .update(learningProgress)
       .set({ lastUpdated: new Date() })
       .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, languageCode)));
+
+    if (sentenceContent) {
+      await deleteChatMessagesBySentence(userId, sentenceContent);
+    }
     return getProgressByUser(userId, languageCode);
   }
 
@@ -372,6 +386,9 @@ export async function deleteMasteredSentenceByUser(
     .limit(1);
 
   if (!sentence?.languageCode) {
+    if (sentenceContent) {
+      await deleteChatMessagesBySentence(userId, sentenceContent);
+    }
     const resolvedLanguageCode = await resolveLanguageCode(userId);
     return getProgressByUser(userId, resolvedLanguageCode);
   }
@@ -385,6 +402,9 @@ export async function deleteMasteredSentenceByUser(
     .set({ lastUpdated: new Date() })
     .where(and(eq(learningProgress.userId, userId), eq(learningProgress.languageCode, sentence.languageCode)));
 
+  if (sentenceContent) {
+    await deleteChatMessagesBySentence(userId, sentenceContent);
+  }
   return getProgressByUser(userId, sentence.languageCode);
 }
 
