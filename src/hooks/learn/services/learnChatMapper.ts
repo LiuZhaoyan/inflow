@@ -28,6 +28,7 @@ export function mapChatHistoryRowsToViewModel(rows: ChatHistoryRow[]): StoredCha
             role: row.role,
             content: row.content,
             ...(action ? { userAction: action } : {}),
+            ...(row.messageType ? { messageType: row.messageType } : {}),
         };
     });
 

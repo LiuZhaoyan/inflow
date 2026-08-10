@@ -15,6 +15,7 @@ export interface Msg {
     role: 'user' | 'ai';
     content: string;
     userAction?: LearnAction;
+    messageType?: string;
 }
 
 export interface StoredChat {

@@ -282,6 +282,7 @@ export default function useLearnChat() {
                 role: 'ai',
                 content: viewModel.response,
                 userAction: action,
+                ...(viewModel.normalizedType ? { messageType: viewModel.normalizedType } : {}),
             }]);
 
             if (viewModel.difficulty) {

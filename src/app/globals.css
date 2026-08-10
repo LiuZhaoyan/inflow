@@ -22,6 +22,10 @@
   --line-2: rgba(147, 51, 234, 0.12);
   --wash-0: rgba(255, 255, 255, 0.72);
   --wash-1: rgba(250, 245, 255, 0.82);
+  --learn-canvas: #f4f0f5;
+  --learn-note: #fbf8fb;
+  --learn-surface: #f6f0fb;
+  --learn-line: #dfd3e3;
 
   /* Semantic */
   --background: var(--paper-0);
