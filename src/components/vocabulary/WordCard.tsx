@@ -31,7 +31,7 @@ export default function WordCard({
   return (
     <div
       className={`
-        relative group bg-[var(--card)] rounded-2xl border transition-all duration-300 overflow-hidden lg:max-w-[190px]
+        relative group bg-[var(--card)] rounded-2xl border transition-all duration-300 overflow-hidden w-[190px]
         ${
           selectionMode && isSelected
             ? 'ring-2 ring-[var(--ring)] border-transparent shadow-lg transform -translate-y-1'

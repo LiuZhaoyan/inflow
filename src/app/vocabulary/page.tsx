@@ -88,9 +88,9 @@ export default function VocabularyPage() {
         </div>
       </div>
 
-      <main className="w-full px-6 lg:px-12 pb-20">
+      <main className="w-full px-3 lg:px-6 pb-20">
          <div>
-           <div className="max-w-4xl mx-auto">
+           <div>
              <VocabularyToolbar
                selectionMode={selectionMode}
                selectedCount={selectedIds.size}
@@ -103,7 +103,7 @@ export default function VocabularyPage() {
            </div>
          </div>
 
-         <div className="max-w-4xl mx-auto space-y-8 pt-6">
+         <div className="space-y-8 pt-6">
              
              <AddWordForm
               isOpen={isAdding}
