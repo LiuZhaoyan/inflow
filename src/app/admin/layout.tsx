@@ -71,7 +71,7 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-[var(--paper-0)]">
       {/* 顶部 Header */}
-      <Header />
+      <Header variant="learn" learnTitle="Admin" learnSubtitle="MANAGEMENT" />
 
       <div className="flex mt-16">
         {/* 侧栏导航 */}

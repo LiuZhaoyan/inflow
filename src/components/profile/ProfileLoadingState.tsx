@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 export default function ProfileLoadingState() {
   return (
     <div className="page-surface page-surface-operation text-[var(--foreground)] font-sans">
-      <Header showProfile={false} />
+      <Header variant="learn" learnTitle="Profile" learnSubtitle="LEARNING RECORD" showProfile={false} />
       <main className="flex items-center justify-center pt-40">
         <div className="paper-card-soft flex items-center gap-3 px-5 py-4">
           <Loader2 className="animate-spin text-[var(--accent-1)]" size={22} />

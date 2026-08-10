@@ -32,7 +32,7 @@ const coreIdeas = [
 export default function DocsPage() {
   return (
     <div className="page-surface page-surface-reading text-[var(--foreground)] selection:bg-[#f1d6bd] selection:text-[#2d231c]">
-      <Header rightText="Docs" />
+      <Header variant="learn" learnTitle="Docs" learnSubtitle="DOCUMENTATION" />
 
       <main className="w-full px-6 lg:px-12 pb-20">
         <div className="mx-auto max-w-4xl reveal-up">

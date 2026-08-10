@@ -59,10 +59,10 @@ export default function VocabularyPage() {
     : words.filter(w => w.language === selectedLanguage);
 
   return (
-    <div className="min-h-screen bg-[var(--paper-0)] text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
+    <div className="min-h-screen bg-[var(--learn-canvas)] text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
       <Header variant="learn" learnTitle="Vocabulary" learnSubtitle="STUDY COLLECTION" />
 
-      <div className="sticky top-[52px] z-40 h-[72px] bg-[var(--paper-0)]">
+      <div className="sticky top-[52px] z-40 h-[72px] bg-[var(--learn-canvas)]">
         <div className="grid h-full grid-cols-[1fr_auto_1fr] items-start">
           <div />
           <LanguageFilterRail
