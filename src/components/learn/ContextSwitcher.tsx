@@ -27,7 +27,7 @@ export default function ContextSwitcher({
                 type="button"
                 onClick={() => setShowContextMenu(prev => !prev)}
                 className={isHeader
-                    ? 'flex max-w-[13rem] flex-col items-center text-center sm:max-w-md'
+                    ? 'flex max-w-[13rem] cursor-pointer flex-col items-center text-center sm:max-w-md'
                     : selectedContext
                         ? 'paper-pill-soft paper-pill-accent cursor-pointer px-2.5 py-1 text-xs font-semibold md:text-sm'
                         : 'paper-pill-soft paper-pill-ink cursor-pointer px-2.5 py-1 text-xs font-semibold md:text-sm'}

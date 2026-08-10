@@ -34,7 +34,7 @@ export default function UserMenu({ name, email }: UserMenuProps) {
       </Link>
 
       {open && (
-        <div className="absolute left-1/2 top-full mt-1 w-30 -translate-x-1/2 rounded-xl border border-[var(--line-0)] bg-[var(--paper-0)] shadow-md p-2">
+        <div className="absolute left-1/2 top-full mt-1 w-30 -translate-x-1/2 rounded-md border border-[var(--line-0)] bg-[var(--paper-0)] shadow-md p-2">
           <div className="px-2 py-2 border-b border-[var(--line-0)]">
             <p className="text-sm font-semibold text-[var(--ink-1)] truncate">{name || 'User'}</p>
             <p className="text-xs text-[var(--ink-2)] truncate">{email || '—'}</p>

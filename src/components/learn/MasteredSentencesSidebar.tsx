@@ -68,14 +68,16 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
     <>
       {/* Sidebar Container */}
       <div 
-        className={`fixed left-0 top-[0px] h-full z-20 bg-[var(--paper-note)] transition-all duration-300 flex flex-col pt-20 pb-4 ${isOpen ? 'w-80' : 'w-16'}`}
+        className={`fixed left-0 top-[0px] z-20 flex h-full flex-col bg-[var(--paper-note)] pt-20 pb-4 transition-all duration-300 ${isOpen ? 'w-80' : 'w-12'}`}
       >
         {/* Toggle & Header */}
-        <div className={`flex items-center flex-shrink-0 mb-4 ${isOpen ? 'justify-between px-4' : 'justify-center'}`}>
+        <div className={`mb-4 flex flex-shrink-0 items-center ${isOpen ? 'justify-between px-4' : 'justify-center'}`}>
            {isOpen && <h2 className="paper-title text-base tracking-tight">Mastered Sentences <span className="text-xs font-normal text-[var(--ink-3)] ml-2">({sentences.length})</span></h2>}
            <button 
              onClick={() => setIsOpen(!isOpen)}
-             className="paper-btn-flat min-h-0 p-2 text-[var(--ink-2)] transition-colors"
+             className={isOpen
+               ? 'paper-btn-flat min-h-0 p-2 text-[var(--ink-2)] transition-colors'
+               : 'relative flex h-9 w-9 items-center justify-center rounded-full bg-[var(--learn-surface)] text-[var(--ink-2)] transition-colors hover:bg-[var(--learn-line)]'}
              title={isOpen ? "Collapse library" : "Expand sentence library"}
            >
              {isOpen ? <ChevronLeft size={20} /> : <Book size={20} />}
@@ -138,7 +140,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
       </div>
 
       {/* Layout Spacer for Parent Flex Container */}
-      <div className={`transition-all duration-300 flex-shrink-0 ${isOpen ? 'w-80' : 'w-16'}`} />
+      <div className={`flex-shrink-0 transition-all duration-300 ${isOpen ? 'w-80' : 'w-12'}`} />
     </>
   );
 }
