@@ -1,6 +1,6 @@
 'use client';
 
-import { TrendingDown, TrendingUp, Minus, ChevronUp, ChevronDown } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus, ChevronUp, ChevronDown, Ellipsis } from 'lucide-react';
 import { useState } from 'react';
 import { useClickOutsideClose } from '@/hooks/useClickOutsideClose';
 import { getLevelLabel } from '@/lib/domain/learn/difficulty-engine';
@@ -30,6 +30,7 @@ interface DifficultyIndicatorProps {
     direction: 'decrease' | 'maintain' | 'increase';
     performance: string;
     onManualAdjust?: (level: number) => void;
+    compact?: boolean;
 }
 
 export default function DifficultyIndicator({
@@ -37,6 +38,7 @@ export default function DifficultyIndicator({
     direction,
     performance,
     onManualAdjust,
+    compact = false,
 }: DifficultyIndicatorProps) {
     const [showAdjust, setShowAdjust] = useState(false);
     const menuRef = useClickOutsideClose(showAdjust, () => setShowAdjust(false));
@@ -52,11 +54,12 @@ export default function DifficultyIndicator({
         <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setShowAdjust(prev => !prev)}
-                className={`cursor-pointer inline-flex items-center gap-1.5 transition-colors ${colorClass}`}
+                className={compact
+                    ? 'inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-[var(--ink-2)] transition-colors hover:bg-[rgba(255,255,255,0.45)]'
+                    : `cursor-pointer inline-flex items-center gap-1.5 transition-colors ${colorClass}`}
                 title={`${stateLabel}. Trend: ${directionLabel}. Click to adjust.`}
             >
-                <span>{stateLabel}</span>
-                <DirectionIcon size={12} className={directionColor} />
+                {compact ? <Ellipsis size={20} /> : <><span>{stateLabel}</span><DirectionIcon size={12} className={directionColor} /></>}
             </button>
 
             {showAdjust && onManualAdjust && (

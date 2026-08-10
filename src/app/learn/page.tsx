@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useRef, useState, type UIEvent } from 'react';
 import MasteredSentencesSidebar from '@/components/learn/MasteredSentencesSidebar';
 import ChatArea from '@/components/learn/ChatArea';
 import ContextSwitcher from '@/components/learn/ContextSwitcher';
@@ -18,6 +19,8 @@ import useSelectionPopover from '@/hooks/learn/useSelectionPopover';
 
 export default function LearnPage() {
     const { data: session } = useSession();
+    const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+    const lastScrollTopRef = useRef(0);
 
     const {
         messages,
@@ -93,6 +96,18 @@ export default function LearnPage() {
         setDifficultyLevelState(1);
     };
 
+    const handleWorkspaceScroll = (event: UIEvent<HTMLDivElement>) => {
+        const scrollTop = event.currentTarget.scrollTop;
+
+        if (scrollTop <= 8) {
+            setIsHeaderHidden(false);
+        } else if (scrollTop > lastScrollTopRef.current && scrollTop > 52) {
+            setIsHeaderHidden(true);
+        }
+
+        lastScrollTopRef.current = scrollTop;
+    };
+
     return (
         <div className="page-surface page-surface-reading flex h-screen w-full min-w-0 overflow-hidden text-[var(--foreground)]">
             {!profileLoading && !userProfile?.isOnboarded && (
@@ -142,38 +157,43 @@ export default function LearnPage() {
             />
 
             {/* Main Content */}
-            <div className="flex h-full w-0 min-w-0 flex-1 flex-col bg-[var(--learn-canvas)]">
-                {/* Header */}
-                <header className="sticky top-0 z-10 flex-shrink-0 w-full bg-[rgba(255,250,241,0.86)] backdrop-blur-md">
-                    <div className="mx-auto flex w-full min-w-0 items-center justify-between px-3 py-4 sm:px-6 lg:px-12">
-                        <Link href="/profile" className="paper-btn-flat min-h-0 px-3 py-2 text-sm">
+            <div className="relative flex h-full w-0 min-w-0 flex-1 flex-col bg-[var(--learn-canvas)]">
+                <div
+                    className="flex h-full flex-col overflow-x-hidden overflow-y-auto scroll-smooth"
+                    onScroll={handleWorkspaceScroll}
+                    onMouseMove={(event) => {
+                        if (event.clientY <= 40) setIsHeaderHidden(false);
+                    }}
+                >
+                    {/* Header */}
+                    <header
+                        className={`sticky top-0 z-30 w-full flex-shrink-0 border-b border-[var(--learn-line)] bg-white transition-transform duration-200 ${isHeaderHidden ? '-translate-y-full' : 'translate-y-0'}`}
+                    >
+                    <div className="mx-auto grid w-full min-w-0 grid-cols-[1fr_auto_1fr] items-center px-4 py-2 sm:px-6 lg:px-12">
+                        <Link
+                            href="/profile"
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--learn-line)] bg-[rgba(251,247,251,0.54)] text-[var(--ink-1)] transition-colors hover:text-[var(--accent-1)]"
+                            title="Back to profile"
+                        >
                             <ArrowLeft size={20} />
-                            <span className="font-medium">Back</span>
                         </Link>
-                        <h1 className="paper-title hidden text-lg text-[var(--accent-1)] sm:block">AI Tutor</h1>
-                        <div className="flex min-w-0 items-center gap-1.5 sm:gap-3">
-                            <div className="hidden sm:block">
-                                <DifficultyIndicator
-                                    level={difficultyLevel}
-                                    direction={difficultyDirection}
-                                    performance={difficultyPerformance}
-                                    onManualAdjust={handleManualDifficultyAdjust}
-                                />
-                            </div>
-                            {/* <LanguageSwitcher
-                                selectedLanguage={selectedLanguage}
-                                showLanguageMenu={showLanguageMenu}
-                                setShowLanguageMenu={setShowLanguageMenu}
-                                onSelectLanguage={(lang) => {
-                                    setShowLanguageMenu(false);
-                                    switchLanguage(lang);
-                                }}
-                            /> */}
+                        <div className="justify-self-center">
+                            <h1 className="sr-only">Learn</h1>
                             <ContextSwitcher
                                 selectedContext={selectedContext}
                                 showContextMenu={showContextMenu}
                                 setShowContextMenu={setShowContextMenu}
                                 onSelectContext={switchContext}
+                                variant="header"
+                            />
+                        </div>
+                        <div className="flex items-center justify-self-end gap-1.5 sm:gap-2">
+                            <DifficultyIndicator
+                                level={difficultyLevel}
+                                direction={difficultyDirection}
+                                performance={difficultyPerformance}
+                                onManualAdjust={handleManualDifficultyAdjust}
+                                compact
                             />
                             {session?.user ? (
                                 <UserMenu name={session.user.name} email={session.user.email} />
@@ -182,19 +202,20 @@ export default function LearnPage() {
                             )}
                         </div>
                     </div>
-                </header>
+                    </header>
 
-                {/* Chat Area */}
-                <ChatArea
-                    messages={messages}
-                    loading={loading}
-                    onSelectContext={switchContext}
-                    messageRefs={messageRefs}
-                    messagesEndRef={messagesEndRef}
-                />
+                    {/* Chat Area */}
+                    <ChatArea
+                        messages={messages}
+                        loading={loading}
+                        onSelectContext={switchContext}
+                        messageRefs={messageRefs}
+                        messagesEndRef={messagesEndRef}
+                    />
+                </div>
 
                 {/* Control Area */}
-                <div className="paper-panel-flat bg-transparent flex-shrink-0 z-20 rounded-none">
+                <div className="paper-panel-flat absolute inset-x-0 bottom-0 z-20 bg-[var(--learn-canvas)] rounded-none">
                     <div className="mx-auto w-full px-6 lg:px-12 py-4 flex flex-col gap-4 max-w-6xl">
                         {/* Current Sentence Display Area */}
                         <CurrentSentenceCard

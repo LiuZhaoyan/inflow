@@ -49,7 +49,7 @@ export default function ChatArea({
     const visibleMessages = messages.filter((msg) => !(msg.role === 'user' && msg.userAction));
 
     return (
-        <main className="flex-1 overflow-y-auto bg-[var(--learn-canvas)] px-4 py-5 scroll-smooth sm:px-6 sm:py-6">
+        <main className="flex-1 bg-[var(--learn-canvas)] px-4 pb-64 pt-5 sm:px-6 sm:pb-64 sm:pt-6">
             <div className="relative mx-auto w-full max-w-3xl py-3 pl-10 pr-1 sm:pl-12 sm:pr-2">
                 <div
                     aria-hidden="true"
