@@ -51,7 +51,6 @@ export default function useLearnChat() {
     const [difficultyPerformance, setDifficultyPerformance] = useState<string>('learning');
     const [placementCompleted, setPlacementCompleted] = useState(false);
     const [placementLoading, setPlacementLoading] = useState(true);
-    const [cooldownEnabled, setCooldownEnabled] = useState(true);
     const persistence = useLearnChatPersistence();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,10 +74,6 @@ export default function useLearnChat() {
         loadingRef.current = loading;
     }, [loading]);
 
-    useEffect(() => {
-        setCooldownEnabled(persistence.isCooldownEnabled());
-    }, [persistence]);
-
     const {
         isCooldownActive: isUnderstandCooldownActive,
         cooldownRemainingMs: cooldownUnderstandRemainingMs,
@@ -89,7 +84,7 @@ export default function useLearnChat() {
         flushQueuedIfReady: flushUnderstandIfReady,
         clear: clearUnderstand,
     } = useCooldownGate<ActionPayload>({
-        enabled: cooldownEnabled,
+        enabled: true,
         baseMs: UNDERSTAND_BASE_COOLDOWN_MS,
         maxMs: UNDERSTAND_MAX_COOLDOWN_MS,
         fallbackRetryAfterMs: RETRY_AFTER_FALLBACK_MS,
@@ -108,7 +103,7 @@ export default function useLearnChat() {
         flushQueuedIfReady: flushAuxIfReady,
         clear: clearAux,
     } = useCooldownGate<ActionPayload>({
-        enabled: cooldownEnabled,
+        enabled: true,
         baseMs: AUX_BASE_COOLDOWN_MS,
         maxMs: AUX_MAX_COOLDOWN_MS,
         fallbackRetryAfterMs: RETRY_AFTER_FALLBACK_MS,

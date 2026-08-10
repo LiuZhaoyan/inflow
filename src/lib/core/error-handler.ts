@@ -94,13 +94,6 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
 };
 
 /**
- * Generate unique trace ID for request tracking
- */
-function generateTraceId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
-
-/**
  * Create standardized error response
  */
 export function createErrorResponse(
@@ -111,7 +104,7 @@ export function createErrorResponse(
     error: {
       code,
       message: customMessage || ERROR_MESSAGES[code],
-      traceId: generateTraceId(),
+      traceId: crypto.randomUUID(),
     },
   };
 }

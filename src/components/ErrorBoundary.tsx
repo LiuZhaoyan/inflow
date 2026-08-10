@@ -99,22 +99,6 @@ export class ErrorBoundary extends React.Component<
 }
 
 /**
- * Hook for catching async errors
- */
-export function useAsyncError() {
-  const [, setError] = useState();
-
-  return useCallback(
-    (error: Error) => {
-      setError(() => {
-        throw error;
-      });
-    },
-    [setError]
-  );
-}
-
-/**
  * Styles for error boundary
  */
 const styles = {

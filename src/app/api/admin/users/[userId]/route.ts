@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkAdminRole } from '@/lib/auth/permissions';
+import { requireAdminRole } from '@/lib/auth/helpers';
 import { deleteUser } from '@/lib/db/user';
 import { logger } from '@/lib/core/logger';
 
@@ -14,7 +14,7 @@ export async function DELETE(
 
   try {
     // 检查管理员权限
-    const { user, errorResponse } = await checkAdminRole();
+    const { user, errorResponse } = await requireAdminRole();
     if (errorResponse) {
       logger.warn('Unauthorized admin access attempt', {
         endpoint,

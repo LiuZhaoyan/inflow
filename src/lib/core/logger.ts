@@ -29,7 +29,7 @@ interface LogEntry {
 /**
  * Anonymize user ID by showing only first 4 and last 4 characters
  */
-function anonymizeUserId(userId: string): string {
+export function anonymizeUserId(userId: string): string {
   if (!userId || userId.length <= 8) {
     return '****';
   }
@@ -127,37 +127,5 @@ export const logger = {
    */
   error(message: string, contextOrError?: LogContext | Error | unknown): void {
     log('error', message, contextOrError);
-  },
-
-  /**
-   * Helper to log API errors with standard context
-   */
-  errorWithRequest(
-    message: string,
-    {
-      requestId,
-      userId,
-      endpoint,
-      statusCode,
-      durationMs,
-      error,
-    }: {
-      requestId?: string;
-      userId?: string;
-      endpoint?: string;
-      statusCode?: number;
-      durationMs?: number;
-      error?: Error | unknown;
-    },
-  ): void {
-    const context: LogContext = {
-      ...(requestId && { requestId }),
-      ...(userId && { userId }),
-      ...(endpoint && { endpoint }),
-      ...(statusCode !== undefined && { statusCode }),
-      ...(durationMs !== undefined && { durationMs }),
-    };
-
-    log('error', message, error instanceof Error ? error : context);
   },
 };

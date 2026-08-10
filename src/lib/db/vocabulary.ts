@@ -109,11 +109,6 @@ export async function getVocabularyStatsByUser(userId: string): Promise<Vocabula
   return { total, byLanguage };
 }
 
-export async function getVocabulary(userId: string = LEGACY_SINGLE_USER_ID): Promise<VocabularyWord[]> {
-  await initVocabularyDb();
-  return getVocabularyByUser(userId);
-}
-
 export async function addWordByUser(
   userId: string,
   word: Omit<VocabularyWord, 'id' | 'createdAt'>,
@@ -136,13 +131,6 @@ export async function addWordByUser(
     .returning();
 
   return mapRowToWord(created);
-}
-
-export async function addWord(
-  word: Omit<VocabularyWord, 'id' | 'createdAt'>,
-  userId: string = LEGACY_SINGLE_USER_ID,
-): Promise<VocabularyWord> {
-  return addWordByUser(userId, word);
 }
 
 async function safeUnlink(filePath: string) {
@@ -185,10 +173,6 @@ export async function deleteWordByUser(userId: string, id: string): Promise<void
     await db
       .delete(vocabulary)
       .where(and(eq(vocabulary.id, id), eq(vocabulary.userId, userId)));
-}
-
-export async function deleteWord(id: string, userId: string = LEGACY_SINGLE_USER_ID): Promise<void> {
-  return deleteWordByUser(userId, id);
 }
 
 export async function updateWordByUser(
@@ -234,12 +218,4 @@ export async function updateWordByUser(
       .returning();
 
     return mapRowToWord(updated);
-}
-
-export async function updateWord(
-  id: string,
-  updates: Partial<VocabularyWord>,
-  userId: string = LEGACY_SINGLE_USER_ID,
-): Promise<VocabularyWord | null> {
-  return updateWordByUser(userId, id, updates);
 }

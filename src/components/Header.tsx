@@ -29,8 +29,7 @@ export default function Header({ homeLink = true, rightText = "Beta v0.1", showP
             href="/"
             className="flex items-center gap-2 font-bold text-xl tracking-tight text-[var(--ink-1)] hover:text-[var(--accent-1)] transition-colors"
           >
-            <img src="/icon.svg" alt="Inflow" className="h-6 w-6" />
-            Inflow
+            {logo}
           </Link>
         ) : (
           logo

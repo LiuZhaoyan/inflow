@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { logger } from '@/lib/core/logger';
 import { computeCooldownAfter429, computeCooldownAfterSuccess } from '@/hooks/learn/utils/cooldownPolicy';
 
 interface CooldownGateInput<T extends { queuedAt?: number }> {
@@ -40,14 +39,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
     const isBlockedRef = useRef(input.isBlocked);
     const runWithCooldownRef = useRef<((payload: T) => Promise<void>) | null>(null);
 
-    const metricsRef = useRef({
-        cooldown_blocked_count: 0,
-        cooldown_wait_ms: 0,
-        pending_action_replaced_count: 0,
-        send_after_cooldown_count: 0,
-        cooldown_429_event_count: 0,
-    });
-
     useEffect(() => {
         enabledRef.current = input.enabled;
     }, [input.enabled]);
@@ -56,10 +47,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
         onRunRef.current = input.onRun;
         isBlockedRef.current = input.isBlocked;
     }, [input.onRun, input.isBlocked]);
-
-    const logCooldownMetric = (event: string, value?: number) => {
-        logger.info('useCooldownGate: cooldown metric', { event, value });
-    };
 
     const clearTimers = useCallback(() => {
         if (cooldownTimerRef.current !== null) {
@@ -101,8 +88,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
         const waitMs = Math.max(0, Math.min(cooldownMsRef.current, input.maxMs));
         nextAllowedAtRef.current = Date.now() + waitMs;
         setCooldownRemainingMs(waitMs);
-        metricsRef.current.cooldown_wait_ms = waitMs;
-        logCooldownMetric('cooldown_wait_ms', waitMs);
 
         clearTimers();
         if (waitMs <= 0) {
@@ -128,8 +113,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
             pendingActionRef.current = null;
             setHasQueuedAction(false);
             if (next && runWithCooldownRef.current) {
-                metricsRef.current.send_after_cooldown_count += 1;
-                logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
                 void runWithCooldownRef.current(next);
             }
         };
@@ -157,8 +140,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
         setCooldownRemainingMs(0);
 
         if (next && runWithCooldownRef.current) {
-            metricsRef.current.send_after_cooldown_count += 1;
-            logCooldownMetric('send_after_cooldown_count', metricsRef.current.send_after_cooldown_count);
             void runWithCooldownRef.current(next);
         }
     }, []);
@@ -176,22 +157,14 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
             return;
         }
 
-        const hadPending = Boolean(pendingActionRef.current);
         pendingActionRef.current = {
             ...payload,
             queuedAt: now,
         };
         setHasQueuedAction(true);
 
-        if (hadPending) {
-            metricsRef.current.pending_action_replaced_count += 1;
-            logCooldownMetric('pending_action_replaced_count', metricsRef.current.pending_action_replaced_count);
-        }
-
         const waitMs = Math.max(0, nextAllowedAtRef.current - now);
         setCooldownRemainingMs(waitMs);
-        metricsRef.current.cooldown_blocked_count += 1;
-        logCooldownMetric('cooldown_blocked_count', metricsRef.current.cooldown_blocked_count);
 
         clearTimers();
         cooldownTimerRef.current = window.setTimeout(() => {
@@ -211,8 +184,6 @@ export function useCooldownGate<T extends { queuedAt?: number }>(
                 maxMs: input.maxMs,
             },
         );
-        metricsRef.current.cooldown_429_event_count += 1;
-        logCooldownMetric('429_after_cooldown_count', metricsRef.current.cooldown_429_event_count);
     }, [input.baseMs, input.fallbackRetryAfterMs, input.maxMs]);
 
     const notifySuccess = useCallback(() => {
