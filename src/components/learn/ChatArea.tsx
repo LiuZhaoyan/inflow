@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
-import type { RefObject } from 'react';
+import { Fragment, type RefObject } from 'react';
 import type { Msg } from '@/lib/types/learnTypes';
 import { CONTEXT_OPTIONS } from '@/lib/types/learnTypes';
 
@@ -9,6 +9,29 @@ interface ChatAreaProps {
     onSelectContext: (context: string) => void;
     messageRefs: RefObject<Record<string, HTMLDivElement | null>>;
     messagesEndRef: RefObject<HTMLDivElement | null>;
+}
+
+export function renderAiContent(content: string) {
+    return content.split('\n').map((line, lineIndex, lines) => (
+        <Fragment key={lineIndex}>
+            {line.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g).map((part, partIndex) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return <strong key={partIndex} className="font-semibold text-[var(--ink-0)]">{part.slice(2, -2)}</strong>;
+                }
+
+                if (part.startsWith('`') && part.endsWith('`')) {
+                    return <code key={partIndex} className="font-mono text-[0.9em] text-[var(--accent-1)]">{part.slice(1, -1)}</code>;
+                }
+
+                if (part.startsWith('*') && part.endsWith('*')) {
+                    return <em key={partIndex}>{part.slice(1, -1)}</em>;
+                }
+
+                return part;
+            })}
+            {lineIndex < lines.length - 1 && <br />}
+        </Fragment>
+    ));
 }
 
 export default function ChatArea({
@@ -98,7 +121,7 @@ export default function ChatArea({
                                                         ? 'font-medium text-[var(--accent-1)]'
                                                         : `${note?.bodyClass ?? ''} text-[var(--ink-1)]`}
                                             `}>
-                                                {msg.content}
+                                                {msg.role === 'ai' ? renderAiContent(msg.content) : msg.content}
                                             </div>
                                         </div>
                                     </div>
