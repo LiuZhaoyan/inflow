@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BookOpen, MessageCircle, ScrollText } from 'lucide-react';
 import Header from '@/components/Header';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import ProfileLoadingState from '@/components/profile/ProfileLoadingState';
@@ -99,32 +98,26 @@ export default function ProfilePage() {
     ? [
         {
           key: 'vocabulary',
-          icon: <BookOpen size={22} />,
           label: 'Vocabulary',
           total: stats.vocabulary.total,
           byLanguage: stats.vocabulary.byLanguage,
           href: '/vocabulary',
-          iconClassName: 'text-[var(--accent-1)]',
-          chipClassName: 'bg-[rgba(147,51,234,0.1)] text-[var(--accent-1)] border border-[rgba(147,51,234,0.14)]',
+          detailClassName: 'text-[var(--accent-1)]',
         },
         {
           key: 'sentences',
-          icon: <MessageCircle size={22} />,
           label: 'Mastered Sentences',
           total: stats.sentences.total,
           byLanguage: stats.sentences.byLanguage,
           href: '/learn',
-          iconClassName: 'text-[var(--success)]',
-          chipClassName: 'bg-[rgba(95,125,98,0.12)] text-[var(--success)] border border-[rgba(95,125,98,0.16)]',
+          detailClassName: 'text-[var(--success)]',
         },
         {
           key: 'stories',
-          icon: <ScrollText size={22} />,
           label: 'Stories',
           total: stats.stories.total,
           href: '/vocabulary',
-          iconClassName: 'text-[var(--ink-1)]',
-          chipClassName: 'bg-[rgba(51,65,85,0.08)] text-[var(--ink-1)] border border-[rgba(51,65,85,0.12)]',
+          detailClassName: 'text-[var(--ink-3)]',
         },
       ]
     : [];

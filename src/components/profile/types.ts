@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 export interface ProfileStats {
   vocabulary: { total: number; byLanguage: Record<string, number> };
   sentences: { total: number; byLanguage: Record<string, number> };
@@ -14,13 +12,11 @@ export interface ProfileFormState {
 
 export interface ProfileStatCard {
   key: string;
-  icon: ReactNode;
   label: string;
   total: number;
   byLanguage?: Record<string, number>;
   href: string;
-  iconClassName: string;
-  chipClassName: string;
+  detailClassName: string;
 }
 
 export interface ProfileQuickLink {

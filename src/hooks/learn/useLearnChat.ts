@@ -32,10 +32,12 @@ const RETRY_AFTER_FALLBACK_MS = 10000;
 const SUCCESS_WINDOW_FOR_DECAY = 3;
 
 export default function useLearnChat() {
+    const persistence = useLearnChatPersistence();
+
     const [messages, setMessages] = useState<Msg[]>([]);
     const [currentSentence, setCurrentSentence] = useState('');
     const [currentSentenceMessageId, setCurrentSentenceMessageId] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [selectedContext, setSelectedContext] = useState<string | null>(null);
     const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>('en');
     const [showContextMenu, setShowContextMenu] = useState(false);
@@ -51,11 +53,9 @@ export default function useLearnChat() {
     const [difficultyPerformance, setDifficultyPerformance] = useState<string>('learning');
     const [placementCompleted, setPlacementCompleted] = useState(false);
     const [placementLoading, setPlacementLoading] = useState(true);
-    const persistence = useLearnChatPersistence();
-
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-    const loadingRef = useRef(false);
+    const loadingRef = useRef(true);
     const runActionNowRef = useRef<(payload: ActionPayload) => Promise<void>>(async () => {});
     const notify429UnderstandRef = useRef<(retryAfterMs?: number) => void>(() => {});
     const notifySuccessUnderstandRef = useRef<() => void>(() => {});
@@ -158,7 +158,9 @@ export default function useLearnChat() {
         const lastContext = persistence.getLastContext(selectedLanguage);
         if (lastContext) {
             setSelectedContext(lastContext);
+            setLoading(true);
             void loadStoredChat(selectedLanguage, lastContext).then((stored) => {
+                setLoading(false);
                 if (!stored) {
                     setMessages([]);
                     setCurrentSentence('');
@@ -176,6 +178,7 @@ export default function useLearnChat() {
         setMessages([]);
         setCurrentSentence('');
         setCurrentSentenceMessageId(null);
+        setLoading(false);
     }, [
         loadMasteredSentences,
         loadStoredChat,
