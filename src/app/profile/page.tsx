@@ -5,14 +5,16 @@ import { BookOpen, MessageCircle, ScrollText } from 'lucide-react';
 import Header from '@/components/Header';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import ProfileLoadingState from '@/components/profile/ProfileLoadingState';
-import ProfilePageHeader from '@/components/profile/ProfilePageHeader';
 import ProfileQuickLinks from '@/components/profile/ProfileQuickLinks';
 import ProfileStatsSection from '@/components/profile/ProfileStatsSection';
 import ProfileStoriesSection from '@/components/profile/ProfileStoriesSection';
 import ProfileSummaryCard from '@/components/profile/ProfileSummaryCard';
+import ProfileProgressLedger, { type ProfileProgressEvent } from '@/components/profile/ProfileProgressLedger';
 import type { ProfileFormState, ProfileQuickLink, ProfileStatCard, ProfileStats } from '@/components/profile/types';
 import type { UserProfile } from '@/lib/types/user';
 import type { Story } from '@/lib/types/story';
+import type { MasteredSentence } from '@/lib/types/progress';
+import type { VocabularyWord } from '@/lib/types/vocabulary';
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -23,6 +25,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [stories, setStories] = useState<Story[]>([]);
+  const [masteredSentences, setMasteredSentences] = useState<MasteredSentence[]>([]);
+  const [vocabulary, setVocabulary] = useState<VocabularyWord[]>([]);
   const [storiesExpanded, setStoriesExpanded] = useState(true);
   const [expandedStoryId, setExpandedStoryId] = useState<string | null>(null);
 
@@ -31,11 +35,15 @@ export default function ProfilePage() {
       fetch('/api/user').then(r => r.json()),
       fetch('/api/profile/stats').then(r => r.json()),
       fetch('/api/stories').then(r => r.json()),
+      fetch('/api/mastered-sentences?limit=8').then(r => r.json()),
+      fetch('/api/vocabulary?limit=8').then(r => r.json()),
     ])
-      .then(([userData, statsData, storiesData]) => {
+      .then(([userData, statsData, storiesData, sentencesData, vocabularyData]) => {
         setProfile(userData.profile);
         setStats(statsData);
         setStories(storiesData.stories || []);
+        setMasteredSentences(sentencesData.sentences || []);
+        setVocabulary(Array.isArray(vocabularyData) ? vocabularyData : vocabularyData.words || []);
         if (userData.profile) {
           setForm({
             username: userData.profile.username || '',
@@ -126,16 +134,42 @@ export default function ProfilePage() {
     { label: 'Learn', href: '/learn', desc: 'Practice sentences' },
   ];
 
+  const progressEvents: ProfileProgressEvent[] = [
+    ...masteredSentences.map((sentence) => ({
+      id: `sentence-${sentence.id}`,
+      date: sentence.masteredAt,
+      type: 'sentence' as const,
+      title: 'Mastered a new sentence',
+      detail: sentence.content,
+      meta: sentence.context ? `Practised in ${sentence.context}` : 'Sentence practice',
+    })),
+    ...stories.map((story) => ({
+      id: `story-${story.id}`,
+      date: story.createdAt,
+      type: 'story' as const,
+      title: 'Wrote a short story',
+      detail: story.content.replace(/\*\*/g, '').slice(0, 80),
+      meta: story.language ? story.language.toUpperCase() : 'Story writing',
+    })),
+    ...vocabulary.map((word) => ({
+      id: `word-${word.id}`,
+      date: word.createdAt,
+      type: 'vocabulary' as const,
+      title: 'Added new vocabulary',
+      detail: word.word,
+      meta: word.language ? word.language.toUpperCase() : 'Vocabulary review',
+    })),
+  ].sort((a, b) => b.date - a.date).slice(0, 8);
+
   if (loading) {
     return <ProfileLoadingState />;
   }
 
   return (
     <div className="page-surface page-surface-operation text-[var(--foreground)] font-sans selection:bg-[#ede9fe] selection:text-[#4c1d95]">
-      <Header showProfile={false} />
+      <Header variant="learn" />
 
       <main className="max-w-5xl mx-auto px-4 md:px-5 pb-20 pt-10">
-        <ProfilePageHeader />
         <ProfileSummaryCard
           profile={profile}
           onEdit={() => {
@@ -152,6 +186,7 @@ export default function ProfilePage() {
           onToggleStory={(id) => setExpandedStoryId((prev) => (prev === id ? null : id))}
           onDeleteStory={handleDeleteStory}
         />
+        <ProfileProgressLedger events={progressEvents} />
         <ProfileQuickLinks links={quickLinks} />
       </main>
 

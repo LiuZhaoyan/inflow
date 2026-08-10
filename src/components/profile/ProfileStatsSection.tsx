@@ -9,7 +9,7 @@ interface ProfileStatsSectionProps {
 
 export default function ProfileStatsSection({ statCards }: ProfileStatsSectionProps) {
   return (
-    <section className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <section className="mb-10 grid grid-cols-3 rounded-[var(--radius-xl)] bg-[var(--learn-surface)] p-5 sm:p-7">
       {statCards.map((card) => {
         const CardWrapper = card.href.startsWith('#') ? 'a' : Link;
 
@@ -17,15 +17,11 @@ export default function ProfileStatsSection({ statCards }: ProfileStatsSectionPr
           <CardWrapper
             key={card.key}
             href={card.href}
-            className="paper-panel-soft group flex flex-col justify-between p-5 hover:-translate-y-0.5"
+            className="group flex min-w-0 flex-col border-r border-[var(--learn-line)] px-3 last:border-r-0 sm:px-7"
           >
             <div>
-              <div className={`paper-icon-well mb-4 h-10 w-10 ${card.iconClassName}`}>
-                {card.icon}
-              </div>
-
-              <p className="mb-1 text-sm font-medium text-[var(--ink-2)]">{card.label}</p>
-              <p className="paper-title text-3xl">{card.total}</p>
+              <p className="mb-1 truncate text-xs font-semibold text-[var(--ink-2)] sm:text-sm">{card.label}</p>
+              <p className="paper-title text-3xl sm:text-4xl">{card.total}</p>
 
               {card.byLanguage && Object.keys(card.byLanguage).length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
@@ -43,8 +39,8 @@ export default function ProfileStatsSection({ statCards }: ProfileStatsSectionPr
               )}
             </div>
 
-            <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-[var(--accent-1)] transition-all group-hover:gap-2">
-              View <ArrowRight size={14} />
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-[var(--accent-1)] transition-all group-hover:gap-2">
+              View <ArrowRight size={13} />
             </div>
           </CardWrapper>
         );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession } from 'next-auth/react';
+import { ArrowLeft, Ellipsis } from 'lucide-react';
 import UserMenu from '@/components/auth/UserMenu';
 import ProfileAvatarLink from '@/components/auth/ProfileAvatarLink';
 
@@ -9,9 +10,10 @@ export type HeaderProps = {
   homeLink?: boolean;
   rightText?: string;
   showProfile?: boolean;
+  variant?: 'default' | 'learn';
 };
 
-export default function Header({ homeLink = true, rightText = "Beta v0.1", showProfile = true }: HeaderProps) {
+export default function Header({ homeLink = true, rightText = "Beta v0.1", showProfile = true, variant = 'default' }: HeaderProps) {
   const { data: session } = useSession();
 
   const logo = (
@@ -22,7 +24,24 @@ export default function Header({ homeLink = true, rightText = "Beta v0.1", showP
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--line-0)] bg-[rgba(233,222,205,0.9)] backdrop-blur-md">
+    <header className={`sticky top-0 z-50 w-full border-b border-[var(--line-0)] backdrop-blur-md ${variant === 'learn' ? 'bg-white' : 'bg-[rgba(233,222,205,0.9)]'}`}>
+      {variant === 'learn' ? (
+        <div className="mx-auto grid w-full min-w-0 grid-cols-[1fr_auto_1fr] items-center px-4 py-2 sm:px-6 lg:px-12">
+          <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--learn-line)] bg-[rgba(251,247,251,0.54)] text-[var(--ink-1)] transition-colors hover:text-[var(--accent-1)]" title="Back to home">
+            <ArrowLeft size={20} />
+          </Link>
+          <div className="justify-self-center text-center">
+            <span className="block font-serif text-lg font-bold text-[var(--ink-0)] sm:text-2xl">Profile</span>
+            <span className="block text-[10px] font-extrabold tracking-[0.09em] text-[var(--accent-1)]">LEARNING RECORD</span>
+          </div>
+          <div className="flex items-center justify-self-end gap-2">
+            <Ellipsis size={20} className="text-[var(--ink-2)]" />
+            {showProfile && (
+              session?.user ? <UserMenu name={session.user.name} email={session.user.email} /> : <ProfileAvatarLink />
+            )}
+          </div>
+        </div>
+      ) : (
       <div className="mx-auto w-full px-6 lg:px-12 flex items-center justify-between py-4">
         {homeLink ? (
           <Link
@@ -46,6 +65,7 @@ export default function Header({ homeLink = true, rightText = "Beta v0.1", showP
           )}
         </nav>
       </div>
+      )}
     </header>
   );
 }

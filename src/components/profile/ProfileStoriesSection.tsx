@@ -21,13 +21,13 @@ export default function ProfileStoriesSection({
   onDeleteStory,
 }: ProfileStoriesSectionProps) {
   return (
-    <section id="stories" className="paper-panel-flat mb-8 p-6">
+    <section id="stories" className="mb-10">
       <button onClick={onToggleExpanded} className="flex w-full items-center justify-between">
-        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--ink-3)]">
+        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-[var(--accent-1)]">
           <ScrollText size={16} className="text-[var(--accent-1)]" />
           Your Stories
           {stories.length > 0 && (
-            <span className="paper-pill-soft paper-pill-accent normal-case font-semibold">
+            <span className="text-xs font-semibold normal-case text-[var(--ink-3)]">
               {stories.length}
             </span>
           )}
