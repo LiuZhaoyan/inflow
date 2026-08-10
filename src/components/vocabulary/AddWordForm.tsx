@@ -25,7 +25,7 @@ export default function AddWordForm({
   if (!isOpen) return null;
 
   return (
-    <div className="paper-card p-6 reveal-up relative">
+    <div className="paper-card p-6 reveal-up relative [box-shadow:0_12px_48px_-10px_rgba(147,51,234,0.18)]">
       <button
         onClick={onClose}
         className="absolute top-4 right-4 h-8 w-8 inline-flex items-center justify-center rounded-full border border-[var(--line-0)] bg-[#faf5ff] text-[var(--ink-2)] hover:text-[var(--accent-1)]"
@@ -45,7 +45,7 @@ export default function AddWordForm({
             <input
               type="text"
               placeholder="e.g. Serendipity"
-              className="paper-input"
+              className="paper-input [background:#fff]"
               value={newWord}
               onChange={(e) => onChangeWord(e.target.value)}
               autoFocus
@@ -56,7 +56,7 @@ export default function AddWordForm({
             <input
               type="text"
               placeholder="Meaning in context..."
-              className="paper-input"
+              className="paper-input [background:#fff]"
               value={newDefinition}
               onChange={(e) => onChangeDefinition(e.target.value)}
             />
@@ -67,7 +67,7 @@ export default function AddWordForm({
           <button
             type="submit"
             disabled={addingStatus !== 'idle'}
-            className="paper-btn-primary px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex h-[52px] items-center justify-center gap-2 rounded-xl border border-[#5b21b6] bg-[var(--accent-1)] px-6 text-sm font-extrabold text-white shadow-[0_4px_0_#5b21b6] transition-[filter,box-shadow] cursor-pointer hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {addingStatus === 'idle' && 'Create Card'}
             {addingStatus === 'saving' && (

@@ -29,7 +29,7 @@ export default function VocabularyToolbar({
           <button
             onClick={onGenerateStory}
             disabled={selectedCount === 0 || isGeneratingStory}
-            className="paper-btn-primary text-sm"
+            className="inline-flex h-[52px] items-center justify-center gap-2 rounded-xl border border-[#5b21b6] bg-[var(--accent-1)] px-5 text-sm font-extrabold text-white shadow-[0_4px_0_#5b21b6] transition-[filter,box-shadow] cursor-pointer hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isGeneratingStory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             Generate Story
