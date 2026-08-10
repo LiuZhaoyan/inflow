@@ -45,13 +45,13 @@ export default function VocabularyToolbar({
         <>
           <button
             onClick={onStartSelection}
-            className="paper-btn-ghost text-sm"
+            className="inline-flex h-[52px] w-[140px] items-center justify-center rounded-xl border border-[var(--line-0)] bg-[var(--paper-note)] px-3 text-sm font-bold text-[var(--ink-1)] shadow-[0_2px_0_var(--line-0)] transition-colors cursor-pointer hover:text-[var(--accent-1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
           >
             Select to Practice
           </button>
           <button
             onClick={onAddWord}
-            className="paper-btn-primary text-sm"
+            className="inline-flex h-[52px] w-[140px] items-center justify-center gap-2 rounded-xl border border-[#5b21b6] bg-[var(--accent-1)] px-3 text-sm font-extrabold text-white shadow-[0_4px_0_#5b21b6] transition-[filter,box-shadow] cursor-pointer hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ring)]"
           >
             <Plus className="w-4 h-4" />
             Add Word

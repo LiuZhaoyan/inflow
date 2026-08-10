@@ -113,8 +113,9 @@ export default function StorySidebar({
     <>
       <button
         onClick={onToggle}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 bg-white border border-[var(--line-0)] shadow-sm rounded-l-full px-3 py-2 text-sm text-[var(--ink-2)] hover:text-[var(--accent-1)] hover:border-[var(--line-1)]"
+        className="flex h-[64px] w-10 items-center justify-center bg-white border border-[var(--line-0)] shadow-sm rounded-b-full px-2 py-2 text-sm text-[var(--ink-2)] [writing-mode:vertical-rl] hover:text-[var(--accent-1)] hover:border-[var(--line-1)]"
         title={isOpen ? 'Hide Story' : 'Show Story'}
+        aria-expanded={isOpen}
       >
         <span className="inline-flex items-center gap-1">
           <Wand2 className="w-4 h-4 text-[var(--accent-1)]" />

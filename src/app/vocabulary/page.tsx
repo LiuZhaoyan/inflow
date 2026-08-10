@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useVocabularyData from '@/hooks/vocabulary/useVocabularyData';
 import useVocabularyActions from '@/hooks/vocabulary/useVocabularyActions';
 import useStoryMode from '@/hooks/vocabulary/useStoryMode';
@@ -9,7 +9,6 @@ import AddWordForm from '@/components/vocabulary/AddWordForm';
 import LanguageFilterRail from '@/components/vocabulary/LanguageFilterRail';
 import StorySidebar from '@/components/vocabulary/StorySidebar';
 import Header from '@/components/Header';
-import SectionTitle from '@/components/SectionTitle';
 import VocabularyToolbar from '@/components/vocabulary/VocabularyToolbar';
 import WordGrid from '@/components/vocabulary/WordGrid';
 
@@ -60,24 +59,36 @@ export default function VocabularyPage() {
     : words.filter(w => w.language === selectedLanguage);
 
   return (
-    <div className="page-surface page-surface-reading text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
-      <Header />
+    <div className="min-h-screen bg-[var(--paper-0)] text-[var(--foreground)] selection:bg-[#ede9fe] selection:text-[#4c1d95]">
+      <Header variant="learn" learnTitle="Vocabulary" learnSubtitle="STUDY COLLECTION" />
+
+      <div className="sticky top-[52px] z-40 h-[72px] bg-[var(--paper-0)]">
+        <div className="grid h-full grid-cols-[1fr_auto_1fr] items-start">
+          <div />
+          <LanguageFilterRail
+            availableLanguages={availableLanguages}
+            selectedLanguage={selectedLanguage}
+            onSelect={setSelectedLanguage}
+          />
+          <div className="flex justify-end">
+          <StorySidebar
+            isOpen={isStorySidebarOpen}
+            story={story}
+            translation={translation}
+            stories={stories}
+            activeStoryId={activeStoryId}
+            isGeneratingStory={isGeneratingStory}
+            onToggle={() => setIsStorySidebarOpen(prev => !prev)}
+            onClose={() => setIsStorySidebarOpen(false)}
+            onSelectStory={selectStory}
+            onDeleteStory={deleteStory}
+            onUpdateStoryAudio={updateStoryAudioPath}
+          />
+        </div>
+      </div>
 
       <main className="w-full px-6 lg:px-12 pb-20">
-         
-         {/* Title Section */}
-        <div className="mb-4 max-w-4xl mx-auto reveal-up">
-            <div className="flex flex-col">
-              <SectionTitle
-                eyebrow="Your space"
-                title="Vocabulary &"
-                highlight="Flashcards"
-                description="Browse your collection, open a story, or upload fresh input."
-              />
-            </div>
-         </div>
-
-         <div className="sticky top-[var(--header-height)] z-40">
+         <div>
            <div className="max-w-4xl mx-auto">
              <VocabularyToolbar
                selectionMode={selectionMode}
@@ -102,26 +113,6 @@ export default function VocabularyPage() {
               onChangeDefinition={setNewDefinition}
               onSubmit={handleAddWord}
               onClose={() => setIsAdding(false)}
-             />
-
-             <LanguageFilterRail
-               availableLanguages={availableLanguages}
-               selectedLanguage={selectedLanguage}
-               onSelect={setSelectedLanguage}
-             />
-
-             <StorySidebar
-               isOpen={isStorySidebarOpen}
-               story={story}
-              translation={translation}
-               stories={stories}
-               activeStoryId={activeStoryId}
-               isGeneratingStory={isGeneratingStory}
-               onToggle={() => setIsStorySidebarOpen(prev => !prev)}
-               onClose={() => setIsStorySidebarOpen(false)}
-               onSelectStory={selectStory}
-               onDeleteStory={deleteStory}
-               onUpdateStoryAudio={updateStoryAudioPath}
              />
 
              <WordGrid
