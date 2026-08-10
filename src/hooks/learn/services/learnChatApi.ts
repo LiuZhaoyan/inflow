@@ -4,6 +4,15 @@ import type { UserProfile } from '@/lib/types/user';
 import { fetchWithRetry } from '@/lib/http/fetch-with-retry';
 import { parseRetryAfterMs } from '@/hooks/learn/utils/cooldownPolicy';
 
+// ponytail: fallback for envs where crypto.randomUUID isn't available (non-HTTPS, old browsers)
+function generateUUID(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c === 'x' ? 0 : 3);
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+    });
+}
+
 const RETRY_AFTER_FALLBACK_MS = 10000;
 
 export interface LearnChatApiError extends Error {
@@ -136,7 +145,7 @@ export async function fetchChatHistory(language: string, context: string): Promi
 }
 
 export async function postLearnChatAction(input: LearnChatActionRequest): Promise<LearnChatActionResponse> {
-    const requestId = crypto.randomUUID();
+    const requestId = generateUUID();
     const res = await fetchWithRetry('/api/learn-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

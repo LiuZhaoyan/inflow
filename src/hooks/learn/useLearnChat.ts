@@ -321,11 +321,6 @@ export default function useLearnChat() {
             }
 
             logger.error('useLearnChat: Failed to execute chat action', error);
-            setMessages(prev => [...prev, {
-                id: Date.now().toString() + 'err',
-                role: 'ai',
-                content: 'Sorry, I encountered an error. Please try again.',
-            }]);
         } finally {
             setLoading(false);
             loadingRef.current = false;

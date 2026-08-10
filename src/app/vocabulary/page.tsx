@@ -84,6 +84,7 @@ export default function VocabularyPage() {
             onDeleteStory={deleteStory}
             onUpdateStoryAudio={updateStoryAudioPath}
           />
+          </div>
         </div>
       </div>
 

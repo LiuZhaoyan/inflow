@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
 import { logger } from './logger';
 
 /**
@@ -104,7 +105,7 @@ export function createErrorResponse(
     error: {
       code,
       message: customMessage || ERROR_MESSAGES[code],
-      traceId: crypto.randomUUID(),
+      traceId: uuidv4(),
     },
   };
 }
