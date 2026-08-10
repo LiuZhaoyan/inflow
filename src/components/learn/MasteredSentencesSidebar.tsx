@@ -12,6 +12,22 @@ interface Props {
 export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const sentenceGroups = sentences.slice().reverse().reduce<{ date: string; sentences: MasteredSentence[] }[]>((groups, sentence) => {
+    const date = new Date(sentence.masteredAt).toLocaleDateString(undefined, {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const group = groups[groups.length - 1];
+
+    if (group?.date === date) {
+      group.sentences.push(sentence);
+    } else {
+      groups.push({ date, sentences: [sentence] });
+    }
+
+    return groups;
+  }, []);
 
   const playSavedAudio = async (sentence: MasteredSentence) => {
     if (playingId) return;
@@ -68,7 +84,7 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
 
         {/* Content List */}
         {isOpen && (
-          <div className="flex-1 overflow-y-auto px-4 space-y-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-4 custom-scrollbar">
             {sentences.length === 0 ? (
                  <div className="paper-panel-soft flex flex-col items-center justify-center h-40 text-[var(--ink-3)] text-center p-4 rounded-xl">
                     <Book size={24} className="mb-2 opacity-50"/>
@@ -76,45 +92,45 @@ export default function MasteredSentencesSidebar({ sentences, onDelete, onSelect
                     <p className="text-xs mt-1">Keep learning!</p>
                  </div>
             ) : (
-                sentences.slice().reverse().map((s) => (
-                    <div
-                      key={s.id}
-                      onClick={() => onSelect?.(s)}
-                      className="paper-panel-soft group p-2.5 text-sm transition-all cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start gap-1.5">
-                         <p className="text-[var(--ink-1)] font-medium leading-normal flex-1">{s.content}</p>
-                         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                           <button
+                sentenceGroups.map((group) => (
+                  <section key={group.date} className="mb-5 last:mb-0">
+                    <h3 className="mb-1.5 px-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--accent-1)]">
+                      {group.date}
+                    </h3>
+                    {group.sentences.map((s) => (
+                      <div
+                        key={s.id}
+                        onClick={() => onSelect?.(s)}
+                        className="group flex cursor-pointer items-center gap-2 rounded-[4px] px-2 py-2 text-sm transition-colors hover:bg-[rgba(240,228,244,0.7)]"
+                      >
+                        <p className="min-w-0 flex-1 truncate font-medium leading-normal text-[var(--ink-1)]">{s.content}</p>
+                        <div className="flex flex-shrink-0 items-center gap-0.5">
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               playSavedAudio(s);
                             }}
-                            className={`paper-btn-flat min-h-0 rounded-full p-1.5 text-[var(--accent-1)] ${playingId === s.id ? 'animate-pulse' : 'opacity-60 group-hover:opacity-100'}`}
+                            className={`min-h-0 rounded-full p-1.5 text-[var(--accent-1)] transition-colors hover:bg-[rgba(126,34,206,0.08)] ${playingId === s.id ? 'animate-pulse' : 'opacity-60 group-hover:opacity-100'}`}
                             title="Play audio"
-                           >
-                            <Volume2 size={16} />
-                           </button>
-                           {onDelete && (
+                          >
+                            <Volume2 size={15} />
+                          </button>
+                          {onDelete && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onDelete(s.id);
                               }}
-                              className="rounded-full p-1.5 text-[var(--danger)] transition-colors opacity-60 group-hover:opacity-100 hover:bg-[rgba(220,38,38,0.08)]"
+                              className="rounded-full p-1.5 text-[var(--danger)] transition-colors opacity-60 hover:bg-[rgba(220,38,38,0.08)] group-hover:opacity-100"
                               title="Delete sentence"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={14} />
                             </button>
-                           )}
-                         </div>
-                      </div>
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <span className="paper-pill-soft paper-pill-ink text-[10px] font-mono">
-                                {new Date(s.masteredAt).toLocaleDateString()}
-                            </span>
+                          )}
                         </div>
-                    </div>
+                      </div>
+                    ))}
+                  </section>
                 ))
             )}
           </div>
