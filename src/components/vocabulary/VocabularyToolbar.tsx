@@ -20,7 +20,7 @@ export default function VocabularyToolbar({
   onAddWord,
 }: VocabularyToolbarProps) {
   return (
-    <div className="flex w-full items-center justify-end gap-3 mt-4">
+    <div className="flex items-center gap-2">
       {selectionMode ? (
         <>
           <span className="paper-chip">

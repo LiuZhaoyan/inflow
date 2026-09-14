@@ -70,7 +70,16 @@ export default function VocabularyPage() {
             selectedLanguage={selectedLanguage}
             onSelect={setSelectedLanguage}
           />
-          <div className="flex justify-end">
+          <div className="flex justify-end items-start gap-2 pt-1">
+            <VocabularyToolbar
+              selectionMode={selectionMode}
+              selectedCount={selectedIds.size}
+              isGeneratingStory={isGeneratingStory}
+              onGenerateStory={generateStory}
+              onCancelSelection={resetStory}
+              onStartSelection={() => setSelectionMode(true)}
+              onAddWord={() => setIsAdding(true)}
+            />
           <StorySidebar
             isOpen={isStorySidebarOpen}
             story={story}
@@ -89,19 +98,6 @@ export default function VocabularyPage() {
       </div>
 
       <main className="w-full px-3 lg:px-6 pb-20">
-         <div>
-           <div>
-             <VocabularyToolbar
-               selectionMode={selectionMode}
-               selectedCount={selectedIds.size}
-               isGeneratingStory={isGeneratingStory}
-               onGenerateStory={generateStory}
-               onCancelSelection={resetStory}
-               onStartSelection={() => setSelectionMode(true)}
-               onAddWord={() => setIsAdding(true)}
-             />
-           </div>
-         </div>
 
          <div className="space-y-8 pt-6">
              
