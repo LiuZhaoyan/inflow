@@ -1,1 +1,0 @@
-ALTER TABLE `chat_messages` ADD COLUMN `user_action` text;

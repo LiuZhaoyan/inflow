@@ -1,0 +1,85 @@
+{
+  "id": "fsi-ko-unit1-dialogue-a-v1",
+  "title": "初次见面 · 问候与自我介绍",
+  "description": "同一段对话，先带停顿练习，再听连贯版本。10 个小片段，约 1 分钟。",
+  "duration": 63,
+  "audio": "/materials/fsi-unit1-dialogue-a.mp3",
+  "source": {
+    "url": "https://fsi-languages.yojik.eu/languages/FSI/fsi-korean-basic-course-original.html",
+    "textUrl": "https://fsi-languages.yojik.eu/languages/FSI/Korean/Basic/Volume%201/Fsi-KoreanBasicCourseVolume1-StudentText.pdf#page=26",
+    "note": "Foreign Service Institute（美国外交学院），Korean Basic Course Vol. 1，B. Nam Park，1968，第一课对话 A；通过 Yojik 档案镜像获取。历史正式语体，不作为现代日常用语的唯一范本。先播放原录音带停顿版，再播放连贯版；没有合成语音。",
+    "rights": "档案页声明原版课程属公共领域，但本 MP3 元数据另标注 Non-commercial educational use only。本素材仅用于非商业学习验证；不将网站声明视为已解决的商业再分发授权。中文参考译文与切段由 Inflow 整理。"
+  },
+  "segments": [
+    {
+      "id": "p1",
+      "start": 0,
+      "end": 5.9,
+      "text": "안녕하십니까? 네, 안녕하십니까?",
+      "translation": "您好。是的，您好。"
+    },
+    {
+      "id": "p2",
+      "start": 5.9,
+      "end": 14.4,
+      "text": "처음 뵙습니다. 김기수입니다.",
+      "translation": "初次见面。我叫金基洙。"
+    },
+    {
+      "id": "p3",
+      "start": 14.4,
+      "end": 24.2,
+      "text": "제 이름은 제임스입니다. 선생은 미국 사람입니까?",
+      "translation": "我叫詹姆斯。您是美国人吗？"
+    },
+    {
+      "id": "p4",
+      "start": 24.2,
+      "end": 34.7,
+      "text": "네, 그렇습니다. 선생은 무엇을 하십니까?",
+      "translation": "是的。您从事什么工作？"
+    },
+    {
+      "id": "p5",
+      "start": 34.7,
+      "end": 46.3,
+      "text": "저는 학생입니다. 무엇을 공부합니까? 한국말을 공부합니다.",
+      "translation": "我是学生。您学什么？我学韩语。"
+    },
+    {
+      "id": "p6",
+      "start": 46.3,
+      "end": 49.3,
+      "text": "안녕하십니까? 네, 안녕하십니까?",
+      "translation": "您好。是的，您好。"
+    },
+    {
+      "id": "p7",
+      "start": 49.3,
+      "end": 53.2,
+      "text": "처음 뵙습니다. 김기수입니다. 제 이름은 제임스입니다.",
+      "translation": "初次见面。我叫金基洙。我叫詹姆斯。"
+    },
+    {
+      "id": "p8",
+      "start": 53.2,
+      "end": 56.2,
+      "text": "선생은 미국 사람입니까? 네, 그렇습니다.",
+      "translation": "您是美国人吗？是的。"
+    },
+    {
+      "id": "p9",
+      "start": 56.2,
+      "end": 59.5,
+      "text": "선생은 무엇을 하십니까? 저는 학생입니다.",
+      "translation": "您从事什么工作？我是学生。"
+    },
+    {
+      "id": "p10",
+      "start": 59.5,
+      "end": 63,
+      "text": "무엇을 공부합니까? 한국말을 공부합니다.",
+      "translation": "您学什么？我学韩语。"
+    }
+  ]
+}

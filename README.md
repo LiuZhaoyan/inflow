@@ -1,122 +1,48 @@
-<div align="center">
-   <img src="src/app/icon.svg" alt="Inflow Icon" width="64" height="64" />
-   <h1>Inflow</h1>
-</div>
+# Inflow
 
-**Acquire language, don't memorize it.**
+韩语结构化精听 MVP：整段盲听 → 分段听写 → 渐进提示 → 理解自评与笔记 → 薄弱片段复习。
 
-Inflow is an immersive language learning application built with Next.js. It follows the philosophy of comprehensible input: learners improve by working with language that is meaningful and slightly above their current level.
+## 启动
 
-## Philosophy
+需要 Node.js 20.9+。无需 API Key、账号或数据库。
 
-Inflow is designed around contextual language acquisition instead of rote memorization.
-
-- **Contextual Learning**: Learn words within story and practice context.
-- **AI-Powered Assistance**: Get concise explanations and translations for difficult sentences.
-- **Guided Practice**: Practice one sentence at a time with adaptive difficulty.
-- **Distraction-Free Study**: Keep the interface focused on reading, vocabulary, and review.
-
-## Features
-
-- **AI Explanations**: Click or submit sentences for concise, context-aware explanations.
-- **AI Depiction**: Optionally generate scene images to support comprehension.
-- **AI Story Builder**: Create short stories from a vocabulary list.
-- **Guided Practice Chat**: Practice one sentence at a time with explanations and translations.
-- **Text-to-Speech**: Generate audio for practice sentences and mastered items.
-- **Multi-language Support**: Auto-detection across major languages.
-- **Progress Tracking**: Manage vocabulary, stories, mastered sentences, and learning progress.
-
-## Tech Stack
-
-- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
-- **Language**: TypeScript + React 19
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/)
-- **UI Components**: [Lucide React](https://lucide.dev/), [Framer Motion](https://www.framer.com/motion/)
-- **AI Integration**: OpenAI-compatible chat + image APIs
-- **TTS**: PPInfra / MiniMax Speech (server-side)
-- **Data Storage**: Drizzle ORM + SQLite (better-sqlite3)
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm, pnpm, or yarn
-
-### Installation
-
-1. Clone the repository.
-
-   ```bash
-   git clone https://github.com/yourusername/inflow.git
-   cd inflow
-   ```
-
-2. Install dependencies.
-
-   ```bash
-   npm install
-   ```
-
-3. Configure environment variables.
-
-   Create a `.env.local` file in the root directory:
-
-   ```env
-   API_KEY=your_openai_api_key
-   BASE_URL=https://api.openai.com/v1
-
-   ENABLE_AI_DEPICT=true
-   AI_DEPICT_API_URL=https://api.openai.com/v1/images/generations
-   ```
-
-4. Run the development server.
-
-   ```bash
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000).
-
-## Scripts
-
-- `npm run dev` - start dev server
-- `npm run build` - build for production
-- `npm run start` - run production server
-- `npm run lint` - lint codebase
-- `npm run db:generate` - generate Drizzle migration files
-- `npm run db:migrate` - apply migrations to SQLite database
-- `npm run db:studio` - open Drizzle Studio
-
-## Project Structure
-
-```text
-inflow/
-├── src/
-│   ├── app/                 # Next.js App Router pages and API routes
-│   ├── components/          # React components
-│   ├── hooks/               # Custom React hooks
-│   └── lib/
-│       ├── ai/              # OpenAI-compatible client
-│       ├── auth/            # NextAuth configuration and permissions
-│       ├── db/              # Drizzle schema and database access
-│       ├── domain/          # Difficulty engine and domain logic
-│       ├── http/            # HTTP utilities
-│       ├── media/           # Image and TTS services
-│       └── types/           # Shared TypeScript types
-├── drizzle/                 # Drizzle Kit migration files
-├── data/                    # SQLite database files (runtime, ignored)
-├── public/uploads/          # Generated images and audio
-├── next.config.ts
-├── drizzle.config.ts
-└── tsconfig.json
+```bash
+npm ci
+npm run dev
 ```
 
-## Storage Notes
+打开 http://localhost:3000。生产运行使用 `npm run build && npm start`。
 
-- Application data such as users, progress, vocabulary, stories, and chat history is stored in SQLite under `data/`.
-- Generated media such as images and audio is stored in `public/uploads/`.
+## 实现范围
 
-## License
+- Next.js 单页、原生音频播放器；分段循环、0.6–1.2 倍速。
+- 听写按韩文字块比较，忽略空格、标点；空白也可提交。结果不直接泄露缺失字符。
+- 提交后依次开放字数、部分字符、原文、中文参考译文。
+- 自主查词、理解自评与笔记。无提示听写全对且自评理解，3 天后复习；其他情况进入薄弱列表，1 天后复习，也可提前练。
+- 进度保存在当前浏览器 localStorage；刷新恢复。清理浏览器数据会丢失，没有跨设备同步。
+- 背诵和复述由用户自行进行。听写匹配与自评不是客观语义理解测试，也不代表长期掌握。
 
-This project is licensed under the Apache License 2.0. See the LICENSE file for details.
+## 文件
+
+- `src/app/`：页面入口、样式与原 Logo。
+- `src/listening/Practice.tsx`：学习页面与播放控制。
+- `src/listening/practice.ts`：听写比较、掌握判定和存储校验。
+- `src/listening/lesson.json`：首份素材及时间戳。
+- `public/materials/`：真实录音节选和来源说明。
+
+首份素材是 FSI 1968 年韩语课程对话 A，约 63 秒、10 个片段，带停顿版接连贯版。来源权威性指原编写机构；下载站是第三方档案镜像。教材年代较早，采用正式语体。参见 [素材来源与核验记录](public/materials/SOURCE.md)。录音元数据带非商业教育用途限制，不能把项目的 Apache-2.0 许可套用于该素材；商业发行前须解决授权或换用许可明确的素材。
+
+只有一份素材用于验证完整流程；上传、自动分段、LLM 和大素材库不在此版中。后续维护素材时同时校对录音、原文和时间戳。
+
+## 验证
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+人工试用：听完整素材，提交一次错误听写，逐级请求提示并自评；刷新确认恢复；从薄弱列表重新练习；完成全部片段后回听全文。
+
+产品边界见 [MVP 定义](STRUCTURED_INTENSIVE_LISTENING_MVP.md)。代码许可见 [LICENSE](LICENSE)。

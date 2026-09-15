@@ -1,6 +1,6 @@
 {
   "name": "inflow",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,40 +8,19 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit --pretty false",
-    "test": "tsx --test \"src/**/*.test.ts\"",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "test": "node --import tsx --test src/listening/*.test.ts"
   },
   "dependencies": {
-    "@auth/drizzle-adapter": "^1.11.1",
-    "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.6.2",
-    "clsx": "^2.1.1",
-    "drizzle-orm": "^0.45.1",
-    "framer-motion": "^12.23.26",
-    "franc": "^6.2.0",
-    "lucide-react": "^0.562.0",
     "next": "16.1.1",
-    "next-auth": "^5.0.0-beta.30",
-    "openai": "^6.15.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.0",
-    "uuid": "^13.0.0"
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/uuid": "^10.0.0",
-    "drizzle-kit": "^0.31.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
     "tsx": "^4.23.0",
     "typescript": "^5"
   }
