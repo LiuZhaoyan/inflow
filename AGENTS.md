@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and React 19. Page entry, layout, styles and the retained Logo live in `src/app/`. The learning UI, dictation logic, tests and lesson JSON live in `src/listening/`. Audio and provenance belong in `public/materials/`. Progress is browser-local. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Product scope is defined in `STRUCTURED_INTENSIVE_LISTENING_MVP.md`.
+Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and React 19. Page entry, layout, styles and the retained Logo live in `src/app/`. The learning UI, dictation logic, tests and lesson JSON live in `src/listening/`. Audio and provenance belong in `public/materials/`. Progress is browser-local in the retained legacy MVP. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; `docs/STRUCTURED_INTENSIVE_LISTENING_MVP.md` is a historical record of the superseded preloaded dictation MVP.
 
 ## Build, Test, and Development Commands
 
@@ -18,7 +18,7 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 - Use TypeScript with strict compiler settings and the `@/*` path alias for imports from `src/`
 - Follow existing formatting: two-space indentation is common in config files, while several test files use four spaces
 - Name React components in PascalCase, hooks with `use` prefixes, and route handlers as `route.ts`
-- Keep dictation and progress rules in `src/listening/practice.ts`. Prefer native browser features and existing dependencies; the MVP needs no LLM, account system or database.
+- Keep dictation and progress rules in `src/listening/practice.ts`. Prefer native browser features and existing dependencies. The retained legacy MVP needs no LLM, account system or database; current processing choices are documented in `docs/PRODUCT_SPEC.md` and `docs/ROADMAP.md`.
 
 ## Testing Guidelines
 

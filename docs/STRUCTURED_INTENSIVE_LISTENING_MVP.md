@@ -1,5 +1,7 @@
 # 结构化精听 MVP
 
+> 历史文档：本文记录预置韩语素材、听写与复习 MVP 的旧方案，不代表当前无字幕媒体精听任务的范围或完成状态。当前产品规划见 [PRODUCT_SPEC.md](PRODUCT_SPEC.md)，实施路线见 [ROADMAP.md](ROADMAP.md)，本次任务见 [INTENSIVE_LISTENING_TASK.md](INTENSIVE_LISTENING_TASK.md)。
+
 ## 产品定位
 
 Inflow 面向已掌握目标语言文字和基础发音、但还难以理解真实内容的初级学习者。
