@@ -1,86 +1,88 @@
-# 移动端优先精听任务
+# Mobile-First Intensive Listening Task
 
-状态：已批准，实施中；本文件记录范围与验收，不代表功能完成。
-更新时间：2026-09-16
+Status: approved. The core page and local processing path are implemented; real-media backend acceptance is recorded, while complete browser acceptance remains unfinished.
+Last updated: 2026-09-16
 
-## 1. 范围来源与文档关系
+## 1. Scope and document relationships
 
-本任务依据用户提供的 Photo 1.jpg、Photo 2.jpg 原型，以及已确认的产品目标。页面以手机竖屏为第一优先级，同时保证桌面浏览器可用。
+This task is based on the user-provided Photo 1.jpg and Photo 2.jpg prototypes and the confirmed product goals. The page prioritizes a vertical phone layout while remaining usable in desktop browsers.
 
-- 长远产品方向见 [PRODUCT_SPEC.md](PRODUCT_SPEC.md)，包括后续可考虑的学习连续性、PWA 与本地 Desktop 服务。
-- 本次交付聚焦浏览器内的移动端优先精听页和真实媒体处理流程。
-- [STRUCTURED_INTENSIVE_LISTENING_MVP.md](STRUCTURED_INTENSIVE_LISTENING_MVP.md) 是历史文档，描述旧版预置素材、听写验证和复习逻辑，不能当作本次范围或完成依据。
+- The long-term product direction is in [PRODUCT_SPEC.md](PRODUCT_SPEC.md), including possible learning continuity, PWA support and a local Desktop service.
+- This delivery focuses on the mobile-first browser intensive-listening page and the real-media processing path.
+- [STRUCTURED_INTENSIVE_LISTENING_MVP.md](STRUCTURED_INTENSIVE_LISTENING_MVP.md) is a historical document describing the superseded preloaded-material, dictation and review design. It is not evidence for this scope or its completion.
 
-## 2. 本次目标
+## 2. Current goal
 
-对真实无字幕音频和视频完成：
+For real audio and video without subtitles:
 
-选择媒体 → 自动转写与切分 → 生成带时间范围的句子和原文 → 切句播放 → 意群揭晓 → 倍速与循环 → 当前句自动翻译并在底部显示。
+Choose media → automatically transcribe and segment it → generate sentences with time ranges and source text → play sentence by sentence → reveal meaning groups → change speed and loop → generate and show the current-sentence translation at the bottom.
 
-自动翻译属于本次范围。默认先验证的处理路径是 Next.js Node API 调用本地 Python worker，使用 faster-whisper base CPU int8 转写，按 Whisper 词时间戳切句，使用 kiwipiepy 0.23.2 根据词性和助词边界划分意群，使用 Argos ko→en→zh 模型经 CTranslate2 离线翻译。首次运行需要下载 HuggingFace/Argos 权重；浏览器会把媒体上传到当前 Next.js 服务所在机器，由该机器上的 Python worker 处理，临时文件在处理后清理，不发送给第三方。该路径仍需以音频和视频的完整实测记录确认，不能仅因接口或单次处理成功就标为最终可用。
+Automatic translation is in scope. The initial processing path uses a Next.js Node API calling a local Python worker with faster-whisper base CPU int8 transcription, Whisper word-timestamp sentence boundaries, kiwipiepy 0.23.2 part-of-speech and particle boundaries for meaning groups, and Argos ko→en→zh translation through CTranslate2. The first run downloads Hugging Face and Argos weights. The browser uploads media to the machine running the current Next.js service; that machine's Python worker processes it, temporary files are removed afterward, and the media is not sent to third parties. This path must still be assessed through complete audio and video evidence and must not be called the final solution merely because an endpoint or a single request succeeds.
 
-## 3. 前置处理路径决策
+## 3. Processing-path decision before full acceptance
 
-实施第一步是用真实无字幕音频和视频验证上述最小处理路径，覆盖自动转写、时间边界、意群划分和翻译，并记录：
+The first implementation step is to validate the minimum processing path with real audio and video, covering transcription, timing boundaries, meaning groups and translation, while recording:
 
-- 处理运行位置、等待时间和失败表现；
-- 音频与视频的播放完整性，以及原文和声音是否对应；
-- 意群是否适合逐步揭晓，切句边界是否可用；
-- 首次下载权重的运行条件，以及模型和依赖的许可；
-- 媒体是否只在当前 Next.js 服务所在机器上处理，以及处理结果的保存或清理方式。
+- processing location, wait time and failure behavior;
+- audio and video playback completeness and whether source text corresponds to the sound;
+- whether meaning groups support progressive reveal and whether sentence boundaries are usable;
+- first-run weight-download conditions and the licenses of models and dependencies;
+- whether media is processed only on the current Next.js service machine and how media and results are retained or removed.
 
-当前默认路径是待完整验收的本地方案，不代表最终模型或部署决定。若后续需要接入付费服务或把媒体上传到外部服务，接入前必须向用户说明服务、费用、上传内容、处理位置和保留方式。
+The current default path is a local approach awaiting complete acceptance, not a final model or deployment decision. If a paid service or external media upload is later needed, the service, cost, uploaded content, processing location and retention policy must be explained before integration.
 
-当前实施约定的接口如下，接口本身不等于处理方案已经完成验收：
+The current implementation contract is:
 
-- “POST /api/transcribe”：multipart/form-data 的 file 字段，返回 { segments: [{ start, end, text, groups: string[] }] }。
-- “POST /api/translate”：JSON { text }，返回 { translation }。
-- 两个接口的失败响应均为 { error }，页面需要给出可理解的提示。
+- `POST /api/transcribe`: a `multipart/form-data` `file` field, returning `{ segments: [{ start, end, text, groups: string[] }] }`.
+- `POST /api/translate`: JSON `{ text }`, returning `{ translation }`.
+- Both endpoints return `{ error }` on failure, and the page must show an understandable message.
 
-## 4. 七阶段实施与验收
+The interface contract itself does not prove that the processing approach has passed acceptance.
 
-| 阶段 | 工作内容 | 验收标准 |
+## 4. Seven implementation and acceptance stages
+
+| Stage | Work | Acceptance |
 | --- | --- | --- |
-| 1. 文档归位 | 将 Spec、ROADMAP 和本任务文档统一放入 docs/，文档纳入 Git，更新所有本地链接。 | 文件未被 ignore，迁移后的链接有效。 |
-| 2. 页面布局 | 按原型实现媒体区、进度条、上一句／下一句、切句、reveal、原文区、倍速／循环／翻译入口和底部译文区。 | 手机竖屏符合原型结构；桌面浏览器可用；主要控件不溢出、不遮挡。 |
-| 3. 媒体导入与切分 | 选择音频或视频并完成播放加载；对无字幕媒体生成带起止时间的句子、原文和意群。 | 使用真实无字幕媒体得到真实切分结果；上一句／下一句定位到对应范围；首尾按钮边界正确。 |
-| 4. 意群与 reveal | 句子按意群揭晓，支持少量、更多、全句和隐藏。 | 每次完整揭晓意群；更多保留少量已揭晓内容；全句显示完整原文；切句后默认隐藏。 |
-| 5. 扇形交互 | 移动端长按 reveal 展开，滑至选项后松开选择；桌面点击展开并选择。 | 三个选项可准确选择；移出选项松开可取消；普通页面滚动不误触选择；菜单不被裁切。 |
-| 6. 倍速、循环与翻译 | 调整播放速度、循环当前句、请求当前句自动翻译并展示。 | 倍速实际生效；循环不进入下一句；译文显示在底部且可独立收起；切句后译文默认隐藏；失败状态可理解。 |
-| 7. 完整流程验证 | 用真实无字幕音频和视频走完全部操作；记录子代理测试结果并由主代理审核。 | 导入 → 切分 → 切句 → 意群揭晓 → 倍速／循环 → 查看译文完整可用；处理失败有可理解提示。 |
+| 1. Document placement | Put the specification, roadmap and task document under `docs/`, commit them to Git and update local links. | Files are not ignored and migrated links work. |
+| 2. Page layout | Implement the media area, progress bar, previous/next, sentence navigation, reveal, source-text area, speed/loop/translation entry and bottom translation area based on the prototypes. | The vertical phone layout follows the prototypes; desktop browsers work; primary controls neither overflow nor cover one another. |
+| 3. Media import and segmentation | Select audio or video, load it for playback and generate sentences with start/end times, source text and meaning groups for subtitle-free media. | Real subtitle-free media produces real segments; previous/next locates the corresponding range; first and last controls have correct boundaries. |
+| 4. Meaning groups and reveal | Reveal small, more and full amounts by sentence-level meaning groups, with hiding. | Every reveal shows complete groups; more keeps the small reveal; full shows the complete source text; changing sentences hides text by default. |
+| 5. Fan interaction | On mobile, long-press reveal to open the fan, slide to an option and release; on desktop, click to open and choose. | All three options can be selected; releasing outside cancels; ordinary scrolling does not trigger selection; the menu is not clipped. |
+| 6. Speed, looping and translation | Change playback speed, loop the current sentence and request/show its automatic translation. | Speed changes take effect; looping does not advance to the next sentence; translation appears at the bottom and can be collapsed independently; changing sentences hides it by default; failures are understandable. |
+| 7. Complete-flow validation | Run every operation with real subtitle-free audio and video; record delegated test results and have the primary agent review them. | Import → segmentation → sentence navigation → meaning-group reveal → speed/loop → translation works end to end; processing failures have understandable messages. |
 
-## 5. 本次揭晓规则
+## 5. Reveal rule for this task
 
-意群从句首开始连续揭晓，设当前句有 n 个意群：
+Meaning groups are revealed consecutively from the beginning of the sentence. For a sentence with `n` groups:
 
-- 少量：揭晓前 1 个意群；
-- 更多：揭晓前 min(n, max(2, ceil(2n/3))) 个意群；
-- 全句：揭晓前 n 个意群；
-- 隐藏：收回当前句原文；
-- 切换句子后，原文和译文默认隐藏。
+- small: reveal the first 1 group;
+- more: reveal the first `min(n, max(2, ceil(2n/3)))` groups;
+- full: reveal all `n` groups;
+- hide: hide the current sentence's source text;
+- after changing sentences, hide source text and translation by default.
 
-揭晓以完整意群为单位，不拆成零散词语；“更多”必须保留少量已经揭晓的意群。
+Reveal operates on complete meaning groups rather than individual characters or words. More must retain the groups already shown by small.
 
-## 6. 真实媒体验收记录
+## 6. Real-media acceptance record
 
-- 视频：hanbid-ko.webm，原文件 26,999,144 bytes、155.775 秒；来源为 [WIKITONGUES / Hanbid speaking Korean](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm)，作者 Wikitongues / Teddy Nee，许可 CC BY-SA 4.0。验收文件位于 /tmp/inflow-acceptance/hanbid-ko.webm，不提交 Git。
-- 音频：使用仓库 FSI mp3 作为真实无字幕音频验收输入；不使用 lesson.json 的预置文本替代转写。
+- Video: `hanbid-ko.webm`, original size 26,999,144 bytes and duration 155.775 seconds. Source: [WIKITONGUES / Hanbid speaking Korean](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm), by Wikitongues / Teddy Nee, licensed CC BY-SA 4.0. The acceptance file is at `/tmp/inflow-acceptance/hanbid-ko.webm` and is not committed to Git.
+- Audio: the repository FSI MP3 is used as the real subtitle-free audio input; no preloaded course text substitutes for transcription.
 
-上述素材只用于本地验收和来源记录；最终完成判定仍需主代理查看音频与视频的完整操作结果。
+These materials are used only for local acceptance and provenance records. Final completion still requires the primary agent to inspect the complete audio and video interaction results.
 
-## 7. 验收证据与协作
+## 7. Acceptance evidence and collaboration
 
-完成判定必须包含真实无字幕音频和真实无字幕视频的完整操作记录。静态示例、预填文本或模拟翻译只能用于开发，不能替代真实媒体验收。
+Completion evidence must include a complete operation record for real subtitle-free audio and real subtitle-free video. Static examples, prefilled text or simulated translation cannot substitute for real-media acceptance.
 
-测试可以交给 Luna 子代理执行；主代理在测试完成后查看结果，分析失败和边界，并负责最终集成与验收。文档写入、代码实现或自动检查通过，都不单独代表本任务完成。
+Testing may be delegated to the Luna agent. The primary agent must inspect the result, analyze failures and boundaries, and own final integration and acceptance. Documentation changes, code changes or passing automated checks alone do not prove completion.
 
-## 8. 明确排除
+## 8. Explicit exclusions
 
-本次不包含：
+This task does not include:
 
-- 进度持久化、笔记、回听列表；
-- PWA 安装体验；
-- Desktop 服务或独立桌面客户端；
-- 账号、跨设备同步及其他扩展功能。
+- progress persistence, notes or a revisit list;
+- PWA installation;
+- a Desktop service or standalone desktop client;
+- accounts, cross-device synchronization or other extensions.
 
-这些方向保留在长远产品规划中，不作为本次七阶段完成条件。
+These directions remain in the long-term product plan and are not completion conditions for the seven stages.

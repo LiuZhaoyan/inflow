@@ -1,92 +1,92 @@
-# Inflow 实现 ROADMAP
+# Inflow Implementation Roadmap
 
-状态：基于已确认产品边界的阶段路线；本次精听任务已实施，正在进行真实媒体与浏览器验收；后续阶段未实施。
-更新时间：2026-09-16
-产品依据：[PRODUCT_SPEC.md](PRODUCT_SPEC.md)。
+Status: a staged roadmap based on confirmed product boundaries. The current local processing pipeline and intensive-listening page are implemented; real-media backend acceptance is complete, while full browser acceptance and later stages remain incomplete.
+Last updated: 2026-09-16
+Product source: [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
 
-阶段按依赖顺序排列，不设未经确认的版本号、日期或工期。本文不是具体代码任务清单；未确定的方案不能作为已完成决策执行。
+Stages are ordered by dependency and do not assign unconfirmed versions, dates or estimates. This is not a detailed code task list; undecided approaches must not be treated as completed decisions.
 
-## 阶段 1：验证无字幕媒体的自动处理路径
+## Stage 1: Validate automatic processing for media without subtitles
 
-目标：证明用户提供音频或视频后，系统能够生成支撑精听的原文、播放片段与句内意群。
+Goal: prove that user-provided audio or video can produce source text, playable segments and sentence-level meaning groups that support intensive listening.
 
-工作范围：
+Scope:
 
-- 使用代表性韩语音频和视频验证自动转写、时间边界和意群划分。
-- 检查片段能否完整播放、原文与声音是否对应、意群提示是否适合学习。
-- 测量处理等待时间、运行条件与成本，确定当前浏览器产品的处理运行位置。
-- 明确媒体是否需要上传、处理结果如何复用，以及失败重试方式。
-- 默认先验证 Next.js Node API 调用本地 Python worker，使用 faster-whisper base CPU int8 转写、按 Whisper 词时间戳切句、kiwipiepy 0.23.2 按词性助词边界划分意群，并使用 Argos ko→en→zh 经 CTranslate2 离线翻译；首次运行下载权重，媒体不上传第三方。
+- Validate automatic transcription, timing boundaries and meaning-group segmentation with representative Korean audio and video.
+- Check that segments play completely, source text corresponds to the audio and meaning-group reveals are suitable for learning.
+- Measure processing wait time, runtime conditions and cost, and determine where processing should run for the browser product.
+- Decide whether media must be uploaded, how processing results are reused and how retries work.
+- Initially validate a Next.js Node API calling a local Python worker with faster-whisper base CPU int8 transcription, Whisper word-timestamp sentence boundaries, kiwipiepy 0.23.2 particle and part-of-speech boundaries for meaning groups, and offline Argos ko→en→zh translation through CTranslate2. The first run downloads weights; media is not sent to third parties.
 
-阶段产出：可演示的处理结果、实测记录和据此确定的处理方案。
+Deliverable: demonstrable processing results, an empirical record and a processing approach chosen from that evidence.
 
-验收：无配套字幕的媒体能产生可试听、可揭晓的结果；错误和局限被实际记录。不能以预先人工整理的课程替代这一验证。
+Acceptance: media without accompanying subtitles produces playable and revealable results, with errors and limitations recorded. Pre-arranged course text cannot substitute for this validation.
 
-## 阶段 2：完成浏览器版精听主流程
+## Stage 2: Complete the browser intensive-listening flow
 
-依赖：阶段 1 的处理方案成立。
+Dependency: the Stage 1 processing approach is accepted.
 
-工作范围：
+Scope:
 
-- 在现有 Next.js 项目接入媒体选择、自动处理、状态展示与重试。
-- 实现音视频播放、变速、片段切换、当前片段循环与 A–B 循环。
-- 根据句内意群实现少量提示、更多提示、全句及隐藏行为。
-- 在实际意群样例上确定揭晓数量与顺序，再实现对应规则。
-- 按两张移动端原型组织练习页，底部区域承载译文。
-- 接入当前句自动翻译，显示译文、生成中、缺失和失败状态。
-- 支持当前片段文本修正与边界微调。
-- 移除旧版键盘答案验证、自动掌握判断与固定复习间隔对学习流程的约束。
+- Integrate media selection, automatic processing, status display and retry into the existing Next.js project.
+- Implement audio/video playback, speed control, segment navigation, current-segment looping and A–B looping.
+- Implement small, more and full reveals plus hiding based on sentence-level meaning groups.
+- Determine reveal quantity and order from real meaning-group examples, then implement the rule.
+- Organize the practice page around the two mobile prototypes, with the bottom area carrying translation.
+- Integrate current-sentence automatic translation with generated, missing and failed states.
+- Support lightweight editing of the current segment's text and boundaries.
+- The current learning flow has removed the old keyboard answer checking, automatic mastery judgment and fixed review-interval constraints.
 
-阶段产出：可从无字幕媒体走到分段精听的浏览器版本。
+Deliverable: a browser version that takes subtitle-free media into segmented intensive listening.
 
-验收：用户无需录入答案即可完成切句、循环与原文揭晓；提示以完整意群为单位逐步增加；切换片段默认隐藏原文和译文；自动处理失败后仍可播放原媒体。
+Acceptance: users can navigate, loop and reveal source text without entering an answer; hints increase by complete meaning groups; changing segments hides source text and translation by default; the original media remains playable after automatic processing fails.
 
-译文入口、显示区、生成中和失败状态以及当前句自动翻译属于本阶段；具体服务或本地实现细节待阶段 1 实测后确认。
+The translation entry, display area, generated and failed states, and current-sentence translation belong to this stage. The exact service or local implementation depends on the real-media evidence from Stage 1.
 
-## 阶段 3：学习连续性与移动端 PWA 体验
+## Stage 3: Learning continuity and mobile PWA experience
 
-依赖：阶段 2 主流程可用。
+Dependency: the Stage 2 core flow is usable.
 
-工作范围：
+Scope:
 
-- 保存和恢复学习位置、回听标记、笔记与播放偏好。
-- 保存并复用媒体处理结果；恢复所需媒体关联。
-- 打磨手机、平板触控布局及桌面浏览器可用性。
-- 提供 PWA 安装体验与应用图标。
-- 验证存储失败、媒体重新打开、处理重试等实际使用路径。
-- 将 README 和使用说明更新为实际交付能力。
+- Save and restore learning position, revisit marks, notes and playback preferences.
+- Save and reuse media-processing results, including the association needed for restoration.
+- Polish touch layouts for phones and tablets and usability in desktop browsers.
+- Provide a PWA installation experience and application icon.
+- Validate storage failures, reopening media and processing retries in real usage paths.
+- Update the README and usage instructions to match the delivered behavior.
 
-阶段产出：可以重复使用、恢复练习的移动端优先浏览器产品。
+Deliverable: a mobile-first browser product that can be reused and resume practice.
 
-验收：可再次打开并恢复学习记录，复用已有处理结果；主要播放操作易于触达；存储或媒体关联失败有清楚提示；说明文档与实测能力一致。
+Acceptance: learning records can be reopened and restored, existing processing results are reused, primary playback actions are easy to reach, storage or media-association failures are clearly reported, and the documentation matches observed behavior.
 
-本阶段不以大型媒体离线缓存、后台播放或原生安装包作为完成条件。
+Large media offline caching, background playback and a native installer are not completion conditions for this stage.
 
-## 阶段 4：本地 Desktop 服务
+## Stage 4: Local Desktop service
 
-依赖：浏览器版核心流程成立，处理输入输出边界明确。
+Dependency: the browser core flow is established and the processing input/output boundary is clear.
 
-工作范围：
+Scope:
 
-- 在用户电脑上提供本地媒体处理服务。
-- 本地服务承担媒体读取、转写与分段，供浏览器学习界面使用。
-- 复用已验证的学习交互和处理结果结构。
+- Provide a local media-processing service on the user's computer.
+- Let the local service handle media reading, transcription and segmentation for the browser learning interface.
+- Reuse the validated learning interaction and processing-result structure.
 
-阶段产出：本地 Desktop 服务与浏览器界面协同的学习流程。
+Deliverable: a local Desktop service that works with the browser interface for the learning flow.
 
-验收：用户电脑上的媒体可经本地服务处理并进入同一精听流程。
+Acceptance: media on the user's computer can be processed through the local service and enter the same intensive-listening flow.
 
-具体操作系统支持范围、模型、安装方式及独立桌面客户端均未确定，不列入既定交付承诺。
+Supported operating systems, models, installation method and a standalone desktop client remain undecided and are not delivery commitments.
 
-## 验证方式
+## Verification approach
 
-- 自动检查覆盖真实的字幕／处理结果输入校验、片段范围、意群揭晓关系和进度恢复。
-- 浏览器实测覆盖音频与视频的播放、切句、循环、提示、译文区和失败恢复。
-- 延用仓库现有测试、lint、类型检查与构建命令；实现时按实际改动调整测试。
-- 以无字幕媒体的完整学习路径作为主要验收，而非仅验证预置示例。
+- Automated checks cover validation of real subtitle or processing-result inputs, segment ranges, reveal relationships and progress restoration.
+- Browser testing covers audio and video playback, sentence navigation, looping, reveals, the translation area and failure recovery.
+- Continue using the repository's tests, lint, type checking and build commands, adjusting coverage to the actual implementation.
+- Use the complete learning path with media without subtitles as the primary acceptance path rather than validating only preloaded examples.
 
-## 暂未排入实现的决定
+## Decisions not yet scheduled for implementation
 
-以下事项保留为未定，不视为新功能承诺：自动处理与自动翻译的最终模型或部署方式、媒体与处理结果的具体存储机制、本地 Desktop 服务的打包和发布方式。本次具体揭晓规则已确定，见 [本次任务](INTENSIVE_LISTENING_TASK.md)；默认本地路径需先经过真实无字幕音视频实测。
+The following remain undecided and are not new feature commitments: the final model or deployment approach for automatic processing and translation, the storage mechanism for media and processing results, and packaging or distribution of the local Desktop service. The current reveal rule is confirmed in [the current task](INTENSIVE_LISTENING_TASK.md); the default local path still requires complete real-media validation.
 
-下一次细化实施计划时，只细化当前阶段及其必要决策，不提前增加账号、内容平台、专业编辑器或多端客户端。
+When the implementation plan is refined next, refine only the current stage and its necessary decisions. Do not add accounts, a content platform, a professional editor or multi-client applications in advance.

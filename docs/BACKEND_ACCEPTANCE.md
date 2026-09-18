@@ -1,42 +1,41 @@
+# Inflow Local Backend Real-Media Acceptance
 
-# Inflow 本地后端真实媒体验收
+Acceptance date: 2026-09-16 (Asia/Shanghai)
+Runtime location: WSL Ubuntu, `/home/ada/projects/inflow`
+API: `http://127.0.0.1:3010` (local Node development server)
+Processor: `.venv/bin/python scripts/media_processor.py`; models are loaded only from the project's `.models/` directory.
+No preloaded course text was used as input; every transcription sample came from actual worker output.
 
-验收日期：2026-09-16（Asia/Shanghai）
-运行位置：WSL Ubuntu，/home/ada/projects/inflow
-API：http://127.0.0.1:3010（Node 本地开发服务）
-处理器：项目 .venv/bin/python scripts/media_processor.py，模型只从项目 .models/ 读取
-输入没有使用 src/listening/lesson.json 的预置文本；所有转写样例来自实际 worker 输出。
+## Conclusion
 
-## 结论
+Real audio and real Korean video passed the basic local transcription API acceptance: the API returned HTTP 200 with sentences, source text and meaning groups containing start/end times. Independent structural checks confirmed that all segments are monotonic, have positive duration, and reconstruct the source text from their meaning groups when whitespace is ignored.
 
-真实音频和真实韩语视频均通过本地转写 API 的基本验收：返回 HTTP 200，包含带 start/end 的句子、原文和意群；独立结构检查确认所有片段时间单调、时长为正、意群拼接后与原文一致（忽略空格）。
+The real ASR output contains model recognition errors, especially in longer natural-video sentences; no manual correction or replacement with preloaded text was performed. The offline translation API returned Chinese for two real recognition results. Corrupt media, pure silence and media without an audio track all returned HTTP 503 with understandable error messages.
 
-真实 ASR 结果存在模型误识别，尤其是较长的自然视频语句；结果没有人工纠正或用 lesson 文本替换。离线翻译 API 对两条真实识别句子返回中文。坏媒体、纯静音和无音轨媒体都返回 HTTP 503 及可理解错误信息。
+## Inputs and local models
 
-## 输入与本地模型
-
-| 输入 | 字节数 | SHA-256 | PyAV 时长 | 音视频流 |
+| Input | Bytes | SHA-256 | PyAV duration | Streams |
 | --- | ---: | --- | ---: | --- |
-| public/materials/fsi-unit1-dialogue-a.mp3 | 505,007 | 0e59f38b90d599becfd1e2db70b6480578c1e30fea953ec107b3778ce9fb637a | 63.000 s | audio / mp3float |
-| /tmp/inflow-acceptance/hanbid-ko.webm | 26,999,144 | edf0a8c7ac7a104246ed9c1c2a0e81b51b4509227895c3f50e8c3978f3bd5037 | 155.775 s | video / vp8；audio / vorbis |
+| `public/materials/fsi-unit1-dialogue-a.mp3` | 505,007 | `0e59f38b90d599becfd1e2db70b6480578c1e30fea953ec107b3778ce9fb637a` | 63.000 s | audio / mp3float |
+| `/tmp/inflow-acceptance/hanbid-ko.webm` | 26,999,144 | `edf0a8c7ac7a104246ed9c1c2e0a81b51b4509227895c3f50e8c3978f3bd5037` | 155.775 s | video / vp8; audio / vorbis |
 
-视频来源：[WIKITONGUES / Hanbid speaking Korean](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm)，作者 Wikitongues / Teddy Nee，CC BY-SA 4.0。视频只下载到验收临时目录，未复制到仓库。
+Video source: [WIKITONGUES / Hanbid speaking Korean](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm), by Wikitongues / Teddy Nee, licensed CC BY-SA 4.0. The video was downloaded only to the temporary acceptance directory and was not copied into the repository.
 
-本次运行版本：
+Versions used for this run:
 
 - Python 3.12.3
 - faster-whisper 1.2.1
 - kiwipiepy 0.23.2
 - ctranslate2 4.8.2
 - sentencepiece 0.2.2
-- Whisper 模型：.models/whisper-base，CPU int8
-- 翻译模型：本地 Argos ko→en 与 en→zh，经 CTranslate2 离线执行
+- Whisper model: `.models/whisper-base`, CPU int8
+- Translation models: local Argos ko→en and en→zh, executed offline through CTranslate2
 
-## 实际命令与结果
+## Commands and results
 
-### 1. Python worker：仓库真实音频
+### 1. Python worker: repository audio
 
-等价 worker 命令：
+Equivalent worker command:
 
 ~~~bash
 /home/ada/projects/inflow/.venv/bin/python \
@@ -44,16 +43,16 @@ API：http://127.0.0.1:3010（Node 本地开发服务）
   /home/ada/projects/inflow/public/materials/fsi-unit1-dialogue-a.mp3
 ~~~
 
-状态：PASS。worker 返回码 0，实测耗时 5.972 s，输出 22 个片段，stderr 为空。
+Status: PASS. The worker returned code 0, took 5.972 seconds and produced 22 segments with no stderr output.
 
-结构检查结果：
+Structural checks:
 
-- 22/22 片段 0 <= start < end <= 63.0；
-- 相邻片段时间不重叠；
-- 每个片段 groups 非空；
-- groups 拼接后与 text 一致（忽略空格）。
+- 22/22 segments satisfied `0 <= start < end <= 63.0`;
+- adjacent segments did not overlap;
+- every segment had non-empty `groups`;
+- joining `groups` reconstructed `text` when whitespace was ignored.
 
-样例：
+Sample:
 
 ~~~text
 01  0.080–1.360  안녕하십니까?             → 안녕하십니까?
@@ -61,7 +60,7 @@ API：http://127.0.0.1:3010（Node 本地开发服务）
 22 61.290–62.710  한국말을 공부합니다.       → 한국말을 / 공부합니다.
 ~~~
 
-### 2. HTTP API：仓库真实音频
+### 2. HTTP API: repository audio
 
 ~~~bash
 curl -sS --max-time 650 \
@@ -70,9 +69,9 @@ curl -sS --max-time 650 \
   http://127.0.0.1:3010/api/transcribe
 ~~~
 
-实际结果：HTTP 200，响应 2,319 bytes，耗时 6.148045 s，22 个片段。API 响应再次通过时间、原文和意群结构检查；首片段为 0.080–1.360，末片段为 61.290–62.710。
+Result: HTTP 200, response size 2,319 bytes and elapsed time 6.148045 seconds. The response contained 22 segments and passed the same timing, source-text and meaning-group checks. The first segment was 0.080–1.360 and the last was 61.290–62.710.
 
-### 3. HTTP API：Wikimedia 真实韩语视频
+### 3. HTTP API: real Korean video
 
 ~~~bash
 curl -sS --max-time 650 \
@@ -81,9 +80,9 @@ curl -sS --max-time 650 \
   http://127.0.0.1:3010/api/transcribe
 ~~~
 
-实际结果：HTTP 200，响应 5,604 bytes，耗时 17.229020 s，37 个片段。37/37 片段通过同样的结构检查；全部时间范围落在视频 155.775 秒内。
+Result: HTTP 200, response size 5,604 bytes and elapsed time 17.229020 seconds. The response contained 37 segments. All 37 passed the same structural checks, and every range fell within the 155.775-second video.
 
-样例：
+Sample:
 
 ~~~text
 01   0.080–1.240  안녕하세요?
@@ -92,11 +91,11 @@ curl -sS --max-time 650 \
 37 152.480–153.340  감사합니다.
 ~~~
 
-长句的 “데만 사랑한 전근한” 等内容是 base 模型的真实识别结果，保留用于暴露识别质量上限。
+Phrases such as `데만 사랑한 전근한` are genuine base-model recognition output and are retained to expose the recognition-quality ceiling.
 
-### 4. HTTP API：真实识别句子的中文翻译
+### 4. HTTP API: translation of real recognition output
 
-请求使用 POST /api/translate、content-type: application/json 和 curl --max-time 650，JSON 请求体通过 stdin 传给 curl：
+The requests used `POST /api/translate`, `content-type: application/json`, `curl --max-time 650` and a JSON body piped to curl through standard input:
 
 ~~~bash
 printf '%s' '{"text":"선생님은 미국 사람입니까?"}' |
@@ -105,27 +104,27 @@ printf '%s' '{"text":"선생님은 미국 사람입니까?"}' |
   http://127.0.0.1:3010/api/translate
 ~~~
 
-结果：HTTP 200，耗时 0.603 s，선생님은 미국 사람입니까? → 你是美国老师吗?。
+Result: HTTP 200, elapsed time 0.603 seconds. The literal Chinese output was equivalent to `Are you an American teacher?` for `선생님은 미국 사람입니까?`.
 
-第二条真实视频识别句：
+Second real video recognition result:
 
 ~~~text
-저희 가족은 4명입니다. → 我们的家庭是4个人。
+저희 가족은 4명입니다. → `Our family is four people.` (literal translation meaning)
 ~~~
 
-结果：HTTP 200，耗时 0.468 s。译文为本地 Argos ko→en→zh 推理结果，表达偏直译。
+Result: HTTP 200, elapsed time 0.468 seconds. The translation was produced locally by the Argos ko→en→zh pipeline and was noticeably literal.
 
-## 失败输入验收
+## Failure-input acceptance
 
-负面夹具只放在 /tmp/inflow-acceptance/，不属于产品素材：
+Negative fixtures were stored only in `/tmp/inflow-acceptance/` and are not product materials:
 
-| 输入 | 特征 | SHA-256 | 请求耗时 | HTTP | API 错误 |
+| Input | Characteristics | SHA-256 | Request time | HTTP | API error |
 | --- | --- | --- | ---: | ---: | --- |
-| /etc/hostname，以 bad.webm 上传 | 故意损坏媒体 | 未作为产品输入记录 | 0.283 s | 503 | 本地模型无法处理此媒体或文本，请确认模型安装完整，或换一段清晰的韩语媒体重试。 |
-| silent.wav | 2.000 s，64,044 bytes，PCM 静音音轨 | 20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1fec1b713e7fde58fa | 0.963 s | 503 | 没有识别到语音，请换一段声音清晰的韩语媒体重试。 |
-| no-audio.webm | 2.000 s，708 bytes，只有 VP8 视频流 | 381b9b839079411124deba3e5e3e16cc41c5514517bc6e2cbfcb1d724e505a55 | 0.288 s | 503 | 媒体没有音轨，请选择包含语音的音频或视频。 |
+| `/etc/hostname`, uploaded as `bad.webm` | intentionally corrupt media | not recorded as a product input | 0.283 s | 503 | Local models could not process this media or text; confirm model installation or retry with clear Korean media. |
+| `silent.wav` | 2.000 s, 64,044 bytes, PCM silent audio track | `20eaebffe1816e0ffa6f7f854f5ef4ea80d5349faaf0ce1ec1b713e7fde58fa` | 0.963 s | 503 | No speech was recognized; retry with clear Korean audio. |
+| `no-audio.webm` | 2.000 s, 708 bytes, VP8 video stream only | `381b9b839079411124deba3e5e3e16cc41c5514517bc6e2cbfcb1d724e505a55` | 0.288 s | 503 | The media has no audio track; choose audio or video containing speech. |
 
-坏媒体请求使用的实际 multipart 形式：
+Actual multipart form used for the corrupt-media request:
 
 ~~~bash
 curl -sS --max-time 650 \
@@ -133,8 +132,8 @@ curl -sS --max-time 650 \
   http://127.0.0.1:3010/api/transcribe
 ~~~
 
-## 清理与局限
+## Cleanup and limitations
 
-API 处理期间会把上传内容写入服务机器的临时目录；本轮请求完成后的首次检查短暂看到一个 inflow-i1XPoc 目录，随后复查该目录已自动消失，最终 /tmp 只留下验收证据目录 /tmp/inflow-acceptance，未确认持久残留。处理使用本地 Python 和本地模型；本轮 API 请求均发往 127.0.0.1。
+During API processing, the upload is written to a temporary directory on the service machine. A first inspection briefly found an `inflow-i1XPoc` directory after the request, but a later check confirmed that it had been removed. The only remaining `/tmp` content was the acceptance evidence directory `/tmp/inflow-acceptance`; no persistent upload residue was observed. Processing used local Python and local models, and all API requests in this run targeted `127.0.0.1`.
 
-本轮只覆盖一条 63 秒音频和一条 155.775 秒视频。Whisper base CPU int8 的速度可接受，但长句和自然语速视频会出现上述误识别；意群按词性和助词边界划分，不等于人工语义断句。尚未把模型识别准确率视为教学原文正确性的证明，也未覆盖超过 10 分钟、超过 50 MB、取消请求、并发 busy 锁和浏览器播放行为；这些需要单独验收。
+This run covered only one 63-second audio file and one 155.775-second video. Whisper base CPU int8 was fast enough for this test, but long and natural video sentences showed the recognition errors above. Meaning groups are based on particles and part-of-speech boundaries rather than human semantic segmentation. Model recognition accuracy has not been treated as proof of a correct learning transcript. Media longer than 10 minutes, files larger than 50 MB, request cancellation, concurrent busy-lock behavior and browser playback remain untested and require separate acceptance.

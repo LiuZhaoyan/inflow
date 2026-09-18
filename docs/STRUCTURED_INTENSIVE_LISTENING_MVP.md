@@ -1,37 +1,37 @@
-# 结构化精听 MVP
+# Structured Intensive Listening MVP
 
-> 历史文档：本文记录预置韩语素材、听写与复习 MVP 的旧方案，不代表当前无字幕媒体精听任务的范围或完成状态。当前产品规划见 [PRODUCT_SPEC.md](PRODUCT_SPEC.md)，实施路线见 [ROADMAP.md](ROADMAP.md)，本次任务见 [INTENSIVE_LISTENING_TASK.md](INTENSIVE_LISTENING_TASK.md)。
+> Historical document: this file records the superseded design for a preloaded Korean course, dictation and review MVP. It does not define the current subtitle-free media intensive-listening task or its completion status. See [PRODUCT_SPEC.md](PRODUCT_SPEC.md) for the current product specification, [ROADMAP.md](ROADMAP.md) for the implementation roadmap and [INTENSIVE_LISTENING_TASK.md](INTENSIVE_LISTENING_TASK.md) for the current task.
 
-## 产品定位
+## Product positioning
 
-Inflow 面向已掌握目标语言文字和基础发音、但还难以理解真实内容的初级学习者。
+Inflow targets beginner learners who know the target language's writing system and basic pronunciation but still struggle to understand authentic content.
 
-产品通过分段听写、渐进提示、深度解析和弱项复习，把高强度精听变成可持续的自学流程，不依赖真人教师。
+The product turns intensive listening into sustainable self-study through segmented dictation, progressive hints, deeper analysis and weak-area review without requiring a human teacher.
 
-第一版聚焦韩语。一份完整素材作为学习项目，建议从 1–3 分钟开始，并拆成 3–15 秒的句子或意群进行训练。
+The first version focuses on Korean. A complete piece of material is treated as one learning project, ideally 1–3 minutes long and divided into 3–15 second sentences or meaning groups for practice.
 
-## 学习流程
+## Learning flow
 
-1. **整段盲听**：首次播放不显示文本，用户记录主观理解程度。
-2. **分段听写**：用户循环、变速播放片段并输入听写结果；系统对照标准原文检查正确、遗漏和待确认内容。
-3. **渐进提示**：用户遇到困难时，依次开放字数、部分字符和完整原文，避免过早揭晓答案。
-4. **深度解析**：用户自行查词、分析语法和理解句意；平台提供词典入口、笔记以及逐层显示的原文和翻译。
-5. **完成确认**：完成所有片段的听写与理解后，用户自行进行全文背诵、跟读和原速复述。
-6. **弱项复习**：系统根据错误、重听次数和提示使用情况，安排薄弱片段再次练习。
+1. **Blind full-length listening:** play the material without showing text and record a subjective understanding level.
+2. **Segmented dictation:** loop and change the speed of a segment, enter the dictated text and compare it with the reference transcript for correct, missing and uncertain content.
+3. **Progressive hints:** when the learner is stuck, progressively reveal word counts, partial characters and the complete source text to avoid revealing the answer too early.
+4. **Deep analysis:** the learner looks up vocabulary, analyzes grammar and understands the sentence; the platform provides dictionary entry points, notes and progressively displayed source text and translation.
+5. **Completion confirmation:** after working through dictation and understanding, the learner practices full-text memorization, shadowing and repetition at natural speed.
+6. **Weak-area review:** the system schedules weak segments for later practice based on errors, replay counts and hint usage.
 
-## 掌握信号
+## Mastery signals
 
-- 听写正确率
-- 重听次数
-- 使用过的提示等级
-- 用户标记的理解程度
-- 延迟复习时能否再次听写正确
+- Dictation accuracy
+- Replay count
+- Hint levels used
+- Learner-marked understanding level
+- Whether dictation is correct again during delayed review
 
-主观标记与系统检测共同决定学习状态，不能只凭用户点击“已理解”提升难度。
+Subjective marks and system measurements jointly determine learning state; clicking an understanding button alone must not increase difficulty.
 
-## MVP 边界
+## MVP boundaries
 
-- 系统不评价背诵、语调或复述质量，只提供完整素材、原文和播放控制。
-- 核心学习流程不依赖 LLM；LLM 只作为按需解释等后续增强能力。
-- 不承诺完成固定数量的素材即可掌握一门语言。
-- 素材库来源、版权和用户上传方案另行设计。
+- The system does not evaluate memorization, intonation or repetition quality. It provides the complete material, source text and playback controls.
+- The core learning flow does not depend on an LLM. LLMs are reserved for later on-demand explanations and other enhancements.
+- The product does not promise mastery of a language after a fixed number of materials.
+- Material provenance, copyright and user-upload flows require separate design.

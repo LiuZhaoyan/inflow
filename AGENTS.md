@@ -2,7 +2,12 @@
 
 ## Project Structure & Module Organization
 
-Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and React 19. Page entry, layout, styles and the retained Logo live in `src/app/`. The learning UI, dictation logic, tests and lesson JSON live in `src/listening/`. Audio and provenance belong in `public/materials/`. Progress is browser-local in the retained legacy MVP. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; `docs/STRUCTURED_INTENSIVE_LISTENING_MVP.md` is a historical record of the superseded preloaded dictation MVP.
+Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and React 19. Page entry, layout, styles and the retained Logo live in `src/app/`. The active listening UI, processing logic, API adapters and tests live in `src/listening/` and `src/app/api/`. Audio and provenance belong in `public/materials/`. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; `docs/STRUCTURED_INTENSIVE_LISTENING_MVP.md` is a historical record of the superseded preloaded dictation MVP.
+
+## Documentation Language
+
+- Write repository documentation, specifications, roadmaps, task records and acceptance reports in English.
+- Keep each document's prose in one language; do not mix English and Chinese. Non-English source text, UI labels, media titles and literal model output may remain as quoted data when the subject requires them.
 
 ## Build, Test, and Development Commands
 
@@ -18,15 +23,15 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 - Use TypeScript with strict compiler settings and the `@/*` path alias for imports from `src/`
 - Follow existing formatting: two-space indentation is common in config files, while several test files use four spaces
 - Name React components in PascalCase, hooks with `use` prefixes, and route handlers as `route.ts`
-- Keep dictation and progress rules in `src/listening/practice.ts`. Prefer native browser features and existing dependencies. The retained legacy MVP needs no LLM, account system or database; current processing choices are documented in `docs/PRODUCT_SPEC.md` and `docs/ROADMAP.md`.
+- Keep media-processing and listening-interaction rules close to their modules under `src/listening/`. Prefer native browser features and existing dependencies. The current MVP needs no account system or database; current processing choices are documented in `docs/PRODUCT_SPEC.md` and `docs/ROADMAP.md`.
 
 ## Testing Guidelines
 
 - Tests use Node's built-in `node:test` module with `node:assert/strict`, executed via `npm test` and the `tsx` TypeScript runner.
-- Keep test files beside the code they cover using `*.test.ts`, such as `src/listening/practice.test.ts`.
+- Keep test files beside the code they cover using `*.test.ts`, such as `src/listening/processing.test.ts`.
 - Use ESM-style static imports in tests; avoid top-level dynamic `await import(...)` unless a test specifically needs runtime import behavior.
 - Do not run `.ts` tests with bare `node --test`; the repository relies on `tsx` to load TypeScript.
-- Prefer focused checks for dictation, hint boundaries, persistence and material timestamps; verify playback and learning flows in a browser.
+- Prefer focused checks for media-result validation, sentence timing, meaning-group boundaries, reveal rules, request validation and material provenance; verify processing and playback flows in a browser.
 
 ## Commit & Pull Request Guidelines
 

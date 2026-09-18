@@ -1,125 +1,125 @@
-# Inflow 产品构建 Spec
+# Inflow Product Specification
 
-状态：已确认规划；不表示当前代码已实现。
-更新时间：2026-09-16
+Status: confirmed planning; this document does not mean that every item is implemented.
+Last updated: 2026-09-16
 
-## 1. 产品定位
+## 1. Product positioning
 
-Inflow 是开源的外语影音精听辅助工具。用户提供希望学习的音频或视频，系统进行基础处理，帮助用户按自己的节奏分段播放、获取提示、理解和回听。
+Inflow is an open-source foreign-language audio and video intensive-listening assistant. Users provide audio or video they want to study. The system performs basic processing and helps them play segments at their own pace, request hints, understand the content and listen again.
 
-默认大部分媒体没有配套字幕。系统承担自动转写与基础分段，用户无需先制作字幕或课程。当前围绕韩语学习场景验证体验。
+Most media does not include accompanying subtitles. The system provides automatic transcription and basic segmentation, so users do not need to create subtitles or a course first. The current experience is being validated around Korean learning.
 
-听写可以在纸上、笔记软件或其他地方进行。正确性由用户自行核对，Inflow 不要求录入或提交听写答案。
+Dictation can be done on paper, in a notes application or elsewhere. Users verify their own understanding; Inflow does not require them to enter or submit a dictation answer.
 
-## 2. 平台与演进方向
+## 2. Platform and evolution
 
-- 当前交付移动端优先的浏览器版本，沿用现有 Next.js、React、TypeScript 项目，并规划 PWA 体验。
-- 桌面浏览器可使用同一学习界面。
-- 后续建设本地 Desktop 服务，承担本地媒体处理，复用浏览器学习界面。
-- 本次任务默认先验证 Next.js Node API 调用本地 Python worker；使用 faster-whisper base CPU int8 转写、按 Whisper 词时间戳切句、kiwipiepy 0.23.2 按词性助词边界划分意群，并使用 Argos ko→en→zh 经 CTranslate2 离线翻译。该路径尚未通过真实无字幕音视频验收，不代表已可用或是最终方案。
-- 本地 Desktop 服务不等于已确定发布独立桌面安装包。
+- The current delivery target is a mobile-first browser version using the existing Next.js, React and TypeScript project, with a PWA experience planned later.
+- Desktop browsers can use the same learning interface.
+- A local Desktop service may be built later to handle media processing while reusing the browser learning interface.
+- The current implementation calls a local Python worker through a Next.js Node API. It uses faster-whisper base with CPU int8, sentence boundaries based on Whisper word timestamps, kiwipiepy 0.23.2 particle and part-of-speech boundaries for meaning groups, and offline Argos ko→en→zh translation through CTranslate2. This path has passed basic local backend acceptance with real audio and video, but still has ASR recognition errors; complete browser-flow validation, quality boundaries and the final processing approach remain unconfirmed.
+- A local Desktop service does not imply a commitment to publish a standalone desktop installer.
 
-## 3. 核心流程
+## 3. Core flow
 
-选择音频或视频 → 系统自动转写与分段 → 分段精听 → 按需揭晓意群或全句 → 按需查看译文 → 标记、记录与回听。
+Choose audio or video → automatically transcribe and segment it → practice one segment at a time → reveal meaning groups or the full sentence as needed → view a translation as needed → mark, record and revisit content.
 
-整段播放用于初听和回听。播放、提示与片段切换不以提交答案或完成自评为前提。
+Full-length playback is available for first listening and review. Playback, hints and segment navigation do not depend on submitting an answer or completing a self-assessment.
 
-## 4. 媒体输入与基础处理
+## 4. Media input and basic processing
 
-### 4.1 输入
+### 4.1 Input
 
-- 用户选择设备上的音频或视频。
-- 字幕导入为辅助入口，不是主要使用路径，也不是开始学习的前提。
-- 项目可以保留少量来源与许可明确的示例，不运营持续扩张的官方课程库。
+- Users choose audio or video from their device.
+- Subtitle import is a secondary entry point, not the primary path and not a prerequisite for starting.
+- The project may keep a small number of examples with clear provenance and usage conditions; it will not operate a continuously expanding official course library.
 
-### 4.2 处理结果
+### 4.2 Processing results
 
-- 生成带时间戳的原文与可播放片段。
-- 在句内划分意群，用于渐进揭晓。
-- 自动生成内容标明可能存在错误，不作为保证正确的标准答案。
-- 展示处理状态，支持失败重试；处理失败后原媒体仍可播放。
-- 保存处理结果，重新关联同一媒体时复用，避免重复处理。
-- 提供当前片段文本修正和边界微调的轻量能力，不建设专业字幕编辑器。
+- Generate source text and playable segments with timestamps.
+- Divide each sentence into meaning groups for progressive reveal.
+- Mark automatically generated content as potentially incorrect; it is not a guaranteed answer key.
+- Show processing status and support retry. The original media remains playable after processing fails.
+- Save processing results and reuse them when the same media is associated again, avoiding duplicate processing.
+- Provide lightweight editing for the current segment's text and boundaries rather than building a professional subtitle editor.
 
-本次任务默认先验证上述本地处理路径；语音片段的切分算法、意群划分方法、等待时间和最终费用仍需真实无字幕音视频实测后确认。
+This task initially validates the local processing path above. The audio-segmentation algorithm, meaning-group method, wait time and final cost still require testing with real unscripted audio and video.
 
-## 5. 精听与播放
+## 5. Intensive listening and playback
 
-- 音频、视频播放与暂停，进度定位、倍速、整段播放。
-- 上一句、下一句切换当前播放片段。
-- 当前片段循环；界面清楚显示循环范围和开启状态。
-- 保留 A–B 循环能力，支持用户指定重听范围。
-- 播放与片段切换控件位置稳定，适合移动端触控。
-- 支持回听标记、笔记与学习位置记录；用户可以回到标记内容再次练习。
-- 播放次数不自动转换为能力判断、难度调整或掌握状态。
+- Play and pause audio or video, seek, change speed and play the full media.
+- Move to the previous or next sentence as the current playback segment.
+- Loop the current segment and show the loop range and state clearly.
+- Retain A–B looping so users can choose a range to replay.
+- Keep playback and segment controls stable and reachable for mobile touch interaction.
+- Support revisit marks, notes and learning-position records so users can return to marked content.
+- Do not convert play count into a judgment of ability, automatic difficulty changes or mastery state.
 
-## 6. 意群揭晓
+## 6. Meaning-group reveal
 
-### 6.1 两层结构
+### 6.1 Two levels
 
-播放片段与意群分开：上一句、下一句切换播放片段；片段内的意群决定提示揭晓范围。
+Playback segments and meaning groups are separate. Previous and next move between playback segments; meaning groups within a segment determine the reveal range.
 
-一句话按意群划分。每次完整揭晓意群，不拆成零散字词。
+Each sentence is divided into meaning groups. Each reveal shows complete groups rather than isolated characters or words.
 
-### 6.2 揭晓行为
+### 6.2 Reveal behavior
 
-| 操作 | 已确认行为 |
+| Action | Confirmed behavior |
 | --- | --- |
-| 少量提示 | 揭晓较少的意群 |
-| 更多提示 | 保留已揭晓意群，增加揭晓内容 |
-| 全句 | 揭晓当前片段完整原文 |
-| 隐藏原文 | 用户随时可以重新盲听 |
-| 切换片段 | 原文和译文默认隐藏 |
+| Small hint | Reveal fewer meaning groups. |
+| More hints | Keep the groups already revealed and reveal more content. |
+| Full sentence | Reveal the complete source text for the current segment. |
+| Hide source text | Let the user return to blind listening at any time. |
+| Change segment | Hide source text and translation by default. |
 
-未揭晓内容保留占位。各提示程度由用户主动选择，不需要逐级解锁，也不根据答案自动降级。少量与更多的区别是意群数量，不是词数。
+Unrevealed content remains as a placeholder. Users choose the hint level directly; levels do not require step-by-step unlocking and are not automatically downgraded based on answers. The difference between small and more hints is the number of meaning groups, not the number of words.
 
-本次采用句首连续意群：少量 1 组，更多 min(n, max(2, ceil(2n/3))) 组，全句 n 组；详见 [本次任务](INTENSIVE_LISTENING_TASK.md)。
+The current task uses consecutive groups from the beginning of the sentence: small reveals 1 group, more reveals `min(n, max(2, ceil(2n/3)))` groups, and full reveals all `n` groups. See [the current task](INTENSIVE_LISTENING_TASK.md) for the acceptance rule.
 
-## 7. 译文
+## 7. Translation
 
-- 译文有独立控制入口，不依赖原文揭晓程度。
-- 原型底部的“功能拓展位”正式作为当前句译文区。
-- 点击译文入口展开或收起该区域；切换句子后默认收起。
-- 有译文时展示当前句译文；没有或尚未生成时明确显示状态。
-- 译文展示纳入页面结构；自动翻译属于本次精听页范围，具体服务或本地实现细节待阶段 1 的真实媒体实测后确认。
+- Translation has an independent control and does not depend on how much source text has been revealed.
+- The prototype's bottom extension area is formally used as the current-sentence translation area.
+- Clicking the translation entry expands or collapses that area; changing sentences collapses it by default.
+- When a translation exists, show the current sentence's translation. When it is missing or has not been generated, show an explicit status.
+- Translation is part of the listening-page structure. Automatic translation is in scope for the current page; the specific service or local implementation remains subject to the real-media validation in stage 1.
 
-## 8. 移动端界面参考
+## 8. Mobile interface reference
 
-用户提供的 Photo 1.jpg 与 Photo 2.jpg 是同一练习页的常态和揭晓选项展开状态。
+The supplied Photo 1.jpg and Photo 2.jpg show the normal and expanded-reveal states of the same practice page.
 
-- 暖白背景、黄色强调色、深蓝文字与图标、大圆角。
-- 页面顺序：顶部导航、媒体画面、播放进度、上一句／揭晓／下一句、原文区、倍速／循环／译文入口、底部译文区。
-- 揭晓选项表达少量意群、更多意群与全句三种程度。
-- 原文在练习页内揭晓，不跳转页面。
-- 图片中的插画、系统状态栏和说明性占位文字不等于需要实现的产品功能或已授权发布的素材。
+- Warm white background, yellow accent, dark blue text and icons, and large rounded corners.
+- Page order: top navigation, media display, playback progress, previous/reveal/next controls, source-text area, speed/loop/translation controls, and bottom translation area.
+- Reveal options represent small hints, more hints and the full sentence.
+- Source text is revealed within the practice page without navigating away.
+- Illustrations, system status bars and explanatory placeholder text in the images are not necessarily product features or licensed release assets.
 
-## 9. 数据与处理边界
+## 9. Data and processing boundary
 
-需要表达的数据包括媒体信息、带时间戳的片段与原文、句内意群、可选译文、学习位置、回听标记、笔记和播放偏好。
+The product needs to represent media information, timestamped segments and source text, sentence-level meaning groups, optional translations, learning position, revisit marks, notes and playback preferences.
 
-媒体输入到带时间戳原文与片段的处理边界保持清楚，以支持后续本地 Desktop 服务。当前不提前实现多套处理后端。
+Keep the boundary from media input to timestamped source text and segments explicit so that a future local Desktop service can reuse it. Do not implement multiple processing backends in advance.
 
-“浏览器版”不等于已承诺全部处理发生在浏览器内。是否上传媒体、媒体保留方式、存储技术和重新关联规则，需要随处理方案确定；不能在方案确定前宣称媒体绝不离开设备。
+A browser version does not promise that all processing happens in the browser. Whether media leaves the device, how media is retained, what storage is used and how the same media is re-associated must be decided with the processing approach; do not claim that media never leaves the device before that decision is made.
 
-## 10. 明确边界
+## 10. Explicit boundaries
 
-当前不建设：听写自动验证与评分、自动掌握判断、手写识别与拍照批改、自动难度降级、专业音视频或字幕制作平台、大规模官方素材生产与托管、账号与跨设备同步。
+The current scope does not include automatic dictation verification or scoring, automatic mastery judgment, handwriting recognition or photo grading, automatic difficulty reduction, a professional audio/video or subtitle authoring platform, large-scale official material production or hosting, accounts or cross-device synchronization.
 
-当前不承诺：iOS/Android 安装包、独立桌面安装包、大型媒体离线缓存、后台播放或系统分享入口。
+The current scope does not promise iOS or Android packages, a standalone desktop installer, large media offline caching, background playback or system sharing entry points.
 
-## 11. 现有代码与新规划的关系
+## 11. Relationship between current code and the new plan
 
-当前页面已改为媒体导入、本地自动处理和意群精听。旧版预置课程、听写比较与进度逻辑保留为历史代码，不参与当前页面流程；本次不实现持久化、笔记或复习。具体范围与完成证据见 [本次任务](INTENSIVE_LISTENING_TASK.md)。
+The current page uses media import, local automatic processing and meaning-group intensive listening. The old preloaded course, dictation-comparison and progress logic has been removed from runtime code and remains only as historical background; this task does not implement persistence, notes or review. See [the current task](INTENSIVE_LISTENING_TASK.md) for scope and completion evidence.
 
-[README.md](../README.md) 描述当前运行方式；[STRUCTURED_INTENSIVE_LISTENING_MVP.md](STRUCTURED_INTENSIVE_LISTENING_MVP.md) 仅描述旧版实现。新产品规划以本文件和 [ROADMAP.md](ROADMAP.md) 为准；文档完成不代表产品功能完成。
+[README.md](../README.md) describes the current setup. [STRUCTURED_INTENSIVE_LISTENING_MVP.md](STRUCTURED_INTENSIVE_LISTENING_MVP.md) describes only the superseded design. This specification and [ROADMAP.md](ROADMAP.md) are the current planning sources; completing documentation does not mean the product is complete.
 
-## 12. 产品验收目标
+## 12. Product acceptance goals
 
-- 没有字幕文件的用户可以通过系统处理进入分段精听。
-- 全程不要求输入或提交听写答案。
-- 可完成播放、变速、切句、循环、揭晓、隐藏与回听。
-- 更多提示包含少量提示已揭晓的意群；全句显示完整原文。
-- 译文独立控制，并使用底部译文区。
-- 自动结果来源、处理失败和缺少译文等状态表达清楚。
-- 学习记录与处理结果可复用，不把用户操作包装为客观学习成绩。
+- A user without a subtitle file can process media and enter segmented intensive listening.
+- The full flow does not require entering or submitting a dictation answer.
+- The user can play, change speed, move between sentences, loop, reveal, hide and revisit content.
+- More hints include the groups revealed by the small hint; full reveal shows the complete source text.
+- Translation has an independent control and uses the bottom translation area.
+- The source of automatic results, processing failures and missing translations are clearly communicated.
+- Learning records and processing results can be reused without presenting user actions as objective learning scores.
