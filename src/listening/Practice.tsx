@@ -148,13 +148,34 @@ export default function Practice() {
     onError: () => setError('浏览器无法播放此媒体，请尝试 MP3、MP4 或 WebM 格式。'),
   };
 
-  return <main className="listening-page">
+  return <div className="app-shell">
+    <aside className="desktop-sidebar" aria-label="主导航">
+      <div className="sidebar-brand"><span>inflow</span><Image src="/icon.svg" alt="" width={32} height={32}/></div>
+      <nav>
+        <a className="active" href="#practice"><span aria-hidden="true">⌂</span>学习</a>
+        <a href="#library"><span aria-hidden="true">▱</span>素材库</a>
+        <a href="#favorites"><span aria-hidden="true">♡</span>我的收藏</a>
+        <a href="#history"><span aria-hidden="true">▥</span>学习记录</a>
+      </nav>
+      <div className="sidebar-secondary">
+        <a href="#settings"><span aria-hidden="true">⚙</span>设置</a>
+        <a href="#help"><span aria-hidden="true">?</span>帮助</a>
+      </div>
+      <p>A<br/>Brighter<br/>You ☀</p>
+    </aside>
+    <main className="listening-page" id="practice">
     <header className="masthead">
       <Link className="home-link" href="/" aria-label="返回首页">‹</Link>
       <div className="brand"><div><span>Inflow</span><Image src="/icon.svg" alt="" width={36} height={36}/></div><p>让好内容，成为你的外语老师</p></div>
       <button className="import-icon" onClick={() => picker.current?.click()} aria-label="导入媒体">＋</button>
     </header>
     <input className="file-input" ref={picker} type="file" accept="audio/*,video/*,.m4a,.mp3,.mp4,.wav,.webm,.ogg,.flac,.aac,.mov" aria-label="选择音频或视频" onChange={event => { chooseFile(event.target.files?.[0]); event.target.value = ''; }}/>
+    <div className="desktop-topbar">
+      <button className="desktop-import" onClick={() => picker.current?.click()}><span aria-hidden="true">⌕</span><span>{file?.name || '导入你喜欢的影音素材...'}</span><b aria-hidden="true">＋</b></button>
+      <button className="notification" aria-label="通知">♧</button>
+    </div>
+    <div className="practice-layout">
+    <div className="practice-column">
     <section className="media-card" aria-label="媒体播放器">
       {src && video ? <video key={src} ref={el => { media.current = el; }} {...mediaProps} playsInline onClick={() => void play()} aria-label="视频播放器"/> : <>
         {src && <audio key={src} ref={el => { media.current = el; }} {...mediaProps} aria-label="音频播放器"/>}
@@ -189,5 +210,14 @@ export default function Practice() {
       {translationOpen ? <><div className="translation-heading"><span>中文译文</span><button onClick={() => setTranslationOpen(false)} aria-label="收起译文">收起 ×</button></div><p>{translationBusy ? '正在生成译文…' : translationError || translation}</p></> : <button disabled={!segment} onClick={() => void toggleTranslation()}><span aria-hidden="true">☼</span> 按需查看这一句的意思 <span aria-hidden="true">›</span></button>}
     </section>
     <p className="footer-note">一次听清一点。<br/>长按 reveal 滑动选择；也可点击展开。</p>
-  </main>;
+    </div>
+    <aside className="segment-panel" aria-label="全文句子列表">
+      <div className="segment-panel-header"><strong>原文</strong><span>译文</span><b aria-hidden="true">☷</b></div>
+      <div className="segment-list">
+        {segments.length ? segments.map((item, itemIndex) => <button key={`${item.start}-${itemIndex}`} className={itemIndex === index ? 'active' : ''} onClick={() => select(itemIndex)}><time>{clock(item.start)}</time><span>{item.text}</span></button>) : <div className="segment-empty"><span>☊</span><p>导入并处理素材后<br/>完整原文会显示在这里</p></div>}
+      </div>
+    </aside>
+    </div>
+    </main>
+  </div>;
 }

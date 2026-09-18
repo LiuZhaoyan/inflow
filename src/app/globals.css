@@ -7,7 +7,9 @@ button:disabled { cursor:not-allowed; opacity:.4; }
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #9b6900; outline-offset:4px; }
 button:hover:not(:disabled) { filter:brightness(.97); }
 p,h1 { margin:0; }
+.app-shell { min-height:100vh; }
 .listening-page { width:min(100%,680px); margin:0 auto; padding:20px 20px 28px; }
+.desktop-sidebar,.desktop-topbar,.segment-panel { display:none; }
 .masthead { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; gap:8px; margin:6px 0 28px; }
 .home-link { font-size:44px; line-height:1; color:var(--ink); text-decoration:none; text-align:center; }
 .import-icon { font-size:34px; height:44px; }
@@ -75,5 +77,56 @@ p,h1 { margin:0; }
 .translation p { font-size:18px; }
 .footer-note { color:#99958b; text-align:center; font-size:11px; line-height:1.9; margin-top:22px; }
 @media(min-width:760px) { body { background:#f7f5ed; } .listening-page { background:var(--paper); margin:28px auto; padding:28px 36px; border-radius:28px; box-shadow:0 8px 40px #3a301208; } }
+@media(min-width:1100px) {
+  body { background:#fffefa; }
+  .app-shell { display:grid; grid-template-columns:clamp(210px,16.3vw,250px) minmax(0,1fr); }
+  .desktop-sidebar { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; padding:35px 22px 28px; border-right:1px solid #eeeae0; background:#fff; }
+  .sidebar-brand { display:flex; align-items:center; padding:0 22px 42px; }
+  .sidebar-brand>span { font-family:"Brush Script MT","Segoe Print",cursive; font-size:42px; line-height:1; font-weight:800; font-style:italic; letter-spacing:-2px; }
+  .desktop-sidebar nav { display:flex; flex-direction:column; gap:9px; padding-bottom:26px; border-bottom:1px solid #e8e6df; }
+  .desktop-sidebar a { min-height:60px; display:flex; align-items:center; gap:19px; padding:12px 20px; border-radius:18px; color:var(--ink); text-decoration:none; font-size:17px; }
+  .desktop-sidebar a span { width:25px; text-align:center; font-size:28px; line-height:1; }
+  .desktop-sidebar a.active { background:linear-gradient(100deg,#fff2c8,#fff7df); font-weight:650; }
+  .sidebar-secondary { display:flex; flex-direction:column; gap:3px; margin-top:auto; }
+  .desktop-sidebar>p { margin:42px 0 0 22px; font-family:"Segoe Print",cursive; font-size:19px; line-height:1.25; transform:rotate(-4deg); }
+  .listening-page { width:100%; max-width:none; margin:0 auto; padding:27px 34px; border-radius:0; box-shadow:none; background:transparent; }
+  .masthead { display:none; }
+  .desktop-topbar { height:56px; display:flex; align-items:center; gap:25px; margin-bottom:27px; }
+  .desktop-import { width:min(720px,65%); height:54px; display:flex; align-items:center; gap:16px; padding:0 18px; border:1px solid #e2e3e8; border-radius:22px; background:#fff; box-shadow:0 3px 10px #15193408; color:#8a8d9c; text-align:left; }
+  .desktop-import>span:first-child { font-size:29px; line-height:1; transform:rotate(-20deg); }
+  .desktop-import>span:nth-child(2) { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .desktop-import>b { color:#adb0bd; font-size:20px; }
+  .notification { margin-left:auto; width:48px; height:48px; font-size:28px; }
+  .practice-layout { display:grid; grid-template-columns:minmax(0,1.62fr) minmax(300px,1fr); gap:26px; align-items:start; }
+  .practice-column { min-width:0; }
+  .media-card { border-radius:18px; }
+  .media-card:has(.primary) { min-height:0; }
+  .timeline { margin:16px 0 9px; }
+  .play-button { width:53px; height:53px; }
+  .import-status { margin-top:2px; }
+  .processing-note { margin-bottom:10px; }
+  .transport { max-width:670px; margin:14px auto 18px; gap:42px; }
+  .transport>button,.reveal-trigger { min-height:54px; font-size:17px; }
+  .transcript { min-height:110px; }
+  .transcript p { font-size:19px; }
+  .tools { max-width:680px; margin:19px auto 18px; }
+  .tools>button,.tools>label { border-radius:0; border-right:1px solid #e2e1dc; }
+  .tools>*:last-child { border-right:0; }
+  .translation { max-width:680px; margin:0 auto; }
+  .footer-note { display:none; }
+  .segment-panel { display:block; height:calc(100vh - 110px); min-height:600px; overflow:hidden; border:1px solid #e8e6e1; border-radius:20px; background:#fff; box-shadow:0 5px 22px #25200c0a; }
+  .segment-panel-header { height:84px; display:grid; grid-template-columns:85px 85px 1fr; align-items:center; padding:0 27px; font-size:19px; border-bottom:1px solid #f0eee8; }
+  .segment-panel-header strong,.segment-panel-header span { align-self:stretch; display:flex; align-items:center; justify-content:center; position:relative; }
+  .segment-panel-header strong::after { content:""; position:absolute; bottom:18px; left:17px; right:17px; height:4px; border-radius:4px; background:#f2be32; }
+  .segment-panel-header span { color:#8c8e9b; }
+  .segment-panel-header b { justify-self:end; font-size:27px; }
+  .segment-list { height:calc(100% - 84px); overflow-y:auto; padding:10px 20px 25px; }
+  .segment-list>button { width:100%; display:grid; grid-template-columns:66px 1fr; gap:12px; padding:15px 15px; border-radius:18px; color:#555d77; text-align:left; font-size:16px; line-height:1.45; }
+  .segment-list>button time { color:#a4a7b3; font-variant-numeric:tabular-nums; }
+  .segment-list>button.active { background:linear-gradient(100deg,#fff5d7,#fff8e8); color:#313544; }
+  .segment-list>button.active time { color:#b4a680; }
+  .segment-empty { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#aaa9a1; text-align:center; }
+  .segment-empty>span { font-size:48px; color:#d5c88f; }
+}
 @media(max-width:360px) { .listening-page { padding:12px; } .masthead { margin-bottom:20px; } .soundwave { height:55px; transform:scaleY(.5); margin-bottom:-8px; } .audio-art { padding:12px; } .audio-art p { font-size:11px; } .primary { padding:5px 15px; margin-top:6px; } .transport { gap:6px; } .timeline { gap:8px; } .timeline>span { font-size:10px; } .translation>button { font-size:13px; } }
 @media(prefers-reduced-motion:reduce) { * { scroll-behavior:auto!important; } }

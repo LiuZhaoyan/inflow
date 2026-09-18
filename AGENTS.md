@@ -30,6 +30,7 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 
 ## Commit & Pull Request Guidelines
 
+- When asked to commit current changes, stage and commit them directly. Treat `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, and other checks as opt-in verification, run only when the user explicitly requests them or the task specifically requires verification.
 - Recent history uses concise subjects with conventional prefixes such as `feat:`, `chore:`, and `refactor:`. Keep commits focused and use imperative, specific summaries, for example `feat: add placement test retry state`.
 - For non-trivial commits, include a short commit body after the subject that summarizes the main behavior changes, schema/data compatibility notes, and test or tooling updates.
 - Prefer 2-4 concise bullet-style body lines when a commit touches multiple layers, such as API, UI, domain logic, and tests.
@@ -37,3 +38,17 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 ## Security & Configuration Tips
 
 No environment secrets are required for the MVP. Never commit existing secrets, local databases, logs or generated uploads. Record provenance and material-specific usage conditions when adding audio; the code license does not automatically cover learning media.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local Markdown files under `.scratch/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.
