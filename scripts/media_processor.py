@@ -1,7 +1,6 @@
 """Local Korean ASR and Chinese translation. Model downloads are setup-only."""
 import json
 import os
-import re
 import sys
 from pathlib import Path
 from functools import lru_cache
@@ -42,6 +41,9 @@ def meaning_groups(text):
 
 def sentences(words):
     result, pending = [], []
+    endings = iter(sentence.end for sentence in korean_parser().split_into_sents(''.join(word.word for word in words)))
+    next_ending = next(endings, None)
+    position = 0
     def finish():
         if not pending: return
         text = ''.join(w.word for w in pending).strip()
@@ -49,10 +51,14 @@ def sentences(words):
             result.append({'start': round(pending[0].start, 3), 'end': round(pending[-1].end, 3), 'text': text, 'groups': meaning_groups(text)})
         pending.clear()
     for word in words:
+        position += len(word.word)
         if not word.word.strip(): continue
-        if pending and word.start - pending[-1].end >= 0.8: finish()
         pending.append(word)
-        if re.search(r'[.!?。！？][”\"\']?$', word.word.strip()): finish()
+        # ponytail: sentence ends snap to whole ASR words; splitting inside one word needs finer alignment.
+        if next_ending is not None and position >= next_ending:
+            finish()
+            while next_ending is not None and position >= next_ending:
+                next_ending = next(endings, None)
     finish()
     return result
 
@@ -64,11 +70,9 @@ def transcribe(filename):
         if not media.streams.audio: raise ProcessingError('媒体没有音轨，请选择包含语音的音频或视频。')
         duration = media.duration / av.time_base if media.duration else None
         if duration is None or not 0 < duration <= 600: raise ProcessingError('请选择时长可读取、10 分钟以内的媒体。')
-    model = WhisperModel(str(_models_root()/'whisper-base'), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
+    model = WhisperModel(str(_models_root()/'whisper-turbo'), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
     segments, info = model.transcribe(filename, language='ko', word_timestamps=True, vad_filter=True, beam_size=5, condition_on_previous_text=False)
-    result = []
-    for segment in segments:
-        result.extend(sentences(segment.words or []))
+    result = sentences([word for segment in segments for word in (segment.words or [])])
     if not result: raise ProcessingError('没有识别到语音，请换一段声音清晰的韩语媒体重试。')
     # Word alignment can overlap by milliseconds; preserve text while making playback ranges monotonic.
     for index, segment in enumerate(result):

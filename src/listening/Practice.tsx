@@ -194,6 +194,7 @@ export default function Practice() {
         if (media.current) media.current.currentTime = time; setPosition(time);
       }}/><span>{clock(position)} / {clock(duration)}</span></div>
     <div className="import-status"><span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>{file && <button className="process-button" disabled={!duration || duration > 600 || busy} onClick={() => void processMedia()}>{busy ? '正在转写与切句…' : segments.length ? '重新处理' : '开始处理'}</button>}</div>
+    {busy && <button className="process-button" onClick={() => { processing.current?.abort(); setBusy(false); }}>取消处理</button>}
     <p className="processing-note">媒体在当前 Inflow 服务上处理，不发送至第三方。{busy ? '处理期间仍可试听。' : '自动结果可能有误。'}</p>
     {error && <p className="notice" role="alert">{error}</p>}
     <div className="transport"><button disabled={!segment || index===0} onClick={() => select(index-1)}>◀Ⅰ <span>上一句</span></button>

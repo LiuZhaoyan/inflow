@@ -18,7 +18,7 @@ npm run dev
 
 Open http://localhost:3000. For production, run `npm run build` and then `npm start`.
 
-The first setup downloads dependencies from PyPI and Hugging Face, the Whisper base model and Argos translation weights. The Python environment and models require about 1 GB in total. Subsequent processing uses local files and has no third-party inference fees. The setup script pins the translation mirror versions and SHA-256 checksums; the official Argos download endpoint returned 403 during preparation, so a public mirror is used. The model and Python environment are stored in the Git-ignored `.models/` and `.venv/` directories.
+The first setup downloads dependencies from PyPI and Hugging Face, the [Whisper large-v3-turbo CTranslate2 model](https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo) and Argos translation weights. Whisper weights require about 1.6 GB, plus translation models and Python dependencies. Subsequent processing uses local files and has no third-party inference fees. The setup script pins the Whisper revision and translation mirror versions and SHA-256 checksums; the official Argos download endpoint returned 403 during preparation, so a public mirror is used. The model and Python environment are stored in the Git-ignored `.models/` and `.venv/` directories.
 
 **Processing location:** the browser sends the selected media to the machine running the current Inflow / Next.js service. Python performs transcription and translation on that machine; media and source text are not sent to third parties. Temporary media is removed when processing finishes. When a phone accesses Inflow on a computer, processing happens on the computer rather than on the phone.
 
@@ -66,7 +66,7 @@ This iteration does not save progress, processed media or notes. Refreshing the 
 
 ## Local processing and limitations
 
-- **Transcription and timing:** faster-whisper base, CPU int8, Korean recognition, with sentence boundaries based on real word timestamps, sentence-ending punctuation and pauses. Old recordings, noise, names and connected speech can cause recognition errors.
+- **Transcription and timing:** faster-whisper large-v3-turbo, CPU int8, Korean recognition. Kiwi detects sentence endings across ASR chunks, including missing punctuation, and maps them to real word timestamps; a pause alone does not split a sentence. The native comparison improved common-word recognition and the merged opening range, with an approximately 90-second wait for the selected 156-second video. Names and individual words can still be wrong; [Windows quality evidence](.scratch/desktop-learning/windows-probe.md) remains subject to owner review.
 - **Meaning groups:** Kiwi Korean morphological analysis creates complete grammatical phrases at particle and punctuation boundaries rather than fixed word counts. It is not full semantic understanding and remains limited for idioms, ambiguity and incorrectly transcribed text.
 - **Translation:** an Argos Korean→English→Chinese model runs locally through CTranslate2; the English pivot can lose detail.
 - **Resources:** each processing request has a 10-minute timeout; the API runs one inference operation at a time in the same process and asks busy callers to retry later. There is no account or multi-user job system.

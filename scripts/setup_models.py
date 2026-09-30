@@ -17,8 +17,8 @@ PACKAGES = [
 def install(models_dir=None):
     root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
     root.mkdir(parents=True, exist_ok=True)
-    print('Downloading Whisper base from huggingface.co (~145 MB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
-    snapshot_download('Systran/faster-whisper-base', local_dir=str(root/'whisper-base'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*'])
+    print('Downloading Whisper large-v3-turbo from huggingface.co (~1.6 GB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
+    snapshot_download('dropbox-dash/faster-whisper-large-v3-turbo', revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf', local_dir=str(root/'whisper-turbo'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*','preprocessor_config.json','README.md'])
     for name, folder, revision, digest in PACKAGES:
         if (root/folder/'model/model.bin').exists() and (root/folder/'sentencepiece.model').exists():
             print(name+' already installed', flush=True)

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { readBody, foreignOrigin, runProcessor } from './media-server';
 
-test('processor runs through the configured interpreter and model directory', async () => {
+test('processor uses configured paths and encoding, and permits retry after cancellation', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow media worker '));
   const originalCwd = process.cwd();
   const originalPython = process.env.INFLOW_PYTHON;
@@ -15,7 +15,7 @@ test('processor runs through the configured interpreter and model directory', as
   try {
     await mkdir(path.join(root, 'scripts'));
     await writeFile(path.join(root, 'scripts', 'media_processor.py'), [
-      "console.log(JSON.stringify({ translation: '今天天气很好。', mode: process.argv[2], cwd: process.cwd(), models: process.env.INFLOW_MODELS_DIR, encoding: process.env.PYTHONIOENCODING }));",
+      "setTimeout(() => console.log(JSON.stringify({ translation: '今天天气很好。', mode: process.argv[2], cwd: process.cwd(), models: process.env.INFLOW_MODELS_DIR, encoding: process.env.PYTHONIOENCODING })), process.argv[2] === 'transcribe' ? 60000 : 0);",
     ].join('\n'));
     process.chdir(root);
     process.env.INFLOW_PYTHON = process.execPath;
@@ -29,6 +29,12 @@ test('processor runs through the configured interpreter and model directory', as
       models,
       encoding: 'utf-8',
     });
+
+    const controller = new AbortController();
+    const pending = runProcessor('transcribe', controller.signal, 'sample.webm');
+    setTimeout(() => controller.abort(), 100);
+    await assert.rejects(pending, /处理已取消/);
+    assert.equal((await runProcessor('translate', new AbortController().signal, undefined, '한국어 문장') as { translation: string }).translation, '今天天气很好。');
   } finally {
     process.chdir(originalCwd);
     if (originalPython === undefined) delete process.env.INFLOW_PYTHON;
