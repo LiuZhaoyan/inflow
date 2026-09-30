@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and React 19. Page entry, layout, styles and the retained Logo live in `src/app/`. The active listening UI, processing logic, API adapters and tests live in `src/listening/` and `src/app/api/`. Audio and provenance belong in `public/materials/`. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; `docs/STRUCTURED_INTENSIVE_LISTENING_MVP.md` is a historical record of the superseded preloaded dictation MVP.
+Inflow is a Korean learning application using Next.js 16, TypeScript and React 19, moving toward the confirmed Windows desktop MVP. Page entry, layout, styles and the retained Logo live in `src/app/`. The active listening UI, processing logic, API adapters and tests live in `src/listening/` and `src/app/api/`. Audio and provenance belong in `public/materials/`. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; implementation tickets live under `.scratch/desktop-learning/`.
 
 ## Documentation Language
 
@@ -23,7 +23,7 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 - Use TypeScript with strict compiler settings and the `@/*` path alias for imports from `src/`
 - Follow existing formatting: two-space indentation is common in config files, while several test files use four spaces
 - Name React components in PascalCase, hooks with `use` prefixes, and route handlers as `route.ts`
-- Keep media-processing and listening-interaction rules close to their modules under `src/listening/`. Prefer native browser features and existing dependencies. The current MVP needs no account system or database; current processing choices are documented in `docs/PRODUCT_SPEC.md` and `docs/ROADMAP.md`.
+- Keep media-processing and listening-interaction rules close to their modules under `src/listening/`. Prefer native browser features and existing dependencies. The confirmed desktop MVP uses host-owned SQLite and requires no account system; current processing choices are documented in `docs/PRODUCT_SPEC.md` and `docs/ROADMAP.md`.
 
 ## Testing Guidelines
 
@@ -42,7 +42,7 @@ Inflow is a Korean intensive-listening MVP using Next.js 16, TypeScript and Reac
 
 ## Security & Configuration Tips
 
-No environment secrets are required for the MVP. Never commit existing secrets, local databases, logs or generated uploads. Record provenance and material-specific usage conditions when adding audio; the code license does not automatically cover learning media.
+Local transcription requires no environment secret. Passage generation uses the owner's API key in the host or an ignored local environment file. Never commit existing secrets, local databases, logs or generated uploads. Record provenance and material-specific usage conditions when adding audio; the code license does not automatically cover learning media.
 
 ## Agent skills
 

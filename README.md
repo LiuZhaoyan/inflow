@@ -1,12 +1,12 @@
 # Inflow
 
-A mobile-first Korean intensive-listening page: import audio or video → automatically split it into sentences → reveal meaning groups progressively → adjust speed and looping → view a translation.
+A Korean learning application moving toward a Windows desktop MVP: import media → intensive listening → collect vocabulary → generate a short Korean passage → collect further vocabulary.
 
-The current implementation uses local models, and the complete backend acceptance record is kept in `docs/`. Automatically generated content is not guaranteed to be correct. The prototype's bottom extension area is used for translations.
+The current browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. The desktop host, persistence and vocabulary/artifact UI remain blocked on the Windows and live generation feasibility gates. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
 
 ## Setup (Linux / WSL)
 
-Node.js 20.9+ and Python 3.12 are required. No API key, account or database is needed. The Python worker is called by the Next.js Node API; it does not require a separate Desktop service.
+Node.js 20.9+ and Python 3.12 are required for the listening prototype. The optional passage evaluation runner uses Node.js 24 and an owner-configured DeepSeek API key. The current Python worker is called by the Next.js Node API; it does not require a separate Desktop service.
 
 ```bash
 npm ci
@@ -23,6 +23,36 @@ The first setup downloads dependencies from PyPI and Hugging Face, the Whisper b
 **Processing location:** the browser sends the selected media to the machine running the current Inflow / Next.js service. Python performs transcription and translation on that machine; media and source text are not sent to third parties. Temporary media is removed when processing finishes. When a phone accesses Inflow on a computer, processing happens on the computer rather than on the phone.
 
 This version has been validated for local single-user Linux / WSL use. It requires a working Python subprocess and local model directories; ordinary static hosting or short-lived serverless environments cannot directly run this processing path.
+
+## Windows feasibility setup
+
+Use a checkout on a local Windows drive. The Windows Conda probe failed to lock its package cache on the WSL UNC filesystem, so the setup script rejects a UNC checkout. After these changes are committed, a native Windows PowerShell session can clone the local WSL repository without a push:
+
+```powershell
+$inflowCheckout = Join-Path $env:USERPROFILE 'projects\inflow'
+New-Item -ItemType Directory -Force (Split-Path $inflowCheckout)
+git clone --no-hardlinks '\\wsl.localhost\Ubuntu\home\ada\projects\inflow' $inflowCheckout
+Set-Location $inflowCheckout
+.\scripts\setup_windows.ps1
+npm ci
+npm run dev
+```
+
+The setup script needs Conda available in PowerShell. It creates an isolated `.venv-win` with Python 3.12 using conda-forge, installs the pinned processing dependencies and downloads local models. It leaves the base environment intact and sets `INFLOW_PYTHON` and `INFLOW_MODELS_DIR` for the current PowerShell process. An optional `-ModelsDir` supplies another model directory. In later terminal sessions, set `INFLOW_PYTHON` to the local `.venv-win\python.exe` before starting the server, and set `INFLOW_MODELS_DIR` again if you used a custom directory.
+
+Run the selected [WIKITONGUES Korean sample](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm) without subtitles and record transcription, sentence boundaries, playback, loops, reveal, translation, cancellation and retry. The prepared Windows script and WSL tests do not establish native Windows acceptance or an installer.
+
+## Passage evaluation
+
+Use Node.js 24. Copy `.env.example` to the Git-ignored `.env.local` and set `DEEPSEEK_API_KEY` there. Never paste the key into an issue or report.
+
+```sh
+npm run generation:evaluate
+```
+
+With a key, this command makes at most four serial DeepSeek requests for the prepared Korean cases. It saves Korean text, Chinese sentence translations, target highlights, latency and usage in a new ignored directory under `.scratch/desktop-learning/generated-samples/`. If a request fails, it preserves earlier samples, records a sanitized failure and stops.
+
+Without a key, it only saves the prepared inputs and explicitly reports that live evaluation was not run. Review real samples for the selected meanings, natural inflection, common supporting vocabulary and faithful translations before accepting the provider. Passing structured-output tests is not Korean quality evidence. See [the generation baseline](.scratch/desktop-learning/generation-baseline.md).
 
 ## Usage
 
@@ -52,12 +82,12 @@ npm run typecheck
 npm run build
 ```
 
-Primary acceptance must use real audio and video without subtitles and exercise the complete processing path. The current page uses only recognition results returned by the media-processing API and does not depend on preloaded course text; the superseded dictation design remains only in the historical document.
+Primary acceptance must use real audio and video without subtitles and exercise the complete processing path. The current page uses only recognition results returned by the media-processing API and does not depend on preloaded course text.
 
 ## Documentation and code
 
-- [Current task and acceptance criteria](docs/INTENSIVE_LISTENING_TASK.md)
-- [Product specification](docs/PRODUCT_SPEC.md) · [Roadmap](docs/ROADMAP.md) · [Historical MVP](docs/STRUCTURED_INTENSIVE_LISTENING_MVP.md)
+- [Implementation specification and acceptance criteria](.scratch/desktop-learning/spec.md)
+- [Product specification](docs/PRODUCT_SPEC.md) · [Roadmap](docs/ROADMAP.md) · [Earlier backend acceptance](docs/BACKEND_ACCEPTANCE.md)
 - `src/listening/Practice.tsx`: media and learning interactions; `RevealMenu.tsx`: touch and keyboard menu.
 - `src/app/api/`: transcription and translation endpoints; `src/listening/processing.ts`: processing-result validation.
 - `scripts/media_processor.py`: local transcription, meaning groups and translation; `scripts/setup_models.py`: model installation.

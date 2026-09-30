@@ -1,92 +1,95 @@
 # Inflow Implementation Roadmap
 
-Status: a staged roadmap based on confirmed product boundaries. The current local processing pipeline and intensive-listening page are implemented; real-media backend acceptance is complete, while full browser acceptance and later stages remain incomplete.
-Last updated: 2026-09-16
+Status: confirmed Windows desktop direction; the current browser/local-processing prototype is a starting point, not a delivered desktop application.
+Last updated: 2026-09-30
 Product source: [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
+Implementation contract: [Windows desktop specification](../.scratch/desktop-learning/spec.md).
 
-Stages are ordered by dependency and do not assign unconfirmed versions, dates or estimates. This is not a detailed code task list; undecided approaches must not be treated as completed decisions.
+The first delivery connects Korean video listening, a vocabulary notebook and generated text artifacts for the owner's personal use on Windows. The specification's testing boundary is confirmed. Stages below describe outcomes and dependencies; [the approved ticket breakdown](../.scratch/desktop-learning/ticket-plan.md) links seven published implementation issues. Preparation for tickets 01 and 02 is implemented; native Windows acceptance and live Korean generation review remain open. Later tickets have not started.
 
-## Stage 1: Validate automatic processing for media without subtitles
+## Stage 1: Establish Windows processing and generation feasibility
 
-Goal: prove that user-provided audio or video can produce source text, playable segments and sentence-level meaning groups that support intensive listening.
-
-Scope:
-
-- Validate automatic transcription, timing boundaries and meaning-group segmentation with representative Korean audio and video.
-- Check that segments play completely, source text corresponds to the audio and meaning-group reveals are suitable for learning.
-- Measure processing wait time, runtime conditions and cost, and determine where processing should run for the browser product.
-- Decide whether media must be uploaded, how processing results are reused and how retries work.
-- Initially validate a Next.js Node API calling a local Python worker with faster-whisper base CPU int8 transcription, Whisper word-timestamp sentence boundaries, kiwipiepy 0.23.2 particle and part-of-speech boundaries for meaning groups, and offline Argos ko→en→zh translation through CTranslate2. The first run downloads weights; media is not sent to third parties.
-
-Deliverable: demonstrable processing results, an empirical record and a processing approach chosen from that evidence.
-
-Acceptance: media without accompanying subtitles produces playable and revealable results, with errors and limitations recorded. Pre-arranged course text cannot substitute for this validation.
-
-## Stage 2: Complete the browser intensive-listening flow
-
-Dependency: the Stage 1 processing approach is accepted.
+Goal: obtain runnable evidence for the two model-dependent parts before integrating them into the desktop learning cycle.
 
 Scope:
 
-- Integrate media selection, automatic processing, status display and retry into the existing Next.js project.
-- Implement audio/video playback, speed control, segment navigation, current-segment looping and A–B looping.
-- Implement small, more and full reveals plus hiding based on sentence-level meaning groups.
-- Determine reveal quantity and order from real meaning-group examples, then implement the rule.
-- Organize the practice page around the two mobile prototypes, with the bottom area carrying translation.
-- Integrate current-sentence automatic translation with generated, missing and failed states.
-- Support lightweight editing of the current segment's text and boundaries.
-- The current learning flow has removed the old keyboard answer checking, automatic mastery judgment and fixed review-interval constraints.
+- Evaluate the existing local Korean transcription, sentence timing and translation baseline with representative media on Windows.
+- Record transcription elapsed time, recognition errors, incomplete boundaries and processing conditions; inspect actual sentence replay.
+- Use an isolated Windows Python 3.12 environment and validate dependencies/resource paths before packaging the Python worker.
+- Validate one generation provider using owner-configured credentials. DeepSeek Flash Responses is the researched first candidate; account access and Korean quality must pass the prepared evaluation.
+- Check a small structured response containing Korean sentence text, selected-word annotations and Chinese translation, including inflection and ambiguous contextual meanings.
+- Inspect generated passages for full target coverage, correct meaning, natural Korean and common supporting vocabulary. Record usage and wait time.
+- Keep the current 50 MB and 10-minute processing baseline until resource evidence justifies a separate expansion.
 
-Deliverable: a browser version that takes subtitle-free media into segmented intensive listening.
+Deliverable: Windows media-processing evidence and an accepted first generation provider/response contract.
 
-Acceptance: users can navigate, loop and reveal source text without entering an answer; hints increase by complete meaning groups; changing segments hides source text and translation by default; the original media remains playable after automatic processing fails.
+Acceptance: real media produces usable sentence text/timings; generated samples exercise the agreed vocabulary rule. Neither structural JSON validity nor existing Linux acceptance substitutes for Korean/Windows evidence. If the baseline fails, revise the affected approach from comparative evidence rather than integrating several providers in advance.
 
-The translation entry, display area, generated and failed states, and current-sentence translation belong to this stage. The exact service or local implementation depends on the real-media evidence from Stage 1.
+## Stage 2: Deliver persistent desktop intensive listening
 
-## Stage 3: Learning continuity and mobile PWA experience
-
-Dependency: the Stage 2 core flow is usable.
+Dependency: the Windows processing baseline is usable.
 
 Scope:
 
-- Save and restore learning position, revisit marks, notes and playback preferences.
-- Save and reuse media-processing results, including the association needed for restoration.
-- Polish touch layouts for phones and tablets and usability in desktop browsers.
-- Provide a PWA installation experience and application icon.
-- Validate storage failures, reopening media and processing retries in real usage paths.
-- Update the README and usage instructions to match the delivered behavior.
+- Host the existing React learning interface in Electron and use Next static export for packaged UI assets.
+- Move transcription/translation from POST endpoints into desktop operations and package the Windows processing worker.
+- Import a managed copy of selected media and save its metadata, processing results, learning position and playback preferences in local storage.
+- Preserve sentence navigation, current-sentence loop, speed controls, meaning-group reveals, hiding and independent sentence translation.
+- Reuse existing processing validation and reveal behavior.
+- Validate cancel/retry, missing models, missing managed media, and failure recovery.
+- Verify packaged media serving, codec compatibility and seek/loop completeness on Windows.
 
-Deliverable: a mobile-first browser product that can be reused and resume practice.
+Deliverable: an installable desktop listening slice that can process one Korean video, close and restore it without repeating transcription.
 
-Acceptance: learning records can be reopened and restored, existing processing results are reused, primary playback actions are easy to reach, storage or media-association failures are clearly reported, and the documentation matches observed behavior.
+Acceptance: the installed app plays and processes source media, retains the original media after processing failure, restores learning state and runs its worker without requiring developer paths or system Python. Existing prototype runtime code is adapted rather than treating a browser preview as desktop acceptance.
 
-Large media offline caching, background playback and a native installer are not completion conditions for this stage.
+## Stage 3: Connect vocabulary and generated text artifacts
 
-## Stage 4: Local Desktop service
-
-Dependency: the browser core flow is established and the processing input/output boundary is clear.
+Dependency: the desktop operations and durable storage from Stage 2 exist, and the Stage 1 generation provider passes its evidence gate.
 
 Scope:
 
-- Provide a local media-processing service on the user's computer.
-- Let the local service handle media reading, transcription and segmentation for the browser learning interface.
-- Reuse the validated learning interaction and processing-result structure.
+- Collect source-linked vocabulary from media, retaining dictionary form, contextual Chinese meaning, original sentence and encountered form.
+- Support manual entries and corrections; preserve distinct contextual meanings and multiple source occurrences.
+- Select target vocabulary and optionally provide a topic to generate one short Korean passage, without difficulty-level or length controls.
+- Validate structured output and target annotations, then atomically save the text artifact, Chinese translation, highlights and target-meaning snapshots.
+- Display target highlights and on-demand Chinese translation.
+- Collect further vocabulary from artifacts with source context retained, and generate another passage from those entries.
+- Configure the owner's API key in the desktop host and retain saved material through authentication, quota, malformed-result and other generation failures.
 
-Deliverable: a local Desktop service that works with the browser interface for the learning flow.
+Deliverable: the complete listening → vocabulary → reading → vocabulary learning cycle.
 
-Acceptance: media on the user's computer can be processed through the local service and enter the same intensive-listening flow.
+Acceptance: one real media sentence supplies vocabulary; all selected words appear in a usable generated passage with their intended senses; reading that artifact supplies further vocabulary for a second generation. Saved targets keep their historical meanings after notebook edits, and all records remain available after reopening.
 
-Supported operating systems, models, installation method and a standalone desktop client remain undecided and are not delivery commitments.
+## Stage 4: Complete personal-use Windows acceptance
+
+Dependency: the complete learning cycle from Stage 3 works.
+
+Scope:
+
+- Build and exercise the Windows installer with the packaged worker, local model setup and durable data directories.
+- Test the installed application without the developer environment.
+- Verify Chinese/spaced file paths, original-file movement, managed-file recovery, processing cancellation and clean shutdown.
+- Exercise the full learning cycle, close/reopen it and check media, transcripts, source-linked vocabulary and artifacts.
+- Update runnable setup and usage documentation to describe observed desktop behavior.
+- Record automated results, real model evaluations and installed-app checks separately, including remaining limitations.
+
+Deliverable: a Windows application the owner can install and use for the confirmed learning cycle.
+
+Acceptance: the installed app completes and restores the complete cycle. Generation produces text only; automatic audio generation is not required. Windows packaging, model/runtime setup and persistence are demonstrated rather than inferred from a source checkout.
 
 ## Verification approach
 
-- Automated checks cover validation of real subtitle or processing-result inputs, segment ranges, reveal relationships and progress restoration.
-- Browser testing covers audio and video playback, sentence navigation, looping, reveals, the translation area and failure recovery.
-- Continue using the repository's tests, lint, type checking and build commands, adjusting coverage to the actual implementation.
-- Use the complete learning path with media without subtitles as the primary acceptance path rather than validating only preloaded examples.
+- Prefer observable learning actions through the application operations interface and existing processing/reveal test surfaces.
+- Use temporary real SQLite/files for persistence checks and deterministic external-result substitutes for automated operation tests.
+- Use representative Korean media and generated samples for recognition, timing, word sense, inflection, supporting-vocabulary and translation quality.
+- Use native Windows installed-app checks for playback, worker resources, data directories and restoration.
+- Run implementation checks appropriate to each change; this roadmap does not itself run tests or establish delivery.
 
-## Decisions not yet scheduled for implementation
+## Scope boundaries and later improvements
 
-The following remain undecided and are not new feature commitments: the final model or deployment approach for automatic processing and translation, the storage mechanism for media and processing results, and packaging or distribution of the local Desktop service. The current reveal rule is confirmed in [the current task](INTENSIVE_LISTENING_TASK.md); the default local path still requires complete real-media validation.
+Generated audio/TTS, learner-level estimation, difficulty/length controls, accounts/synchronization, mobile/PWA delivery, other desktop installers, a multi-provider framework, public distribution infrastructure and automatic updates are outside the first delivery.
 
-When the implementation plan is refined next, refine only the current stage and its necessary decisions. Do not add accounts, a content platform, a professional editor or multi-client applications in advance.
+The older browser roadmap's A–B looping, revisit marks, independent notes and lightweight transcript/timing editing remain separate possible improvements. They are not prerequisites for the confirmed vocabulary-to-text cycle.
+
+Technical research is recorded in [the recommendation](../.scratch/desktop-learning/technical-recommendation.md). Research and specification completion do not mean model quality, package compatibility or runtime acceptance has already passed.

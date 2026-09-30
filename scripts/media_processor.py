@@ -7,12 +7,15 @@ from pathlib import Path
 from functools import lru_cache
 
 ROOT = Path(__file__).resolve().parents[1]
-MODELS = ROOT / '.models'
 os.environ['HF_HUB_OFFLINE'] = '1'
 
 
 class ProcessingError(ValueError):
     pass
+
+
+def _models_root():
+    return Path(os.environ.get('INFLOW_MODELS_DIR', ROOT / '.models'))
 
 
 @lru_cache(maxsize=1)
@@ -61,7 +64,7 @@ def transcribe(filename):
         if not media.streams.audio: raise ProcessingError('媒体没有音轨，请选择包含语音的音频或视频。')
         duration = media.duration / av.time_base if media.duration else None
         if duration is None or not 0 < duration <= 600: raise ProcessingError('请选择时长可读取、10 分钟以内的媒体。')
-    model = WhisperModel(str(MODELS/'whisper-base'), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
+    model = WhisperModel(str(_models_root()/'whisper-base'), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
     segments, info = model.transcribe(filename, language='ko', word_timestamps=True, vad_filter=True, beam_size=5, condition_on_previous_text=False)
     result = []
     for segment in segments:
@@ -81,7 +84,7 @@ def translate(text):
     if not isinstance(text,str) or not text.strip() or len(text)>10000: raise ProcessingError('翻译内容为空或过长。')
     for source, target in [('ko','en'),('en','zh')]:
         folder = None
-        for metadata in MODELS.glob('*/metadata.json'):
+        for metadata in _models_root().glob('*/metadata.json'):
             data = json.loads(metadata.read_text())
             if data.get('from_code') == source and data.get('to_code') == target:
                 folder = metadata.parent

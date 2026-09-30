@@ -45,9 +45,13 @@ uploads*
 /logs
 /.models/
 /.venv/
+/.venv-win/
+/.conda-win-cache/
 /scripts/__pycache__/
 
 /.vscode/
 .github
 
 __pycache__/
+
+/.scratch/desktop-learning/generated-samples/

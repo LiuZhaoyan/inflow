@@ -1,6 +1,9 @@
 import unittest
+import os
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from media_processor import meaning_groups, sentences
+from unittest.mock import patch
+from media_processor import ProcessingError, meaning_groups, sentences, translate
 
 class ProcessingTests(unittest.TestCase):
     def test_groups_preserve_text_and_complete_phrases(self):
@@ -20,5 +23,10 @@ class ProcessingTests(unittest.TestCase):
         self.assertEqual(result[1]['text'],'저는 학생입니다.')
         self.assertEqual(result[1]['end'],3)
         self.assertEqual(sentences([]),[])
+
+    def test_translation_uses_configured_models_directory(self):
+        with TemporaryDirectory() as directory, patch.dict(os.environ, {'INFLOW_MODELS_DIR': directory}):
+            with self.assertRaisesRegex(ProcessingError, '翻译模型尚未安装'):
+                translate('안녕하세요.')
 
 if __name__ == '__main__': unittest.main()

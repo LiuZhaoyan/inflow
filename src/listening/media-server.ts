@@ -20,18 +20,29 @@ export async function readBody(request: Request, limit: number): Promise<Buffer>
   return Buffer.concat(chunks);
 }
 
+function processorPaths(root: string, env: NodeJS.ProcessEnv, platform: NodeJS.Platform) {
+  const paths = platform === 'win32' ? path.win32 : path.posix;
+  return {
+    python: env.INFLOW_PYTHON || paths.join(root, '.venv', ...(platform === 'win32' ? ['Scripts', 'python.exe'] : ['bin', 'python'])),
+    worker: paths.join(root, 'scripts', 'media_processor.py'),
+    models: env.INFLOW_MODELS_DIR
+      ? paths.resolve(root, env.INFLOW_MODELS_DIR)
+      : paths.join(root, '.models'),
+  };
+}
+
 // ponytail: one local inference at a time; use a bounded job queue only for a multi-user deployment.
 let busy = false;
 export async function runProcessor(mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string): Promise<unknown> {
   if (busy) throw new Error('正在处理另一项请求，请稍后重试。');
   busy = true;
   try {
-    const python = path.join(process.cwd(), '.venv/bin/python');
-    try { await access(python); }
+    const paths = processorPaths(process.cwd(), process.env, process.platform);
+    try { await access(paths.python); }
     catch { throw new Error('本地处理环境尚未安装，请按 README 完成模型安装后重试。'); }
     return await new Promise((resolve, reject) => {
-      const child = execFile(python, [path.join(process.cwd(), 'scripts/media_processor.py'), mode, ...(file ? [file] : [])],
-        { timeout: 600_000, maxBuffer: 2 * 1024 * 1024, signal, killSignal: 'SIGKILL' }, (error, stdout) => {
+      const child = execFile(paths.python, [paths.worker, mode, ...(file ? [file] : [])],
+        { timeout: 600_000, maxBuffer: 2 * 1024 * 1024, signal, killSignal: 'SIGKILL', env: { ...process.env, INFLOW_MODELS_DIR: paths.models, PYTHONIOENCODING: 'utf-8' } }, (error, stdout) => {
           if (error) {
             reject(new Error(signal.aborted ? '处理已取消。' : '本地处理失败或超时，请确认模型已安装，并使用 10 分钟以内、声音清晰的韩语媒体重试。'));
             return;

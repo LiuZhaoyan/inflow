@@ -1,10 +1,12 @@
 """Download local model data only; never upload media. Run once before starting Inflow."""
+import argparse
 import hashlib
+import os
 import zipfile
 from pathlib import Path
 from huggingface_hub import hf_hub_download, snapshot_download
 
-ROOT = Path(__file__).resolve().parents[1] / '.models'
+DEFAULT_ROOT = Path(__file__).resolve().parents[1] / '.models'
 # Fixed public mirror revisions: official Argos download endpoints returned HTTP 403 during validation.
 PACKAGES = [
     ('ko_en-1_1', 'ko_en', '15d756c2e589f5c4c0272a7666b4cf2a1308d5c8', '6da8f3db6ca40f42b1875570a1c06856f6e17c7ef62845d85de217ba548c1471'),
@@ -12,22 +14,26 @@ PACKAGES = [
 ]
 
 
-def install():
-    ROOT.mkdir(exist_ok=True)
+def install(models_dir=None):
+    root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
+    root.mkdir(parents=True, exist_ok=True)
     print('Downloading Whisper base from huggingface.co (~145 MB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
-    snapshot_download('Systran/faster-whisper-base', local_dir=str(ROOT/'whisper-base'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*'])
+    snapshot_download('Systran/faster-whisper-base', local_dir=str(root/'whisper-base'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*'])
     for name, folder, revision, digest in PACKAGES:
-        if (ROOT/folder/'model/model.bin').exists() and (ROOT/folder/'sentencepiece.model').exists():
+        if (root/folder/'model/model.bin').exists() and (root/folder/'sentencepiece.model').exists():
             print(name+' already installed', flush=True)
             continue
         print('Downloading '+name+' from the fixed Hugging Face Argostranslate mirror', flush=True)
-        package = Path(hf_hub_download('TiberiuCristianLeon/Argostranslate', 'translate-'+name+'.argosmodel', revision=revision, local_dir=str(ROOT/'downloads')))
+        package = Path(hf_hub_download('TiberiuCristianLeon/Argostranslate', 'translate-'+name+'.argosmodel', revision=revision, local_dir=str(root/'downloads')))
         if hashlib.sha256(package.read_bytes()).hexdigest() != digest: raise ValueError('Model checksum mismatch: '+name)
         with zipfile.ZipFile(package) as archive:
             for item in archive.infolist():
-                if not (ROOT/item.filename).resolve().is_relative_to(ROOT.resolve()): raise ValueError('Unsafe archive path')
-            archive.extractall(ROOT)
+                if not (root/item.filename).resolve().is_relative_to(root.resolve()): raise ValueError('Unsafe archive path')
+            archive.extractall(root)
     print('Local models ready. Runtime processing does not use third-party services.', flush=True)
 
 
-if __name__ == '__main__': install()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--models-dir', type=Path, default=None, help='Model directory (defaults to INFLOW_MODELS_DIR or .models).')
+    install(parser.parse_args().models_dir)

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit --pretty false",
-    "test": "node --import tsx --test src/listening/*.test.ts"
+    "test": "node --import tsx --test src/listening/*.test.ts src/generation/*.test.ts",
+    "generation:evaluate": "node --env-file-if-exists=.env.local --import tsx scripts/evaluate-generation.ts"
   },
   "dependencies": {
     "next": "16.1.1",
