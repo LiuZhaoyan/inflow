@@ -1,2 +1,2 @@
-import Practice from '@/listening/Practice';
-export default function Page() { return <Practice />; }
+import LearningWorkspace from '@/workspace/LearningWorkspace';
+export default function Page() { return <LearningWorkspace />; }

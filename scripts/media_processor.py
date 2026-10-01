@@ -1,5 +1,6 @@
 """Local Korean ASR and Chinese translation. Model downloads are setup-only."""
 import json
+import math
 import os
 import sys
 from pathlib import Path
@@ -63,6 +64,15 @@ def sentences(words):
     return result
 
 
+def probe(filename):
+    import av
+    with av.open(filename) as media:
+        duration = media.duration / av.time_base if media.duration is not None else None
+    if duration is None or not math.isfinite(duration) or duration <= 0:
+        raise ProcessingError('无法读取媒体时长，请重试。')
+    return {'duration': duration}
+
+
 def transcribe(filename):
     import av
     from faster_whisper import WhisperModel
@@ -106,7 +116,8 @@ def translate(text):
 
 if __name__ == '__main__':
     try:
-        if sys.argv[1] == 'transcribe': output = transcribe(sys.argv[2])
+        if sys.argv[1] == 'probe': output = probe(sys.argv[2])
+        elif sys.argv[1] == 'transcribe': output = transcribe(sys.argv[2])
         elif sys.argv[1] == 'translate': output = translate(json.load(sys.stdin).get('text'))
         else: raise ProcessingError('未知的媒体处理操作。')
     except ProcessingError as error:

@@ -5,11 +5,11 @@ import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { validateSegments } from '../src/listening/processing';
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
-import type { LearningArtifact, LearningState, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource, MediaVocabularySource } from '../src/listening/desktop';
+import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource, MediaVocabularySource } from '../src/listening/desktop';
 
-type Processor = (mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
+type Processor = (mode: 'probe' | 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string };
-const initialLearning: LearningState = { position: 0, index: 0, rate: 1, loop: false, duration: 0 };
+const initialLearning: LearningState = { position: 0, index: 0, rate: 1, loop: false, duration: 0, mode: 'full' };
 
 export class DesktopOperations {
   private db: DatabaseSync;
@@ -46,8 +46,9 @@ export class DesktopOperations {
   get(id: string): SavedMedia {
     const row = this.row(id);
     const segments = this.db.prepare('SELECT id, content FROM segments WHERE media_id = ? AND active = 1 ORDER BY ordinal').all(id) as { id: string; content: string }[];
+    const learning = JSON.parse(row.learning) as Partial<LearningState>;
     return { id, name: row.name, video: /\.(mp4|webm|mov)$/i.test(row.name), missing: !existsSync(this.mediaPath(id)),
-      segments: segments.map(segment => ({ ...JSON.parse(segment.content), id: segment.id })), learning: JSON.parse(row.learning) };
+      segments: segments.map(segment => ({ ...JSON.parse(segment.content), id: segment.id })), learning: { ...initialLearning, ...learning, mode: learning.mode === 'sentence' ? 'sentence' : 'full' } };
   }
 
   list(): SavedMedia[] {
@@ -75,13 +76,16 @@ export class DesktopOperations {
 
   async importMedia(filename: string): Promise<SavedMedia> {
     const hash = await this.inspect(filename);
+    const probe = await this.processor('probe', new AbortController().signal, filename) as { duration?: unknown };
+    if (typeof probe?.duration !== 'number' || !Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('无法读取媒体时长，请重试。');
+    if (probe.duration > 600) throw new Error('请选择 10 分钟以内的媒体。');
     const id = randomUUID();
     const managedName = id + path.extname(filename).toLowerCase();
     const destination = path.join(this.mediaDirectory, managedName);
     try {
       await copyFile(filename, destination);
       if (await this.inspect(destination) !== hash) throw new Error('媒体在导入时发生变化，请重试。');
-      this.db.prepare('INSERT INTO media VALUES (?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify(initialLearning));
+      this.db.prepare('INSERT INTO media VALUES (?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }));
     } catch (error) { await rm(destination, { force: true }); throw error; }
     return this.open(id);
   }
@@ -100,12 +104,12 @@ export class DesktopOperations {
     return this.open(id);
   }
 
-  saveLearning(id: string, state: LearningState): void {
+  saveLearning(id: string, state: LearningStateInput): void {
     const media = this.get(id);
     if (!state || !Number.isFinite(state.duration) || state.duration <= 0 || !Number.isFinite(state.position) || state.position < 0 || state.position > state.duration ||
       !Number.isInteger(state.index) || state.index < 0 || state.index >= Math.max(1, media.segments.length) ||
-      ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(state.rate) || typeof state.loop !== 'boolean') throw new Error('学习状态无效。');
-    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration }), id);
+      ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(state.rate) || typeof state.loop !== 'boolean' || (state.mode !== undefined && state.mode !== 'full' && state.mode !== 'sentence')) throw new Error('学习状态无效。');
+    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration, mode: state.mode ?? 'full' }), id);
   }
 
   private async runJob<T>(job: string, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
@@ -135,8 +139,9 @@ export class DesktopOperations {
       this.db.prepare('DELETE FROM segments WHERE media_id = ? AND id NOT IN (SELECT segment_id FROM vocabulary_sources)').run(id);
       const insert = this.db.prepare('INSERT INTO segments (id, media_id, ordinal, content) VALUES (?, ?, ?, ?)');
       segments.forEach((segment, index) => insert.run(randomUUID(), id, index, JSON.stringify(segment)));
-      const learning = { ...this.get(id).learning, index: 0, position: segments[0].start };
-      this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify(learning), id);
+      const learning = this.get(id).learning;
+      const index = segments.reduce((selected, segment, current) => segment.start <= learning.position ? current : selected, 0);
+      this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ ...learning, index }), id);
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.get(id);

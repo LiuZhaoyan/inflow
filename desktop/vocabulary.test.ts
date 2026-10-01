@@ -26,11 +26,12 @@ test('collection, distinct senses, correction and target selection survive repro
     { start: 3, end: 4.5, text: '역까지 십 분이 걸렸어요.', groups: ['역까지 십 분이', '걸렸어요.'] },
     { start: 5, end: 6.5, text: '감기에 걸렸어요.', groups: ['감기에', '걸렸어요.'] },
   ];
-  const processor = async () => ({ segments: result });
+  const processor = async (mode: string) => mode === 'probe' ? { duration: 10 } : ({ segments: result });
   let app = new DesktopOperations(library, processor);
   try {
     assert.equal(app.restore()!.segments[0].id, 'existing-segment');
     assert.equal(app.restore()!.segments[0].text, oldSegment.text);
+    assert.equal(app.restore()!.learning.mode, 'full');
     const file = path.join(root, '视频.webm');
     await writeFile(file, 'deterministic media fixture');
     const imported = await app.importMedia(file);

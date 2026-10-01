@@ -1,11 +1,18 @@
 # Inflow Implementation Roadmap
 
-Status: desktop development includes persistent listening, vocabulary and the text-artifact learning cycle; packaged resources and installed-app acceptance remain pending.
+Status: previously accepted desktop slices cover persistent listening, vocabulary and text artifacts. The frontend workspace is implemented and locally verified; owner visual acceptance after rework, packaged resources and installed-app acceptance remain pending.
 Last updated: 2026-10-01
 Product source: [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
 Implementation contract: [Windows desktop specification](../.scratch/desktop-learning/spec.md).
+Current phase: [Frontend Workspace specification](../.scratch/frontend-workspace/spec.md).
 
 The first delivery connects Korean video listening, a vocabulary notebook and generated text artifacts for the owner's personal use on Windows. The specification's testing boundary is confirmed. [The approved ticket breakdown](../.scratch/desktop-learning/ticket-plan.md) links seven implementation issues. Tickets 01 and 02 have owner-accepted native listening and live generation evidence. Ticket 03 delivers static Electron listening with managed media and SQLite restoration, verified across native restarts. Ticket 04 adds source-linked vocabulary collection, learner corrections, manual entries and persistent target selection. Ticket 05 completes two real text generations, artifact-linked collection, historical target snapshots and offline reopening with encrypted host credentials. Packaged worker and installed acceptance remain later work.
+
+## Current phase: Frontend learning workspace
+
+Status: implemented and locally verified; owner visual acceptance after rework remains pending. See [verification evidence](../.scratch/frontend-workspace/acceptance.md).
+
+Coordinate existing processing, reveal and desktop behavior in the confirmed LearningWorkspace layout. The phase includes import-duration gating, playback and Context behavior, source-linked vocabulary confirmation, and the flat Library overlay. Story generation and reading are hidden while stored artifacts and their source text remain preserved for a later redesign. Do not relocate or rewrite the existing business algorithms or add dependencies. Scope and acceptance are defined in the [frontend workspace specification](../.scratch/frontend-workspace/spec.md).
 
 ## Stage 1: Establish Windows processing and generation feasibility
 
@@ -91,5 +98,7 @@ Acceptance: the installed app completes and restores the complete cycle. Generat
 Generated audio/TTS, learner-level estimation, difficulty/length controls, accounts/synchronization, mobile/PWA delivery, other desktop installers, a multi-provider framework, public distribution infrastructure and automatic updates are outside the first delivery.
 
 The older browser roadmap's A–B looping, revisit marks, independent notes and lightweight transcript/timing editing remain separate possible improvements. They are not prerequisites for the confirmed vocabulary-to-text cycle.
+
+Subtitle-region Mask is a confirmed follow-up after the current frontend workspace phase; see [the deferred Mask issue](../.scratch/desktop-learning/issues/08-subtitle-mask.md). The current phase plays original video, including embedded subtitles, as supplied. Mask interaction and persistence details will be confirmed before its implementation.
 
 Technical research is recorded in [the recommendation](../.scratch/desktop-learning/technical-recommendation.md). Research and specification completion do not mean model quality, package compatibility or runtime acceptance has already passed.

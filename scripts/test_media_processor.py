@@ -4,7 +4,7 @@ import wave
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
-from media_processor import ProcessingError, meaning_groups, sentences, translate
+from media_processor import ProcessingError, meaning_groups, probe, sentences, translate
 from faster_whisper.audio import decode_audio
 
 class ProcessingTests(unittest.TestCase):
@@ -15,6 +15,14 @@ class ProcessingTests(unittest.TestCase):
                 audio.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
                 audio.writeframes(b'\x00' * 640)
             self.assertEqual(decode_audio(filename).size, 320)
+
+    def test_probe_reads_media_duration_without_loading_asr(self):
+        with TemporaryDirectory() as directory:
+            filename = os.path.join(directory, 'sample.wav')
+            with wave.open(filename, 'wb') as audio:
+                audio.setparams((1, 2, 16000, 0, 'NONE', 'not compressed'))
+                audio.writeframes(b'\x00' * 32000)
+            self.assertAlmostEqual(probe(filename)['duration'], 1)
 
     def test_groups_preserve_text_and_complete_phrases(self):
         text = '저는 오늘 학교에서 한국어를 배워요.'

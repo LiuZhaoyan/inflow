@@ -1,7 +1,9 @@
 import type { Segment } from './processing';
 import type { GeneratedPassage, GenerationTarget } from '../generation';
 
-export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number };
+export type PlaybackMode = 'full' | 'sentence';
+export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number; mode: PlaybackMode };
+export type LearningStateInput = Omit<LearningState, 'mode'> & { mode?: PlaybackMode };
 export type SavedMedia = {
   id: string; name: string; video: boolean; missing: boolean;
   segments: (Segment & { id: string })[]; learning: LearningState;
@@ -25,7 +27,7 @@ export type DesktopBridge = {
   transcribe(id: string, job: string): Promise<SavedMedia>;
   translate(text: string, job: string): Promise<string>;
   cancel(job: string): Promise<void>;
-  saveLearning(id: string, state: LearningState): Promise<void>;
+  saveLearning(id: string, state: LearningStateInput): Promise<void>;
   listVocabulary(): Promise<VocabularyEntry[]>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
   selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;

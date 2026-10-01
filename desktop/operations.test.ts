@@ -1,9 +1,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { DesktopOperations } from './operations';
+
+test('import rejects media over 600 seconds before storing it and accepts the exact limit', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow duration '));
+  const source = path.join(root, 'sample.webm');
+  const library = path.join(root, 'library');
+  let duration = 600.001;
+  const processor = async (mode: string) => mode === 'probe' ? { duration } : {};
+  const app = new DesktopOperations(library, processor);
+  try {
+    await writeFile(source, 'deterministic media fixture');
+    await assert.rejects(app.importMedia(source), /10 分钟以内/);
+    assert.deepEqual(app.list(), []);
+    assert.deepEqual(await readdir(path.join(library, 'media')), []);
+
+    duration = 600;
+    const imported = await app.importMedia(source);
+    assert.equal(imported.learning.duration, 600);
+    const duplicate = await app.importMedia(source);
+    assert.notEqual(duplicate.id, imported.id);
+    assert.equal(app.list().length, 2);
+  } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
 
 test('managed import, processing and learning survive reopen, cancellation, bad results and missing files', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow 韩语 '));
@@ -14,6 +36,7 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
   let mode = 'success';
   let processingStarted: (() => void) | undefined;
   const processor = async (_mode: string, signal: AbortSignal) => {
+    if (_mode === 'probe') return { duration: 5 };
     if (mode === 'cancel') return new Promise((resolve) => { signal.addEventListener('abort', () => resolve({ segments }), { once: true }); processingStarted?.(); });
     return mode === 'invalid' ? { segments: [{ ...segments[0], end: -1 }] } : { segments };
   };
@@ -24,13 +47,16 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     await rm(source);
     assert.deepEqual(await readFile(app.mediaPath(imported.id)), bytes);
     const processed = await app.transcribe(imported.id, 'first');
-    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true };
+    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true, mode: 'sentence' as const };
     app.saveLearning(imported.id, learning);
     app.close(); app = new DesktopOperations(library, processor);
     const restored = app.restore()!;
     assert.equal(restored.id, imported.id);
     assert.deepEqual(restored.segments, processed.segments);
     assert.deepEqual(restored.learning, learning);
+    app.saveLearning(imported.id, { position: learning.position, index: learning.index, rate: learning.rate, loop: learning.loop, duration: learning.duration });
+    assert.equal(app.get(imported.id).learning.mode, 'full');
+    app.saveLearning(imported.id, learning);
     mode = 'invalid';
     await assert.rejects(app.transcribe(imported.id, 'invalid'));
     assert.deepEqual(app.get(imported.id), restored);
@@ -49,6 +75,45 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     assert.equal((await app.relink(imported.id, source)).missing, false);
     assert.deepEqual(app.get(imported.id).segments, processed.segments);
     assert.throws(() => app.saveLearning(imported.id, { ...learning, index: 99 }), /状态无效/);
+    assert.throws(() => app.saveLearning(imported.id, { ...learning, mode: 'invalid' as 'full' }), /状态无效/);
     assert.throws(() => app.mediaPath('../../secrets'), /不存在/);
+  } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('reprocessing keeps learning state saved while the worker is in flight', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow reprocess state '));
+  const file = path.join(root, 'sample.webm');
+  const original = [{ start: 0.1, end: 1, text: '첫 문장.', groups: ['첫 문장.'] }];
+  const updated = [
+    { start: 0.2, end: 1.5, text: '첫 문장.', groups: ['첫 문장.'] },
+    { start: 2.2, end: 3.2, text: '둘째 문장.', groups: ['둘째 문장.'] },
+    { start: 5, end: 6, text: '셋째 문장.', groups: ['셋째 문장.'] },
+  ];
+  let reprocessing = false;
+  let processingStarted: (() => void) | undefined;
+  let finishProcessing: (() => void) | undefined;
+  const processor = async (mode: string) => {
+    if (mode === 'probe') return { duration: 10 };
+    if (reprocessing) {
+      processingStarted?.();
+      await new Promise<void>(resolve => { finishProcessing = resolve; });
+      return { segments: updated };
+    }
+    return { segments: original };
+  };
+  const app = new DesktopOperations(path.join(root, 'library'), processor);
+  try {
+    await writeFile(file, 'fixture');
+    const imported = await app.importMedia(file);
+    await app.transcribe(imported.id, 'first');
+    reprocessing = true;
+    const started = new Promise<void>(resolve => { processingStarted = resolve; });
+    const pending = app.transcribe(imported.id, 'second');
+    await started;
+    const latest = { duration: 10, position: 4.5, index: 0, rate: 1.5, loop: true, mode: 'sentence' as const };
+    app.saveLearning(imported.id, latest);
+    finishProcessing!();
+    const result = await pending;
+    assert.deepEqual(result.learning, { ...latest, index: 1 });
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });

@@ -7,10 +7,11 @@ const stage = path.join(root, 'build', 'renderer-source');
 await mkdir(path.join(stage, 'src', 'app'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'listening'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'generation'), { recursive: true });
+await cp(path.join(root, 'src/workspace'), path.join(stage, 'src/workspace'), { recursive: true });
 await cp(path.join(root, 'src/generation/index.ts'), path.join(stage, 'src/generation/index.ts'));
 // Only the renderer enters the static build; the browser API routes stay in the prototype.
 for (const file of ['page.tsx', 'layout.tsx', 'globals.css', 'icon.svg']) await cp(path.join(root, 'src/app', file), path.join(stage, 'src/app', file));
-for (const file of ['Practice.tsx', 'VocabularyNotebook.tsx', 'ArtifactLibrary.tsx', 'RevealMenu.tsx', 'reveal.ts', 'processing.ts', 'desktop.ts']) await cp(path.join(root, 'src/listening', file), path.join(stage, 'src/listening', file));
+for (const file of ['VocabularyNotebook.tsx', 'ArtifactLibrary.tsx', 'RevealMenu.tsx', 'reveal.ts', 'processing.ts', 'desktop.ts']) await cp(path.join(root, 'src/listening', file), path.join(stage, 'src/listening', file));
 await cp(path.join(root, 'tsconfig.json'), path.join(stage, 'tsconfig.json'));
 await writeFile(path.join(stage, 'package.json'), JSON.stringify({ name: 'inflow-renderer', private: true }));
 await writeFile(path.join(stage, 'next.config.mjs'), "export default { output: 'export', images: { unoptimized: true }, turbopack: { root: " + JSON.stringify(root) + " } };\n");

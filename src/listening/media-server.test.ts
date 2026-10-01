@@ -15,7 +15,7 @@ test('processor uses configured paths and encoding, and permits retry after canc
   try {
     await mkdir(path.join(root, 'scripts'));
     await writeFile(path.join(root, 'scripts', 'media_processor.py'), [
-      "setTimeout(() => console.log(JSON.stringify({ translation: '今天天气很好。', mode: process.argv[2], cwd: process.cwd(), models: process.env.INFLOW_MODELS_DIR, encoding: process.env.PYTHONIOENCODING })), process.argv[2] === 'transcribe' ? 60000 : 0);",
+      "const result = process.argv[2] === 'probe' ? { duration: 600 } : { translation: '今天天气很好。' }; setTimeout(() => console.log(JSON.stringify({ ...result, mode: process.argv[2], cwd: process.cwd(), models: process.env.INFLOW_MODELS_DIR, encoding: process.env.PYTHONIOENCODING })), process.argv[2] === 'transcribe' ? 60000 : 0);",
     ].join('\n'));
     process.chdir(root);
     process.env.INFLOW_PYTHON = process.execPath;
@@ -32,6 +32,13 @@ test('processor uses configured paths and encoding, and permits retry after canc
 
     const controller = new AbortController();
     const pending = runProcessor('transcribe', controller.signal, 'sample.webm');
+    assert.deepEqual(await runProcessor('probe', new AbortController().signal, 'sample.webm'), {
+      duration: 600,
+      mode: 'probe',
+      cwd: root,
+      models,
+      encoding: 'utf-8',
+    });
     setTimeout(() => controller.abort(), 100);
     await assert.rejects(pending, /处理已取消/);
     assert.equal((await runProcessor('translate', new AbortController().signal, undefined, '한국어 문장') as { translation: string }).translation, '今天天气很好。');

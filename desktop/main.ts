@@ -6,7 +6,7 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
-import type { LearningState, SaveVocabularyInput } from '../src/listening/desktop';
+import type { LearningStateInput, SaveVocabularyInput } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const root = path.resolve(__dirname, '../../..');
@@ -55,7 +55,7 @@ async function start() {
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (text: string, job: string) => operations.translate(text, job),
     cancel: (job: string) => operations.cancel(job),
-    saveLearning: (id: string, state: LearningState) => operations.saveLearning(id, state),
+    saveLearning: (id: string, state: LearningStateInput) => operations.saveLearning(id, state),
     listVocabulary: () => operations.listVocabulary(),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),

@@ -1,7 +1,7 @@
 # Inflow Product Specification
 
 Status: confirmed Windows desktop product planning; implementation remains incomplete.
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 ## 1. Product positioning
 
@@ -17,11 +17,11 @@ Dictation can be done on paper, in a notes application or elsewhere. Users verif
 - The design baseline reuses the React interface through an Electron host and static Next build. The installed application owns processing and persistence rather than requiring the learner to run a development server.
 - The existing implementation remains a browser prototype calling a local Python worker. Its Korean transcription, sentence timings, meaning groups and Chinese translation provide a starting point; Windows speed, accuracy, packaging and full learning-flow acceptance remain unverified.
 - The owner configures their own generation API key. Local transcription is evaluated first; passage generation can call an online provider with the selected vocabulary and necessary source text. Saved learning material remains local.
-- The detailed implementation and validation contract is in [the desktop specification](../.scratch/desktop-learning/spec.md). Technical research supplies a baseline, not evidence that the Windows application has already been delivered.
+- The broader desktop implementation contract is in [the desktop specification](../.scratch/desktop-learning/spec.md). The current frontend phase is defined in [the frontend workspace specification](../.scratch/frontend-workspace/spec.md). Technical research supplies a baseline, not evidence that the Windows application has already been delivered.
 
 ## 3. Core flow
 
-Choose audio or video → automatically transcribe and segment it → practice one segment at a time → collect unfamiliar words → select target vocabulary → generate and save a short passage → read it and collect further words → repeat.
+The current workspace flow is choose media → inspect and process it → practice one sentence at a time → collect unfamiliar words in the vocabulary notebook. Story generation and reading are temporarily hidden in this phase; their stored records and source text remain available, and the next phase will redesign that cycle.
 
 Full-length playback is available for first listening and review. Playback, hints and segment navigation do not depend on submitting an answer or completing a self-assessment.
 
@@ -44,7 +44,7 @@ Generated passages are text-only in the first release. The vocabulary notebook a
 - Save processing results and reuse them when the same media is associated again, avoiding duplicate processing.
 - Lightweight editing of the current segment's text and boundaries remains a possible later improvement rather than a first-release requirement.
 
-Evaluate the existing local processing path with real Korean video on Windows before adopting a replacement. The current prototype's 50 MB and 10-minute processing limits remain the initial baseline; expanding them requires resource evidence.
+Evaluate the existing local processing path with real Korean video on Windows before adopting a replacement. The current workspace retains the existing supported media types and 50 MB limit. It probes duration before saving and rejects media longer than 10 minutes without saving or playback. Existing long-media records remain stored with readable transcripts, but their media playback is disabled. Expanding these limits requires resource evidence.
 
 ## 5. Intensive listening and playback
 
@@ -53,6 +53,9 @@ Evaluate the existing local processing path with real Korean video on Windows be
 - Loop the current segment and show the loop range and state clearly.
 - Keep playback and segment controls stable and reachable in the desktop interface.
 - Save learning position and playback preferences so the learner can continue after reopening.
+- New media opens in full playback mode without autoplay. When processing completes, preserve the current position, mode and playing or paused state. Entering a sentence through Context, previous or next pauses at its start; returning to full playback keeps the current time.
+- Sentence looping applies only in sentence mode while the loop preference remains saved. Restore mode, position, rate and loop preference when reopening material.
+- Full playback follows the current sentence and clears reveal and translation when the sentence changes. Translation is never generated automatically.
 - A–B looping, revisit marks and standalone notes remain possible later improvements, outside the first-release learning-cycle acceptance.
 - Do not convert play count into a judgment of ability, automatic difficulty changes or mastery state.
 
@@ -81,20 +84,14 @@ The retained reveal rule uses consecutive groups from the beginning of the sente
 ## 7. Translation
 
 - Translation has an independent control and does not depend on how much source text has been revealed.
-- The prototype's bottom extension area is formally used as the current-sentence translation area.
-- Clicking the translation entry expands or collapses that area; changing sentences collapses it by default.
+- The current workspace shows the current sentence's Chinese translation beneath SentenceArea, independently from the source-text reveal level.
+- The translation control expands or collapses that area; changing sentences clears the translation by default.
 - When a translation exists, show the current sentence's translation. When it is missing or has not been generated, show an explicit status.
 - Translation is part of the listening-page structure. Existing local sentence translation is the initial baseline; its quality remains subject to real-media acceptance.
 
-## 8. Visual reference
+## 8. Visual reference and workspace layout
 
-The supplied Photo 1.jpg and Photo 2.jpg show the normal and expanded-reveal states of the earlier mobile practice page. They remain visual references; the first delivery is organized for Windows desktop learning.
-
-- Warm white background, yellow accent, dark blue text and icons, and large rounded corners.
-- Page order: top navigation, media display, playback progress, previous/reveal/next controls, source-text area, speed/loop/translation controls, and bottom translation area.
-- Reveal options represent small hints, more hints and the full sentence.
-- Source text is revealed within the practice page without navigating away.
-- Illustrations, system status bars and explanatory placeholder text in the images are not necessarily product features or licensed release assets.
+The current Windows workspace follows the [confirmed dark cinematic reference](https://www.canva.com/design/DAHWwk4SMkc/Ss3xOd5HLxhodE6yzdEnsQ/edit). It places video and the current sentence in the center, Context on the right, and Library in a left-side overlay. Library is a flat list with title search; it has no folders or deduplication workflow. The current workspace phase acceptance and interaction rules are in the [frontend workspace specification](../.scratch/frontend-workspace/spec.md).
 
 ## 9. Data and processing boundary
 
@@ -114,17 +111,19 @@ Generated audio, TTS, timed playback for learning artifacts, mobile packages, PW
 
 ## 11. Relationship between current code and the new plan
 
-The current page implements media import, local processing and meaning-group intensive listening. Desktop development adds a static Electron host, managed media, durable learning storage and a source-linked vocabulary notebook with corrections, manual additions and target selection. Selected vocabulary generates saved text artifacts with historical target meanings, highlights, optional Chinese translation and further source-linked collection; host credentials use Windows encryption. Packaged processing resources and installed-app acceptance remain pending. The old preloaded course and answer-comparison design remains historical background.
+The current page implements media import, local processing and meaning-group intensive listening. The broader desktop plan includes managed media, durable learning storage, a source-linked vocabulary notebook and a text-artifact learning cycle. The frontend workspace is implemented and locally verified: it coordinates existing processing, reveal and desktop business, while story generation and reading are hidden and their stored artifacts and source text are preserved for a later redesign. Owner visual acceptance after rework, packaged processing resources and installed-app acceptance remain pending. The old preloaded course and answer-comparison design remains historical background.
 
 [README.md](../README.md) describes the runnable prototype. [BACKEND_ACCEPTANCE.md](BACKEND_ACCEPTANCE.md) preserves the earlier Linux/WSL real-media evidence. This specification and [ROADMAP.md](ROADMAP.md) are current planning sources; documentation does not establish product completion.
 
-## 12. Product acceptance goals
+## 12. Full product acceptance goals
+
+These goals describe the broader planned product. They are not acceptance evidence for the current frontend workspace phase; its pending criteria are listed in the [frontend workspace specification](../.scratch/frontend-workspace/spec.md). Story-generation and reading acceptance will be revised in the next phase.
 
 - A user without a subtitle file can process media and enter segmented intensive listening.
 - The full flow does not require entering or submitting a dictation answer.
 - The learner can play, change speed, move between sentences, loop, reveal, hide and reopen saved material.
 - More hints include the groups revealed by the small hint; full reveal shows the complete source text.
-- Translation has an independent control and uses the bottom translation area.
+- Translation has an independent control and appears beneath the current sentence.
 - The source of automatic results, processing failures and missing translations are clearly communicated.
 - Vocabulary entries preserve dictionary forms, contextual Chinese meanings, original sentences and sources, and allow learner corrections and manual additions.
 - Selected vocabulary generates one short Korean text passage using every intended meaning with common supporting vocabulary.
@@ -138,6 +137,8 @@ The current page implements media import, local processing and meaning-group int
 - Let the learner review and correct the dictionary form and meaning. Distinct meanings of the same word should remain distinguishable, and further occurrences may preserve additional source contexts.
 
 ## 14. Generated passages and learning artifacts
+
+The interface for this learning cycle is temporarily hidden during the current frontend workspace phase. Existing artifacts, saved target data and source text are preserved; the next phase will redesign the cycle.
 
 - Selecting target vocabulary is enough to generate one short Korean passage. A topic is optional; the first release has no difficulty-level or passage-length control.
 - Use every selected word in its recorded contextual meaning. Natural Korean inflection counts as use; exact dictionary-form spelling is not required. Other vocabulary should be common and everyday.

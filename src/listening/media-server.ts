@@ -33,9 +33,9 @@ function processorPaths(root: string, env: NodeJS.ProcessEnv, platform: NodeJS.P
 
 // ponytail: one local inference at a time; use a bounded job queue only for a multi-user deployment.
 let busy = false;
-export async function runProcessor(mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string, root = process.cwd()): Promise<unknown> {
-  if (busy) throw new Error('正在处理另一项请求，请稍后重试。');
-  busy = true;
+export async function runProcessor(mode: 'probe' | 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string, root = process.cwd()): Promise<unknown> {
+  if (mode !== 'probe' && busy) throw new Error('正在处理另一项请求，请稍后重试。');
+  if (mode !== 'probe') busy = true;
   try {
     const paths = processorPaths(root, process.env, process.platform);
     try { await access(paths.python); }
@@ -56,7 +56,7 @@ export async function runProcessor(mode: 'transcribe' | 'translate', signal: Abo
       child.stdin?.on('error', () => { /* Process exit is reported by execFile. */ });
       child.stdin?.end(mode === 'translate' ? JSON.stringify({ text }) : undefined);
     });
-  } finally { busy = false; }
+  } finally { if (mode !== 'probe') busy = false; }
 }
 
 export function foreignOrigin(request: Request): boolean {

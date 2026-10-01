@@ -29,7 +29,7 @@ test('two artifact cycles preserve snapshots and source relationships across fai
         usage: { input_tokens: 10, output_tokens: 20, total_tokens: 30 } });
     } });
   };
-  const processor = async () => ({ segments: [{ start: 0, end: 2, text: '매일 공원을 걸어요.', groups: ['매일 공원을', '걸어요.'] }] });
+  const processor = async (mode: string) => mode === 'probe' ? { duration: 10 } : ({ segments: [{ start: 0, end: 2, text: '매일 공원을 걸어요.', groups: ['매일 공원을', '걸어요.'] }] });
   let app = new DesktopOperations(root, processor, generator);
   try {
     const file = path.join(root, 'video.webm'); await writeFile(file, 'fixture');
