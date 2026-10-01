@@ -87,6 +87,15 @@ async function start() {
   await window.loadURL('inflow://app/');
 }
 
-app.whenReady().then(start).catch(error => { console.error(error); app.quit(); });
+if (!app.requestSingleInstanceLock()) app.exit(0);
+else {
+  app.on('second-instance', () => {
+    const window = BrowserWindow.getAllWindows()[0];
+    if (!window) return;
+    if (window.isMinimized()) window.restore();
+    window.focus();
+  });
+  app.whenReady().then(start).catch(error => { console.error(error); app.quit(); });
+}
 app.on('before-quit', () => operations?.close());
 app.on('window-all-closed', () => app.quit());
