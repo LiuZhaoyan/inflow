@@ -13,14 +13,15 @@ async function verify() {
     app.on('browser-window-created', (_event, window) => {
       window.hide();
       window.webContents.once('did-finish-load', () => {
+        window.hide();
         if (process.argv[2] === 'primary') console.log('PRIMARY_READY');
         else console.log('UNEXPECTED_SECOND_WINDOW');
       });
     });
     require(path.join(root, 'build/desktop/desktop/main.js'));
     app.on('second-instance', () => {
-      assert.equal(BrowserWindow.getAllWindows().length, 1);
-      console.log('PRIMARY_REUSED');
+      const windows = BrowserWindow.getAllWindows();
+      console.log('PRIMARY_REUSED ' + JSON.stringify({ count: windows.length, visible: windows[0]?.isVisible(), minimized: windows[0]?.isMinimized() }));
     });
     return;
   }
@@ -51,9 +52,12 @@ async function verify() {
     const second = launch('secondary');
     const [code] = await once(second, 'close', { signal: AbortSignal.timeout(5000) });
     assert.equal(code, 0, 'Repeated launch must exit successfully');
-    assert.match(notification, /PRIMARY_REUSED/, 'Repeated launch must reuse the first window');
+    const reused = JSON.parse(notification.match(/PRIMARY_REUSED (.+)/)?.[1] || '{}');
+    assert.equal(reused.count, 1, 'Repeated launch must reuse the first window');
+    assert.equal(reused.visible, true, 'Repeated launch must show the existing hidden window');
+    assert.equal(reused.minimized, false, 'Repeated launch must restore the existing window');
     assert.doesNotMatch(errors, /Unable to move the cache|Unable to create cache|Gpu Cache Creation failed/);
-    console.log('PASS: repeated desktop launch reuses one window without cache errors');
+    console.log('PASS: repeated desktop launch shows one window without cache errors');
   } finally {
     for (const child of children) {
       if (child.exitCode === null && child.signalCode === null) {

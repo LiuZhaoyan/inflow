@@ -1,134 +1,96 @@
 # Inflow
 
-A Korean learning application moving toward a Windows desktop MVP: import media → intensive listening → collect vocabulary → generate a short Korean passage → collect further vocabulary.
+Inflow is a Korean learning desktop application built around one learning loop:
 
-The current Windows-oriented desktop implementation includes local transcription, sentence playback, meaning-group reveals, Chinese translation, managed media, SQLite learning restoration, a source-linked vocabulary notebook, and saved generated text artifacts. Packaged processing resources and installed-app acceptance remain future work. See [Project status](docs/PROJECT_STATUS.md) for the current implementation, [Product specification](docs/PRODUCT_SPEC.md) for intended behavior and scope, and [Roadmap](docs/ROADMAP.md) for what comes next.
-
-## Setup (Linux / WSL)
-
-Node.js 20.9+ and Python 3.12 are required for the listening prototype. The optional passage evaluation runner uses Node.js 24 and an owner-configured DeepSeek API key. The current Python worker is called by the Next.js Node API; it does not require a separate Desktop service.
-
-```bash
-npm ci
-python3 -m venv .venv
-.venv/bin/pip install -r scripts/requirements-media.txt
-.venv/bin/python scripts/setup_models.py
-npm run dev
+```text
+Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 ```
 
-Open http://localhost:3000. For production, run `npm run build` and then `npm start`.
+Import Korean audio or video, practice it sentence by sentence, reveal only as much source text or translation as you need, collect unfamiliar vocabulary with its original context, and reuse selected words in generated Korean reading passages.
 
-The first setup downloads dependencies from PyPI and Hugging Face, the [Whisper large-v3-turbo CTranslate2 model](https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo) and Argos translation weights. Whisper weights require about 1.6 GB, plus translation models and Python dependencies. Subsequent processing uses local files and has no third-party inference fees. The setup script pins the Whisper revision and translation mirror versions and SHA-256 checksums; the official Argos download endpoint returned 403 during preparation, so a public mirror is used. The model and Python environment are stored in the Git-ignored `.models/` and `.venv/` directories.
+The project currently targets personal use on Windows. The desktop implementation is runnable from the repository; packaging it as a self-contained installed application is still future work.
 
-**Processing location:** the browser sends the selected media to the machine running the current Inflow / Next.js service. Python performs transcription and translation on that machine; media and source text are not sent to third parties. Temporary media is removed when processing finishes. When a phone accesses Inflow on a computer, processing happens on the computer rather than on the phone.
+## What can I do with it?
 
-This version has been validated for local single-user Linux / WSL use. It requires a working Python subprocess and local model directories; ordinary static hosting or short-lived serverless environments cannot directly run this processing path.
+The current desktop application supports:
 
-## Windows feasibility setup
+- importing and retaining local audio/video;
+- local Korean transcription and sentence segmentation;
+- full-media and sentence playback, seeking, speed control, and sentence looping;
+- progressive Korean text reveal using Kiwi-derived phrase groups;
+- on-demand Chinese translation;
+- source-linked vocabulary collection and correction;
+- persistent learning state, vocabulary, and generated artifacts in SQLite;
+- generating short Korean passages from selected vocabulary through DeepSeek;
+- collecting new vocabulary from generated passages.
 
-Use a checkout on a local Windows drive. The Windows Conda probe failed to lock its package cache on the WSL UNC filesystem, so the setup script rejects a UNC checkout. After these changes are committed, a native Windows PowerShell session can clone the local WSL repository without a push:
+Automatic transcription, grouping, translation, and generated passages are learning assistance rather than authoritative answers.## Run the desktop app
+
+The current development environment uses Node.js, Electron, Python 3.12, and local processing models. On Windows, prepare the local Python/model environment first:
 
 ```powershell
-$inflowCheckout = Join-Path $env:USERPROFILE 'projects\inflow'
-New-Item -ItemType Directory -Force (Split-Path $inflowCheckout)
-git clone --no-hardlinks '\\wsl.localhost\Ubuntu\home\ada\projects\inflow' $inflowCheckout
-Set-Location $inflowCheckout
 .\scripts\setup_windows.ps1
 npm ci
-npm run dev
 ```
 
-The setup script needs Conda available in PowerShell. It creates an isolated `.venv-win` with Python 3.12 using conda-forge, installs the pinned processing dependencies and downloads local models. It leaves the base environment intact and sets `INFLOW_PYTHON` and `INFLOW_MODELS_DIR` for the current PowerShell process. An optional `-ModelsDir` supplies another model directory. In later terminal sessions, set `INFLOW_PYTHON` to the local `.venv-win\python.exe` before starting the server, and set `INFLOW_MODELS_DIR` again if you used a custom directory.
-
-Run the selected [WIKITONGUES Korean sample](https://commons.wikimedia.org/wiki/File:WIKITONGUES-_Hanbid_speaking_Korean.webm) without subtitles and record transcription, sentence boundaries, playback, loops, reveal, translation, cancellation and retry. The prepared Windows script and WSL tests do not establish native Windows acceptance or an installer.
-
-## Passage evaluation
-
-Use Node.js 24. Set `DEEPSEEK_API_KEY` in the Git-ignored `.env` or `.env.local` (the latter overrides `.env`). `.env.example` documents the expected name. Never paste the key into an issue or report.
-
-```sh
-npm run generation:evaluate
-```
-
-With a key, this command makes at most four serial DeepSeek requests for the prepared Korean cases. It saves Korean text, Chinese sentence translations, target highlights, latency and usage in a new ignored directory under `.scratch/desktop-learning/generated-samples/`. If a request fails, it preserves earlier samples, records a sanitized failure and stops.
-
-Without a key, it only saves the prepared inputs and explicitly reports that live evaluation was not run. Review real samples for the selected meanings, natural inflection, common supporting vocabulary and faithful translations before accepting the provider. Passing structured-output tests is not Korean quality evidence. See [the generation baseline](.scratch/desktop-learning/generation-baseline.md).
-
-## Usage
-
-1. Click `＋` or **Select media**, choose a browser-supported audio or video file, and optionally preview it first.
-2. Click **Start processing**. The current limits are 50 MB and 10 minutes. If processing fails, the original media remains playable and can be retried.
-3. Use previous/next sentence to move between ranges. The transcript is hidden by default; playback stops at the sentence end, or replays the current sentence when looping is enabled.
-4. Long-press **reveal**, slide to a small hint, more hints or the full sentence, and release. On desktop, click to choose; keyboard controls are also supported.
-5. Hide the transcript, change playback speed from 0.5× to 2×, or independently expand the translation area at the bottom. Switching sentences hides both transcript and translation.
-
-Browser mode does not save progress or processed media. Desktop development retains imported media, processing results, learning position, speed, loop preference, vocabulary entries, source contexts, selected target vocabulary and generated text artifacts.
-
-## Desktop development (Windows)
-
-After the native Python/model setup above, run:
+Then build and launch the desktop application:
 
 ```powershell
 npm run desktop:build
 npm run desktop:start
 ```
 
-Electron 44.5.1 loads a static Next export and uses builtin `node:sqlite`; it does not start an HTTP server. Native import retains a managed copy. The application's user-data directory holds `media` files and `learning.sqlite`. The renderer receives managed identifiers and a narrow preload bridge. Media range responses support seeking and sentence replay through a secure custom protocol. [Electron protocol documentation](https://www.electronjs.org/docs/latest/api/protocol).
+Passage generation additionally requires an owner-configured `DEEPSEEK_API_KEY` in the environment, `.env`, or `.env.local`.
 
-The saved-material selector reopens imports. Missing media leaves its transcript intact; **Re-associate media** requires the same recording, checked by SHA-256. Reveals and translations remain hidden when reopening. Development uses this checkout's `.venv-win/python.exe` and `.models`, or explicit `INFLOW_PYTHON` / `INFLOW_MODELS_DIR`. Ticket 06 owns packaging without system Python; this stage is not an installer.
+Local transcription and translation use resources under `.models/` and the Windows Python environment under `.venv-win/`. These directories are not committed to Git.
 
-```powershell
-node scripts/verify-desktop.cjs "path/to/Hanbid sample.webm"
-```
-
-This verification creates an isolated ignored profile, supplies dialog selection deterministically, runs real decoding/transcription/translation, and starts Electron three times to check restoration and missing-file recovery. Evidence and screenshots remain under `.scratch/desktop-learning/generated-samples/desktop-acceptance-*`.
-
-In desktop listening, select a word from revealed transcript text and click **收藏选中文字**. Review its Korean dictionary form and contextual Chinese meaning before saving. The notebook supports later corrections and manual additions. Identical dictionary-form/meaning pairs collect additional contexts; different meanings stay separate. Source buttons return to the recording. Target selections survive restart.
-
-The [notebook acceptance report](.scratch/desktop-learning/vocabulary-notebook-acceptance.md) records native UI and SQLite checks. To repeat the notebook interaction without another transcription, reuse the accepted 33-sentence Hanbid profile:
-
-```powershell
-node scripts/verify-desktop.cjs --vocabulary "path/to/accepted/Hanbid/profile"
-```
-
-Select target entries in the notebook, then open **学习短文** and generate with an optional topic. On first launch, the host imports `DEEPSEEK_API_KEY` from the environment or ignored `.env` / `.env.local`, and stores it separately using Windows encryption. Replace the key through the password form when needed; the application never displays a saved key. Existing encrypted configuration takes precedence over environment files.
-
-Saved artifacts highlight targets and retain the original target meanings after notebook corrections. Chinese translation is hidden until requested. Select unfamiliar Korean text in one sentence and click **收藏这句中的选词**, review/save it and use the new entry in another generation. Source links return to the original artifact. Reopening saved text makes no generation request.
-
-The [artifact acceptance report](.scratch/desktop-learning/text-artifact-acceptance.md) records two real generations and offline restoration. The following live verification makes two owner-key requests using a copy of ticket 04's accepted notebook profile:
-
-```powershell
-node scripts/verify-desktop.cjs --artifacts "path/to/accepted/notebook/profile"
-```
-
-To repeat restoration and simulated failure checks without new paid requests, use `node scripts/verify-desktop.cjs --resume-artifacts "path/to/completed/artifact/evidence-directory"`.
-
-## Local processing and limitations
-
-- **Transcription and timing:** faster-whisper large-v3-turbo, CPU int8, Korean recognition. Kiwi detects sentence endings across ASR chunks, including missing punctuation, and maps them to real word timestamps; a pause alone does not split a sentence. The native comparison improved common-word recognition and the merged opening range, with an approximately 90-second wait for the selected 156-second video. Names and individual words can still be wrong; the owner accepted this baseline on 2026-10-01. [Windows quality evidence](.scratch/desktop-learning/windows-probe.md).
-- **Meaning groups:** Kiwi Korean morphological analysis creates complete grammatical phrases at particle and punctuation boundaries rather than fixed word counts. It is not full semantic understanding and remains limited for idioms, ambiguity and incorrectly transcribed text.
-- **Translation:** an Argos Korean→English→Chinese model runs locally through CTranslate2; the English pivot can lose detail.
-- **Resources:** each processing request has a 10-minute timeout; the API runs one inference operation at a time in the same process and asks busy callers to retry later. There is no account or multi-user job system.
-- **Materials and models:** the project license does not automatically cover media or models. See [material provenance](public/materials/SOURCE.md) for the FSI recording conditions, and [the setup script](scripts/setup_models.py) plus the upstream README files in the model directories for model sources, mirrors and checksums. The English–Chinese model package identifies the original OPUS model as CC-BY 4.0; the Korean–English package lists its corpus sources in its README. This project does not make a separate redistribution-license claim for those upstream materials.
-
-## Verification
+For normal development checks:
 
 ```bash
 npm test
-.venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-Primary acceptance must use real audio and video without subtitles and exercise the complete processing path. The current page uses only recognition results returned by the media-processing API and does not depend on preloaded course text.
+The repository still contains browser/API development paths and verification utilities from earlier implementation work. They are useful for development and regression testing, but the Electron desktop path above represents the current product direction.## Where should I continue reading?
 
-## Documentation and code
+The repository documentation has three primary entry points:
 
-- [Implementation specification and acceptance criteria](.scratch/desktop-learning/spec.md)
-- [Product specification](docs/PRODUCT_SPEC.md) · [Project status](docs/PROJECT_STATUS.md) · [Roadmap](docs/ROADMAP.md)
-- `src/listening/Practice.tsx`: media and learning interactions; `RevealMenu.tsx`: touch and keyboard menu.
-- `src/app/api/`: transcription and translation endpoints; `src/listening/processing.ts`: processing-result validation.
-- `scripts/media_processor.py`: local transcription, meaning groups and translation; `scripts/setup_models.py`: model installation.
+- [Product Specification](docs/PRODUCT_SPEC.md) — **What should Inflow be?** Product behavior, scope, and boundaries.
+- [Project Status](docs/PROJECT_STATUS.md) — **What is Inflow now?** Current architecture, implemented capabilities, persistence, processing, verification state, and known gaps.
+- [Roadmap](docs/ROADMAP.md) — **What comes next?** Remaining work, priorities, and dependencies.
 
-Future task documentation belongs in `docs/` and should be committed to Git. See [LICENSE](LICENSE) for the code license.
+For active implementation work, task-local specs, research, tickets, decisions, and acceptance evidence live under `.scratch/<effort>/`. Completed scratch records are historical task memory and are not expected to describe the current system.
+
+Repository-agent workflow rules live under [docs/agents](docs/agents/).
+
+## Where is the code?
+
+The main implementation areas are:
+
+```text
+src/workspace/       Current learning workspace UI
+src/listening/       Listening, reveal, vocabulary, and desktop bridge types
+src/generation/      Generated-passage contracts and generation logic
+desktop/             Electron host, operations, persistence, media, credentials
+scripts/             Local media processing, model setup, desktop verification
+docs/                Product, project-status, roadmap, and agent documentation
+.scratch/            Task-level working history and acceptance evidence
+```
+
+The desktop architecture is intentionally split between the renderer and host:
+
+```text
+React / Next.js renderer
+        ↓
+DesktopBridge / Electron IPC
+        ↓
+DesktopOperations
+        ↓
+SQLite        Python worker        DeepSeek API
+```
+
+Start with [Project Status](docs/PROJECT_STATUS.md) if you want to understand the current implementation before changing code.
+
+See [LICENSE](LICENSE) for the project license.

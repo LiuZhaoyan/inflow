@@ -93,6 +93,7 @@ else {
     const window = BrowserWindow.getAllWindows()[0];
     if (!window) return;
     if (window.isMinimized()) window.restore();
+    window.show();
     window.focus();
   });
   app.whenReady().then(start).catch(error => { console.error(error); app.quit(); });
