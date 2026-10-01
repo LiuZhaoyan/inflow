@@ -2,7 +2,7 @@
 
 A Korean learning application moving toward a Windows desktop MVP: import media → intensive listening → collect vocabulary → generate a short Korean passage → collect further vocabulary.
 
-The browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. Desktop development adds an Electron host, managed media, SQLite learning restoration, a vocabulary notebook and saved generated text artifacts with further collection. Packaged processing resources and installed acceptance remain later slices. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
+The current Windows-oriented desktop implementation includes local transcription, sentence playback, meaning-group reveals, Chinese translation, managed media, SQLite learning restoration, a source-linked vocabulary notebook, and saved generated text artifacts. Packaged processing resources and installed-app acceptance remain future work. See [Project status](docs/PROJECT_STATUS.md) for the current implementation, [Product specification](docs/PRODUCT_SPEC.md) for intended behavior and scope, and [Roadmap](docs/ROADMAP.md) for what comes next.
 
 ## Setup (Linux / WSL)
 
@@ -126,7 +126,7 @@ Primary acceptance must use real audio and video without subtitles and exercise 
 ## Documentation and code
 
 - [Implementation specification and acceptance criteria](.scratch/desktop-learning/spec.md)
-- [Product specification](docs/PRODUCT_SPEC.md) · [Roadmap](docs/ROADMAP.md) · [Earlier backend acceptance](docs/BACKEND_ACCEPTANCE.md)
+- [Product specification](docs/PRODUCT_SPEC.md) · [Project status](docs/PROJECT_STATUS.md) · [Roadmap](docs/ROADMAP.md)
 - `src/listening/Practice.tsx`: media and learning interactions; `RevealMenu.tsx`: touch and keyboard menu.
 - `src/app/api/`: transcription and translation endpoints; `src/listening/processing.ts`: processing-result validation.
 - `scripts/media_processor.py`: local transcription, meaning groups and translation; `scripts/setup_models.py`: model installation.
