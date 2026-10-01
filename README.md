@@ -2,7 +2,7 @@
 
 A Korean learning application moving toward a Windows desktop MVP: import media → intensive listening → collect vocabulary → generate a short Korean passage → collect further vocabulary.
 
-The browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. Desktop development now adds an Electron host, managed media and SQLite learning restoration. Vocabulary/artifacts and the packaged worker remain later slices. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
+The browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. Desktop development adds an Electron host, managed media, SQLite learning restoration and a persistent vocabulary notebook. Generated artifacts and the packaged worker remain later slices. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
 
 ## Setup (Linux / WSL)
 
@@ -62,7 +62,7 @@ Without a key, it only saves the prepared inputs and explicitly reports that liv
 4. Long-press **reveal**, slide to a small hint, more hints or the full sentence, and release. On desktop, click to choose; keyboard controls are also supported.
 5. Hide the transcript, change playback speed from 0.5× to 2×, or independently expand the translation area at the bottom. Switching sentences hides both transcript and translation.
 
-Browser mode does not save progress or processed media. Desktop development retains imported media, processing results, learning position, speed and loop preference. Vocabulary and artifacts are separate later tickets.
+Browser mode does not save progress or processed media. Desktop development retains imported media, processing results, learning position, speed, loop preference, vocabulary entries, source contexts and selected target vocabulary. Generated artifacts remain a later ticket.
 
 ## Desktop development (Windows)
 
@@ -82,6 +82,14 @@ node scripts/verify-desktop.cjs "path/to/Hanbid sample.webm"
 ```
 
 This verification creates an isolated ignored profile, supplies dialog selection deterministically, runs real decoding/transcription/translation, and starts Electron three times to check restoration and missing-file recovery. Evidence and screenshots remain under `.scratch/desktop-learning/generated-samples/desktop-acceptance-*`.
+
+In desktop listening, select a word from revealed transcript text and click **收藏选中文字**. Review its Korean dictionary form and contextual Chinese meaning before saving. The notebook supports later corrections and manual additions. Identical dictionary-form/meaning pairs collect additional contexts; different meanings stay separate. Source buttons return to the recording. Target selections survive restart and will feed the next artifact slice.
+
+The [notebook acceptance report](.scratch/desktop-learning/vocabulary-notebook-acceptance.md) records native UI and SQLite checks. To repeat the notebook interaction without another transcription, reuse the accepted 33-sentence Hanbid profile:
+
+```powershell
+node scripts/verify-desktop.cjs --vocabulary "path/to/accepted/Hanbid/profile"
+```
 
 ## Local processing and limitations
 

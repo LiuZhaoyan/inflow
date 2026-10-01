@@ -114,7 +114,7 @@ Generated audio, TTS, timed playback for learning artifacts, mobile packages, PW
 
 ## 11. Relationship between current code and the new plan
 
-The current page implements media import, local processing and meaning-group intensive listening. Desktop packaging, durable learning storage, the vocabulary notebook and generated learning artifacts are not implemented. The old preloaded course and answer-comparison design remains historical background.
+The current page implements media import, local processing and meaning-group intensive listening. Desktop development adds a static Electron host, managed media, durable learning storage and a source-linked vocabulary notebook with corrections, manual additions and target selection. Generated learning artifacts, packaged processing resources and installed-app acceptance remain pending. The old preloaded course and answer-comparison design remains historical background.
 
 [README.md](../README.md) describes the runnable prototype. [BACKEND_ACCEPTANCE.md](BACKEND_ACCEPTANCE.md) preserves the earlier Linux/WSL real-media evidence. This specification and [ROADMAP.md](ROADMAP.md) are current planning sources; documentation does not establish product completion.
 

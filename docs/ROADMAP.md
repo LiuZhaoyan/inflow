@@ -1,11 +1,11 @@
 # Inflow Implementation Roadmap
 
-Status: confirmed Windows desktop direction; the current browser/local-processing prototype is a starting point, not a delivered desktop application.
+Status: desktop development includes persistent listening and the vocabulary notebook; artifacts, packaged resources and installed-app acceptance remain pending.
 Last updated: 2026-10-01
 Product source: [PRODUCT_SPEC.md](PRODUCT_SPEC.md).
 Implementation contract: [Windows desktop specification](../.scratch/desktop-learning/spec.md).
 
-The first delivery connects Korean video listening, a vocabulary notebook and generated text artifacts for the owner's personal use on Windows. The specification's testing boundary is confirmed. [The approved ticket breakdown](../.scratch/desktop-learning/ticket-plan.md) links seven implementation issues. Tickets 01 and 02 have owner-accepted native listening and live generation evidence. Ticket 03 delivers static Electron listening with managed media and SQLite restoration, verified across native restarts. Vocabulary, artifacts, packaged worker and installed acceptance remain later work.
+The first delivery connects Korean video listening, a vocabulary notebook and generated text artifacts for the owner's personal use on Windows. The specification's testing boundary is confirmed. [The approved ticket breakdown](../.scratch/desktop-learning/ticket-plan.md) links seven implementation issues. Tickets 01 and 02 have owner-accepted native listening and live generation evidence. Ticket 03 delivers static Electron listening with managed media and SQLite restoration, verified across native restarts. Ticket 04 adds source-linked vocabulary collection, learner corrections, manual entries and persistent target selection. Artifacts, packaged worker and installed acceptance remain later work.
 
 ## Stage 1: Establish Windows processing and generation feasibility
 

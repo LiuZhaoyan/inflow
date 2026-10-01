@@ -1,6 +1,7 @@
 # 04: Collect source-linked vocabulary from video
 
-Status: ready-for-agent
+Status: completed
+Progress: implemented and verified on native Windows on 2026-10-01.
 Blocked by: [03: Restore a processed video in the desktop application](03-persistent-desktop-listening.md).
 Approved: 2026-09-30
 Specification: [Windows Korean Learning Desktop MVP](../spec.md).
@@ -15,12 +16,12 @@ This is a Windows-first Korean learning application for the owner's personal use
 
 ## Acceptance criteria
 
-- [ ] Collect an encountered surface form from visible transcript text, retaining the original sentence and stable source reference.
-- [ ] Let the learner enter or correct the Korean dictionary form and contextual Chinese meaning before saving and later correct the entry.
-- [ ] Support manual additions without inventing a source sentence.
-- [ ] Distinct meanings of the same dictionary form remain distinguishable; further occurrences can retain additional source contexts without overwriting earlier context.
-- [ ] The notebook displays saved entries, supports target selection and retains entries/occurrences after restart.
-- [ ] Changes are saved through the same application operations interface and preserve associated media records.
+- [x] Collect an encountered surface form from visible transcript text, retaining the original sentence and stable source reference.
+- [x] Let the learner enter or correct the Korean dictionary form and contextual Chinese meaning before saving and later correct the entry.
+- [x] Support manual additions without inventing a source sentence.
+- [x] Distinct meanings of the same dictionary form remain distinguishable; further occurrences can retain additional source contexts without overwriting earlier context.
+- [x] The notebook displays saved entries, supports target selection and retains entries/occurrences after restart.
+- [x] Changes are saved through the same application operations interface and preserve associated media records.
 
 ## Verification
 
@@ -32,4 +33,4 @@ User stories 17–21.
 
 ## Comments
 
-Published after the owner approved the seven-ticket breakdown and blocking edges on 2026-09-30. No implementation or acceptance evidence is recorded yet.
+Published after the owner approved the seven-ticket breakdown and blocking edges on 2026-09-30. [Acceptance evidence](../vocabulary-notebook-acceptance.md) records real SQLite migration, preservation and restart checks plus native collection, correction, manual additions, source navigation and selected-target restoration. Ticket 05 is now unblocked by this slice.

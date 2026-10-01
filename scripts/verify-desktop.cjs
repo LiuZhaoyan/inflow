@@ -7,15 +7,17 @@ const root = path.resolve(__dirname, '..');
 
 async function run() {
   if (!process.versions.electron) {
-    const source = process.argv[2];
+    const vocabulary = process.argv[2] === '--vocabulary';
+    const source = vocabulary ? process.argv[3] : process.argv[2];
     if (!source) throw new Error('Usage: node scripts/verify-desktop.cjs <representative Korean media>');
     const output = await fs.mkdtemp(path.join(root, '.scratch/desktop-learning/generated-samples/desktop-acceptance-'));
-    await fs.copyFile(source, path.join(output, '韩语 sample' + path.extname(source)));
-    for (const phase of ['first', 'reopen', 'missing']) {
+    if (vocabulary) await fs.cp(source, path.join(output, 'profile'), { recursive: true });
+    else await fs.copyFile(source, path.join(output, '韩语 sample' + path.extname(source)));
+    for (const phase of vocabulary ? ['vocabulary', 'vocabulary-reopen'] : ['first', 'reopen', 'missing']) {
       await new Promise((resolve, reject) => {
         const env = { ...process.env };
         delete env.ELECTRON_RUN_AS_NODE;
-        const child = spawn(require('electron'), [__filename, phase, output, path.extname(source)], { stdio: 'inherit', env });
+        const child = spawn(require('electron'), [__filename, phase, output, vocabulary ? '.webm' : path.extname(source)], { stdio: 'inherit', env });
         child.on('error', reject);
         child.on('exit', code => code === 0 ? resolve() : reject(new Error(`${phase} exited ${code}`)));
       });
@@ -36,13 +38,13 @@ async function run() {
     window.hide();
     window.webContents.setBackgroundThrottling(false);
     window.webContents.once('did-finish-load', () => window.hide());
-    window.webContents.on('console-message', (_event, details) => { if (details.level === 'error') errors.push(details.message); });
+    window.webContents.on('console-message', event => { if (event.level === 'error') { errors.push(event.message); console.error(event.message); } });
   });
   require(path.join(root, 'build/desktop/desktop/main.js'));
   await app.whenReady();
   const window = BrowserWindow.getAllWindows()[0];
   assert.ok(window);
-  const evaluate = expression => window.webContents.executeJavaScript(expression, true);
+  const evaluate = expression => window.webContents.executeJavaScript('{\n' + expression + '\n}', true);
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   async function wait(expression, timeout = 15000) {
     const started = Date.now();
@@ -56,7 +58,71 @@ async function run() {
   const click = text => evaluate(`Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim().includes(${JSON.stringify(text)}))?.click()`);
   const snapshot = () => evaluate(`({ url: location.href, count: document.querySelectorAll('.segment-list button').length, sentence: document.querySelector('.sentence-meta').textContent, rate: document.querySelector('[aria-label="播放倍速"]').value, loop: document.querySelector('.tools button').getAttribute('aria-pressed'), currentTime: document.querySelector('video')?.currentTime, duration: document.querySelector('video')?.duration, decodedFrames: document.querySelector('video')?.webkitDecodedFrameCount, videoWidth: document.querySelector('video')?.videoWidth, errors: [...document.querySelectorAll('[role="alert"]')].map(el => el.textContent), sourceHidden: !document.querySelector('.meaning-group'), translationHidden: !document.querySelector('.translation.expanded') })`);
   let evidence = { phase, electron: process.versions.electron, node: process.versions.node };
-  if (phase === 'first') {
+  if (phase === 'vocabulary' || phase === 'vocabulary-reopen') {
+    await wait('!!document.querySelector("#notebook") && document.querySelectorAll(".segment-list button").length === 33');
+    const readEntries = () => evaluate('window.inflow.listVocabulary()');
+    if (phase === 'vocabulary') {
+      assert.deepEqual(await readEntries(), []);
+      const field = (name, value) => evaluate(`const input = document.querySelector('.vocabulary-editor [name=${JSON.stringify(name)}]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)}); input.dispatchEvent(new Event('input', { bubbles: true }));`);
+      async function save(lemma, meaning) {
+        await field('lemma', lemma); await field('meaningZh', meaning);
+        await click('保存词汇'); await wait('!document.querySelector(".vocabulary-editor")');
+      }
+      async function collect(index) {
+        await evaluate(`document.querySelectorAll('.segment-list button')[${index}].click()`);
+        await evaluate('document.querySelector(".reveal-trigger").click()');
+        await wait('!!document.querySelector("[data-reveal-option=all]")');
+        await evaluate('document.querySelector("[data-reveal-option=all]").click()');
+        if (index === 1) {
+          await evaluate(`const range = document.createRange(); range.selectNodeContents(document.querySelector('#notebook h2')); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);`);
+          await click('收藏选中文字');
+          await wait('Array.from(document.querySelectorAll("[role=alert]")).some(el => el.textContent.includes("请在已揭晓"))');
+          assert.equal(await evaluate('!!document.querySelector(".vocabulary-editor")'), false);
+          assert.deepEqual(await readEntries(), []);
+        }
+        await evaluate(`const node = [...document.querySelectorAll('.transcript .meaning-group')].find(el => el.textContent.includes('대만을')).firstChild; const offset = node.textContent.indexOf('대만을'); const range = document.createRange(); range.setStart(node, offset); range.setEnd(node, offset + 3); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);`);
+        await click('收藏选中文字'); await wait('!!document.querySelector(".vocabulary-editor")');
+        assert.equal(await evaluate('document.querySelector(".vocabulary-context strong").textContent'), '대만을');
+      }
+      await collect(1); await save('대만', '台湾');
+      const first = (await readEntries())[0];
+      assert.equal(first.sources[0].surface, '대만을');
+      await collect(2); await save('대만', '台湾');
+      const added = (await readEntries())[0];
+      assert.equal(added.id, first.id); assert.equal(added.sources.length, 2); assert.deepEqual(added.sources[0], first.sources[0]);
+      await evaluate(`document.querySelector('[data-entry-id="${first.id}"] button').click()`);
+      await wait('!!document.querySelector(".vocabulary-editor")');
+      await save('타이완', '台湾（地名）');
+      for (const meaning of ['船', '肚子']) {
+        await click('手动添加'); await wait('!!document.querySelector(".vocabulary-editor")');
+        assert.equal(await evaluate('!!document.querySelector(".vocabulary-editor .vocabulary-context")'), false);
+        await save('배', meaning);
+      }
+      let entries = await readEntries();
+      assert.equal(entries.length, 3);
+      assert.equal(entries.filter(entry => entry.lemma === '배').length, 2);
+      assert.equal(entries.find(entry => entry.meaningZh === '船').sources.length, 0);
+      for (const entry of [entries.find(entry => entry.id === first.id), entries.find(entry => entry.meaningZh === '船')]) {
+        await evaluate(`document.querySelector('[data-entry-id="${entry.id}"] input[type=checkbox]').click()`);
+        await wait('!document.querySelector(".vocabulary-target input:disabled")');
+      }
+      entries = await readEntries();
+      assert.equal(entries.filter(entry => entry.selected).length, 2);
+      assert.equal(entries.find(entry => entry.id === first.id).lemma, '타이완');
+      await evaluate(`document.querySelector('[data-entry-id="${first.id}"] details').open = true; document.querySelector('[data-entry-id="${first.id}"] .vocabulary-source').click()`);
+      await wait('document.querySelector(".sentence-meta").textContent.includes("第 2 / 33")');
+      assert.equal((await snapshot()).sourceHidden, true);
+      await fs.writeFile(path.join(output, 'expected-vocabulary.json'), JSON.stringify(entries, null, 2));
+    } else {
+      await wait('document.querySelectorAll(".vocabulary-entry").length === 3');
+      assert.deepEqual(await readEntries(), JSON.parse(await fs.readFile(path.join(output, 'expected-vocabulary.json'), 'utf8')));
+      assert.equal(await evaluate('document.querySelectorAll(".vocabulary-target input:checked").length'), 2);
+      assert.equal((await snapshot()).sourceHidden, true);
+    }
+    evidence.vocabulary = await readEntries();
+    await evaluate('document.querySelectorAll(".vocabulary-entry details").forEach(el => el.open = true); document.querySelector("#notebook").scrollIntoView({block:"start",behavior:"instant"})');
+    await delay(200);
+  } else if (phase === 'first') {
     await evaluate('document.querySelector(".desktop-import").click()');
     await wait('document.querySelector("video")?.readyState >= 1');
     await fs.rm(source);

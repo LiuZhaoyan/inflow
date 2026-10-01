@@ -3,6 +3,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('inflow', Object.fromEntries(
-  ['list', 'restore', 'open', 'importMedia', 'relink', 'transcribe', 'translate', 'cancel', 'saveLearning']
+  ['list', 'restore', 'open', 'importMedia', 'relink', 'transcribe', 'translate', 'cancel', 'saveLearning', 'listVocabulary', 'saveVocabulary', 'selectVocabulary']
     .map(method => [method, (...args) => ipcRenderer.invoke(`inflow:${method}`, ...args)]),
 ));

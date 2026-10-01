@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { DesktopOperations } from './operations';
 import { serveMedia } from './media';
 import { runProcessor } from '../src/listening/media-server';
-import type { LearningState } from '../src/listening/desktop';
+import type { LearningState, SaveVocabularyInput } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const root = path.resolve(__dirname, '../../..');
@@ -52,6 +52,9 @@ async function start() {
     translate: (text: string, job: string) => operations.translate(text, job),
     cancel: (job: string) => operations.cancel(job),
     saveLearning: (id: string, state: LearningState) => operations.saveLearning(id, state),
+    listVocabulary: () => operations.listVocabulary(),
+    saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
+    selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
   };
   for (const [method, handler] of Object.entries(handlers)) ipcMain.handle(`inflow:${method}`, (event, ...args) => {
     if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error('访问被拒绝。');

@@ -4,7 +4,7 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { validateSegments } from '../src/listening/processing';
-import type { LearningState, SavedMedia } from '../src/listening/desktop';
+import type { LearningState, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource } from '../src/listening/desktop';
 
 type Processor = (mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string };
@@ -22,8 +22,13 @@ export class DesktopOperations {
     this.db = new DatabaseSync(path.join(directory, 'learning.sqlite'));
     this.db.exec(`PRAGMA foreign_keys = ON;
       CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, name TEXT NOT NULL, filename TEXT NOT NULL, hash TEXT NOT NULL, learning TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS segments (id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES media(id), ordinal INTEGER NOT NULL, content TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`);
+      CREATE TABLE IF NOT EXISTS segments (id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES media(id), ordinal INTEGER NOT NULL, content TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1);
+      CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS vocabulary (id TEXT PRIMARY KEY, lemma TEXT NOT NULL, meaning TEXT NOT NULL, selected INTEGER NOT NULL DEFAULT 0, UNIQUE(lemma, meaning));
+      CREATE TABLE IF NOT EXISTS vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), segment_id TEXT NOT NULL REFERENCES segments(id), surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, segment_id, surface));`);
+    if (!(this.db.prepare('PRAGMA table_info(segments)').all() as { name: string }[]).some(column => column.name === 'active')) {
+      this.db.exec('ALTER TABLE segments ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
+    }
   }
 
   private row(id: string): MediaRow {
@@ -37,7 +42,7 @@ export class DesktopOperations {
 
   get(id: string): SavedMedia {
     const row = this.row(id);
-    const segments = this.db.prepare('SELECT id, content FROM segments WHERE media_id = ? ORDER BY ordinal').all(id) as { id: string; content: string }[];
+    const segments = this.db.prepare('SELECT id, content FROM segments WHERE media_id = ? AND active = 1 ORDER BY ordinal').all(id) as { id: string; content: string }[];
     return { id, name: row.name, video: /\.(mp4|webm|mov)$/i.test(row.name), missing: !existsSync(this.mediaPath(id)),
       segments: segments.map(segment => ({ ...JSON.parse(segment.content), id: segment.id })), learning: JSON.parse(row.learning) };
   }
@@ -119,8 +124,10 @@ export class DesktopOperations {
     if (media.learning.duration && segments.at(-1)!.end > media.learning.duration + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
     this.db.exec('BEGIN');
     try {
-      this.db.prepare('DELETE FROM segments WHERE media_id = ?').run(id);
-      const insert = this.db.prepare('INSERT INTO segments VALUES (?, ?, ?, ?)');
+      // Collected source segments remain immutable; only the latest result appears in the player.
+      this.db.prepare('UPDATE segments SET active = 0 WHERE media_id = ?').run(id);
+      this.db.prepare('DELETE FROM segments WHERE media_id = ? AND id NOT IN (SELECT segment_id FROM vocabulary_sources)').run(id);
+      const insert = this.db.prepare('INSERT INTO segments (id, media_id, ordinal, content) VALUES (?, ?, ?, ?)');
       segments.forEach((segment, index) => insert.run(randomUUID(), id, index, JSON.stringify(segment)));
       const learning = { ...this.get(id).learning, index: 0, position: segments[0].start };
       this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify(learning), id);
@@ -134,6 +141,67 @@ export class DesktopOperations {
     const result = await this.process(job, 'translate', undefined, text) as { translation?: unknown };
     if (typeof result?.translation !== 'string' || !result.translation.trim()) throw new Error('翻译失败，请重试。');
     return result.translation;
+  }
+
+  private vocabulary(id: string): VocabularyEntry {
+    if (typeof id !== 'string') throw new Error('词汇编号无效。');
+    const entry = this.db.prepare('SELECT id, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'sources' | 'selected'> & { selected: number } | undefined;
+    if (!entry) throw new Error('词汇不存在。');
+    const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
+      s.media_id AS mediaId, m.name AS mediaName, json_extract(s.content, '$.start') AS start
+      FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
+      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as VocabularySource[];
+    return { ...entry, selected: entry.selected === 1, sources };
+  }
+
+  listVocabulary(): VocabularyEntry[] {
+    return (this.db.prepare('SELECT id FROM vocabulary ORDER BY rowid DESC').all() as { id: string }[]).map(entry => this.vocabulary(entry.id));
+  }
+
+  saveVocabulary(input: SaveVocabularyInput): VocabularyEntry {
+    const text = (value: unknown, limit: number) => {
+      if (typeof value !== 'string' || !value.trim() || value.length > limit || value.includes('\0')) throw new Error('请填写有效的词典形和中文词义，选中文字也不能为空或过长。');
+      return value.trim().normalize('NFC');
+    };
+    if (!input || typeof input !== 'object') throw new Error('词汇内容无效。');
+    const lemma = text(input.lemma, 100), meaning = text(input.meaningZh, 300);
+    const matching = this.db.prepare('SELECT id FROM vocabulary WHERE lemma = ? AND meaning = ?').get(lemma, meaning) as { id: string } | undefined;
+    if (input.id !== undefined) {
+      this.vocabulary(input.id);
+      if (matching && matching.id !== input.id) throw new Error('已有同词同义的词条。请保留不同词义，或从原文收集到已有词条。');
+    }
+    let source: { segmentId: string; surface: string; sentence: string } | undefined;
+    if (input.source !== undefined) {
+      if (!input.source || typeof input.source.segmentId !== 'string') throw new Error('原句来源无效。');
+      const segment = this.db.prepare('SELECT content FROM segments WHERE id = ?').get(input.source.segmentId) as { content: string } | undefined;
+      if (!segment) throw new Error('原句已更新，请从当前原文重新收集。');
+      const sentence = JSON.parse(segment.content).text as string;
+      const surface = text(input.source.surface, 100);
+      if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
+      source = { segmentId: input.source.segmentId, surface, sentence };
+    }
+    const id = input.id ?? matching?.id ?? randomUUID();
+    this.db.exec('BEGIN');
+    try {
+      if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ? WHERE id = ?').run(lemma, meaning, id);
+      else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning) VALUES (?, ?, ?) ON CONFLICT(lemma, meaning) DO NOTHING').run(id, lemma, meaning);
+      if (source) this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, source.segmentId, source.surface, source.sentence);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return this.vocabulary(id);
+  }
+
+  selectVocabulary(ids: string[]): VocabularyEntry[] {
+    if (!Array.isArray(ids) || ids.length > 20 || new Set(ids).size !== ids.length) throw new Error('最多选择 20 个不同词条。');
+    ids.forEach(id => this.vocabulary(id));
+    this.db.exec('BEGIN');
+    try {
+      this.db.prepare('UPDATE vocabulary SET selected = 0').run();
+      const select = this.db.prepare('UPDATE vocabulary SET selected = 1 WHERE id = ?');
+      ids.forEach(id => select.run(id));
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return this.listVocabulary();
   }
 
   cancel(job: string): void { this.jobs.get(job)?.abort(); }

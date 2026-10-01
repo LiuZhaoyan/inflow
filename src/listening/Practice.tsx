@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import RevealMenu from './RevealMenu';
 import { revealedGroupCount, type RevealChoice } from './reveal';
 import { validateSegments, type Segment } from './processing';
-import { managedMediaUrl, type SavedMedia } from './desktop';
+import { managedMediaUrl, type SavedMedia, type VocabularySource } from './desktop';
+import VocabularyNotebook, { type VocabularyDraft } from './VocabularyNotebook';
 
 const clock = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
@@ -18,6 +19,10 @@ export default function Practice() {
   const [file, setFile] = useState<File | { name: string; type: string } | null>(null);
   const [savedMedia, setSavedMedia] = useState<SavedMedia | null>(null);
   const [library, setLibrary] = useState<SavedMedia[]>([]);
+  const [desktop, setDesktop] = useState(false);
+  const [collection, setCollection] = useState<VocabularyDraft | null>(null);
+  const [collectionError, setCollectionError] = useState('');
+  const transcript = useRef<HTMLParagraphElement>(null);
   const [src, setSrc] = useState('');
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
@@ -37,6 +42,7 @@ export default function Practice() {
   const video = !!file && (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name));
   const selectReveal = useCallback((choice: RevealChoice) => setReveal(choice), []);
   const hideText = useCallback(() => {
+    setCollectionError('');
     setReveal(null); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
     translating.current?.abort();
   }, []);
@@ -58,6 +64,7 @@ export default function Practice() {
     let active = true;
     Promise.all([desktop.restore(), desktop.list()]).then(([restored, items]) => {
       if (!active) return;
+      setDesktop(true);
       setLibrary(items);
       if (restored) applySaved(restored);
     }).catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '素材恢复失败，请重试。'); });
@@ -121,6 +128,38 @@ export default function Practice() {
     media.current?.pause(); setIndex(next); hideText();
     if (media.current) media.current.currentTime = segments[next].start;
     setPosition(segments[next].start);
+  }
+
+  function collectSelection() {
+    const selection = window.getSelection();
+    const surface = selection?.toString().trim();
+    const source = savedMedia?.segments[index];
+    if (!source || !selection?.rangeCount || !surface || surface.length > 100 ||
+      !transcript.current?.contains(selection.anchorNode) || !transcript.current.contains(selection.focusNode) ||
+      selection.getRangeAt(0).cloneContents().querySelector('.hidden-group') ||
+      !source.text.replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) {
+      setCollectionError('请在已揭晓的当前句原文中选中要收藏的词语（100 字以内）。'); return;
+    }
+    setCollectionError('');
+    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', source: { segmentId: source.id, surface, sentence: source.text, mediaName: savedMedia!.name } });
+    document.getElementById('notebook')?.scrollIntoView({ block: 'start' });
+  }
+
+  async function openVocabularySource(source: VocabularySource) {
+    try {
+      const saved = await window.inflow!.open(source.mediaId);
+      let next = saved.segments.findIndex(item => item.id === source.segmentId);
+      const historical = next < 0;
+      if (historical) {
+        next = saved.segments.findIndex(item => item.end > source.start);
+        if (next < 0) next = Math.max(0, saved.segments.length - 1);
+      }
+      const position = saved.segments[next]?.start ?? source.start;
+      applySaved({ ...saved, learning: { ...saved.learning, index: next, position } });
+      if (media.current && saved.id === savedMedia?.id && !saved.missing) media.current.currentTime = position;
+      document.getElementById('practice')?.scrollIntoView({ block: 'start' });
+      if (historical && !saved.missing) setError('素材已重新转写，已打开相近位置。收藏时的原句仍保留在词汇本。');
+    } catch (failure) { setError(failure instanceof Error ? failure.message : '来源素材无法打开。'); }
   }
 
   async function play() {
@@ -217,7 +256,7 @@ export default function Practice() {
       <nav>
         <a className="active" href="#practice"><span aria-hidden="true">⌂</span>学习</a>
         <a href="#library"><span aria-hidden="true">▱</span>素材库</a>
-        <a href="#favorites"><span aria-hidden="true">♡</span>我的收藏</a>
+        {desktop && <a href="#notebook"><span aria-hidden="true">♡</span>词汇本</a>}
         <a href="#history"><span aria-hidden="true">▥</span>学习记录</a>
       </nav>
       <div className="sidebar-secondary">
@@ -267,8 +306,9 @@ export default function Practice() {
       <button disabled={!segment || index===segments.length-1} onClick={() => select(index+1)}><span>下一句</span> Ⅰ▶</button></div>
     <section className="transcript" aria-label="当前句原文" aria-live="polite">
       <div className="sentence-meta"><span>{segment ? `第 ${index+1} / ${segments.length} 句 · ${clock(segment.start)}–${clock(segment.end)}` : '当前句'}</span>{reveal && <button onClick={() => setReveal(null)}>隐藏原文</button>}</div>
-      {segment ? <p lang="ko">{segment.groups.map((group,n) => <span key={n} className={reveal && n < revealedGroupCount(segment.groups,reveal) ? 'meaning-group' : 'hidden-group'}>{reveal && n < revealedGroupCount(segment.groups,reveal) ? group : <span aria-label="未揭晓意群">•••</span>}{' '}</span>)}</p> : <p className="empty-text">{busy ? '正在听清每一句…' : '处理媒体后，从这里揭晓原文'}</p>}
+      {segment ? <p ref={transcript} lang="ko">{segment.groups.map((group,n) => <span key={n} className={reveal && n < revealedGroupCount(segment.groups,reveal) ? 'meaning-group' : 'hidden-group'}>{reveal && n < revealedGroupCount(segment.groups,reveal) ? group : <span aria-label="未揭晓意群">•••</span>}{' '}</span>)}</p> : <p className="empty-text">{busy ? '正在听清每一句…' : '处理媒体后，从这里揭晓原文'}</p>}
     </section>
+    {desktop && <div className="collection-controls"><button className="process-button" disabled={!savedMedia?.segments[index] || !reveal} onMouseDown={event => event.preventDefault()} onClick={collectSelection}>收藏选中文字</button>{collectionError && <p className="notice" role="alert">{collectionError}</p>}</div>}
     <div className="tools"><label><select aria-label="播放倍速" value={rate} onChange={event => { const next = Number(event.target.value); setRate(next); if (media.current) media.current.playbackRate = next; }}>{[0.5,0.75,1,1.25,1.5,2].map(value => <option key={value} value={value}>{value}×</option>)}</select><span>倍速</span></label>
       <button disabled={!segment} aria-pressed={loop} onClick={() => setLoop(value => !value)}><span className="tool-symbol" aria-hidden="true">↻</span><span>{loop ? '循环中' : '循环'}</span></button>
       <button disabled={!segment} aria-expanded={translationOpen} onClick={() => void toggleTranslation()}><span className="translate-symbol" aria-hidden="true">文ᴬ</span><span>翻译</span></button></div>
@@ -284,6 +324,7 @@ export default function Practice() {
       </div>
     </aside>
     </div>
+    {desktop && <VocabularyNotebook collection={collection} onDismiss={() => setCollection(null)} onOpenSource={source => void openVocabularySource(source)}/>}
     </main>
   </div>;
 }
