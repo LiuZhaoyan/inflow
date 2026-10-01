@@ -2,7 +2,7 @@
 
 A Korean learning application moving toward a Windows desktop MVP: import media → intensive listening → collect vocabulary → generate a short Korean passage → collect further vocabulary.
 
-The current browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. The desktop host, persistence and vocabulary/artifact UI remain blocked on the Windows and live generation feasibility gates. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
+The browser prototype implements local transcription, sentence playback, meaning-group reveals and Chinese translation. Desktop development now adds an Electron host, managed media and SQLite learning restoration. Vocabulary/artifacts and the packaged worker remain later slices. [The approved tasks](.scratch/desktop-learning/ticket-plan.md) record the sequence. Automatically generated content may contain errors; [earlier backend evidence](docs/BACKEND_ACCEPTANCE.md) covers Linux/WSL only.
 
 ## Setup (Linux / WSL)
 
@@ -44,7 +44,7 @@ Run the selected [WIKITONGUES Korean sample](https://commons.wikimedia.org/wiki/
 
 ## Passage evaluation
 
-Use Node.js 24. Copy `.env.example` to the Git-ignored `.env.local` and set `DEEPSEEK_API_KEY` there. Never paste the key into an issue or report.
+Use Node.js 24. Set `DEEPSEEK_API_KEY` in the Git-ignored `.env` or `.env.local` (the latter overrides `.env`). `.env.example` documents the expected name. Never paste the key into an issue or report.
 
 ```sh
 npm run generation:evaluate
@@ -62,11 +62,30 @@ Without a key, it only saves the prepared inputs and explicitly reports that liv
 4. Long-press **reveal**, slide to a small hint, more hints or the full sentence, and release. On desktop, click to choose; keyboard controls are also supported.
 5. Hide the transcript, change playback speed from 0.5× to 2×, or independently expand the translation area at the bottom. Switching sentences hides both transcript and translation.
 
-This iteration does not save progress, processed media or notes. Refreshing the page requires importing and processing the media again. It does not include a review list, PWA installation, a Desktop service or accounts.
+Browser mode does not save progress or processed media. Desktop development retains imported media, processing results, learning position, speed and loop preference. Vocabulary and artifacts are separate later tickets.
+
+## Desktop development (Windows)
+
+After the native Python/model setup above, run:
+
+```powershell
+npm run desktop:build
+npm run desktop:start
+```
+
+Electron 44.5.1 loads a static Next export and uses builtin `node:sqlite`; it does not start an HTTP server. Native import retains a managed copy. The application's user-data directory holds `media` files and `learning.sqlite`. The renderer receives managed identifiers and a narrow preload bridge. Media range responses support seeking and sentence replay through a secure custom protocol. [Electron protocol documentation](https://www.electronjs.org/docs/latest/api/protocol).
+
+The saved-material selector reopens imports. Missing media leaves its transcript intact; **Re-associate media** requires the same recording, checked by SHA-256. Reveals and translations remain hidden when reopening. Development uses this checkout's `.venv-win/python.exe` and `.models`, or explicit `INFLOW_PYTHON` / `INFLOW_MODELS_DIR`. Ticket 06 owns packaging without system Python; this stage is not an installer.
+
+```powershell
+node scripts/verify-desktop.cjs "path/to/Hanbid sample.webm"
+```
+
+This verification creates an isolated ignored profile, supplies dialog selection deterministically, runs real decoding/transcription/translation, and starts Electron three times to check restoration and missing-file recovery. Evidence and screenshots remain under `.scratch/desktop-learning/generated-samples/desktop-acceptance-*`.
 
 ## Local processing and limitations
 
-- **Transcription and timing:** faster-whisper large-v3-turbo, CPU int8, Korean recognition. Kiwi detects sentence endings across ASR chunks, including missing punctuation, and maps them to real word timestamps; a pause alone does not split a sentence. The native comparison improved common-word recognition and the merged opening range, with an approximately 90-second wait for the selected 156-second video. Names and individual words can still be wrong; [Windows quality evidence](.scratch/desktop-learning/windows-probe.md) remains subject to owner review.
+- **Transcription and timing:** faster-whisper large-v3-turbo, CPU int8, Korean recognition. Kiwi detects sentence endings across ASR chunks, including missing punctuation, and maps them to real word timestamps; a pause alone does not split a sentence. The native comparison improved common-word recognition and the merged opening range, with an approximately 90-second wait for the selected 156-second video. Names and individual words can still be wrong; the owner accepted this baseline on 2026-10-01. [Windows quality evidence](.scratch/desktop-learning/windows-probe.md).
 - **Meaning groups:** Kiwi Korean morphological analysis creates complete grammatical phrases at particle and punctuation boundaries rather than fixed word counts. It is not full semantic understanding and remains limited for idioms, ambiguity and incorrectly transcribed text.
 - **Translation:** an Argos Korean→English→Chinese model runs locally through CTranslate2; the English pivot can lose detail.
 - **Resources:** each processing request has a 10-minute timeout; the API runs one inference operation at a time in the same process and asks busy callers to retry later. There is no account or multi-user job system.

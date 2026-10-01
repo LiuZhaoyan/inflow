@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import RevealMenu from './RevealMenu';
 import { revealedGroupCount, type RevealChoice } from './reveal';
 import { validateSegments, type Segment } from './processing';
+import { managedMediaUrl, type SavedMedia } from './desktop';
 
 const clock = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
@@ -14,7 +15,9 @@ export default function Practice() {
   const picker = useRef<HTMLInputElement>(null);
   const processing = useRef<AbortController | null>(null);
   const translating = useRef<AbortController | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | { name: string; type: string } | null>(null);
+  const [savedMedia, setSavedMedia] = useState<SavedMedia | null>(null);
+  const [library, setLibrary] = useState<SavedMedia[]>([]);
   const [src, setSrc] = useState('');
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
@@ -33,9 +36,37 @@ export default function Practice() {
   const segment = segments[index];
   const video = !!file && (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name));
   const selectReveal = useCallback((choice: RevealChoice) => setReveal(choice), []);
+  const hideText = useCallback(() => {
+    setReveal(null); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
+    translating.current?.abort();
+  }, []);
+  const applySaved = useCallback((next: SavedMedia) => {
+    processing.current?.abort(); translating.current?.abort(); media.current?.pause();
+    setSavedMedia(next); setFile({ name: next.name, type: next.video ? 'video/' : 'audio/' });
+    setSrc(next.missing ? '' : managedMediaUrl(next.id));
+    setDuration(next.learning.duration); setPosition(next.learning.position); setIndex(next.learning.index);
+    setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments);
+    setPlaying(false); setBusy(false); hideText();
+    setError(next.missing ? '媒体文件丢失。原文和学习记录仍然保留，请重新关联同一文件。' : '');
+  }, [hideText]);
 
-  useEffect(() => () => { if (src) URL.revokeObjectURL(src); }, [src]);
+  useEffect(() => () => { if (src.startsWith('blob:')) URL.revokeObjectURL(src); }, [src]);
   useEffect(() => () => { processing.current?.abort(); translating.current?.abort(); }, []);
+  useEffect(() => {
+    const desktop = window.inflow;
+    if (!desktop) return;
+    let active = true;
+    Promise.all([desktop.restore(), desktop.list()]).then(([restored, items]) => {
+      if (!active) return;
+      setLibrary(items);
+      if (restored) applySaved(restored);
+    }).catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '素材恢复失败，请重试。'); });
+    return () => { active = false; };
+  }, [applySaved]);
+  useEffect(() => {
+    if (!savedMedia || !duration) return;
+    void window.inflow?.saveLearning(savedMedia.id, { position, index, rate, loop, duration }).catch(failure => setError(failure instanceof Error ? failure.message : '学习记录保存失败。'));
+  }, [savedMedia, duration, position, index, rate, loop]);
   useEffect(() => {
     if (!playing || !segment) return;
     let frame = 0;
@@ -54,9 +85,25 @@ export default function Practice() {
     return () => cancelAnimationFrame(frame);
   }, [playing, segment, loop]);
 
-  function hideText() {
-    setReveal(null); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
-    translating.current?.abort();
+  async function importMedia() {
+    if (!window.inflow) { picker.current?.click(); return; }
+    try {
+      const next = await window.inflow.importMedia();
+      if (next) { applySaved(next); setLibrary(await window.inflow.list()); }
+    } catch (failure) { setError(failure instanceof Error ? failure.message : '导入失败，请重试。'); }
+  }
+
+  async function openSaved(id: string, relink = false) {
+    try {
+      const next = relink ? await window.inflow!.relink(id) : await window.inflow!.open(id);
+      if (next) { applySaved(next); setLibrary(await window.inflow!.list()); }
+    } catch (failure) { setError(failure instanceof Error ? failure.message : '素材打开失败，请重试。'); }
+  }
+
+  function desktopJob(controller: AbortController) {
+    const job = crypto.randomUUID();
+    controller.signal.addEventListener('abort', () => { void window.inflow?.cancel(job).catch(() => {}); }, { once: true });
+    return job;
   }
 
   function chooseFile(next: File | undefined) {
@@ -90,10 +137,20 @@ export default function Practice() {
     const controller = new AbortController(); processing.current?.abort(); processing.current = controller;
     setBusy(true); setError('');
     try {
-      const form = new FormData(); form.append('file', file);
-      const response = await fetch('/api/transcribe', { method: 'POST', body: form, signal: controller.signal });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || '处理失败，请重试。');
+      let data: { segments: unknown };
+      if (savedMedia && window.inflow) {
+        const processed = await window.inflow.transcribe(savedMedia.id, desktopJob(controller));
+        const items = await window.inflow.list();
+        if (controller.signal.aborted) return;
+        setSavedMedia(processed); setLibrary(items);
+        data = processed;
+      } else {
+        if (!(file instanceof File)) return;
+        const form = new FormData(); form.append('file', file);
+        const response = await fetch('/api/transcribe', { method: 'POST', body: form, signal: controller.signal });
+        data = await response.json();
+        if (!response.ok) throw new Error((data as { error?: string }).error || '处理失败，请重试。');
+      }
       const result = validateSegments(data.segments);
       if (result[result.length-1].end > duration + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
       if (controller.signal.aborted) return;
@@ -113,6 +170,11 @@ export default function Practice() {
     const controller = new AbortController(); translating.current?.abort(); translating.current = controller;
     setTranslationBusy(true); setTranslationError('');
     try {
+      if (window.inflow) {
+        const translated = await window.inflow.translate(segment.text, desktopJob(controller));
+        if (!controller.signal.aborted) setTranslation(translated);
+        return;
+      }
       const response = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
       const data = await response.json();
       if (!response.ok || typeof data.translation !== 'string' || !data.translation.trim()) throw new Error(data.error || '翻译失败，请收起后重试。');
@@ -128,6 +190,7 @@ export default function Practice() {
       const el = media.current;
       if (!el) return;
       el.playbackRate = rate;
+      if (savedMedia) el.currentTime = savedMedia.learning.position;
       if (Number.isFinite(el.duration)) { setDuration(el.duration); if (el.duration > 600) setError('媒体可试听；自动处理支持 10 分钟以内的媒体。'); }
       else setError('无法读取媒体时长，请换一个格式重试。');
     },
@@ -167,19 +230,21 @@ export default function Practice() {
     <header className="masthead">
       <Link className="home-link" href="/" aria-label="返回首页">‹</Link>
       <div className="brand"><div><span>Inflow</span><Image src="/icon.svg" alt="" width={36} height={36}/></div><p>让好内容，成为你的外语老师</p></div>
-      <button className="import-icon" onClick={() => picker.current?.click()} aria-label="导入媒体">＋</button>
+      <button className="import-icon" onClick={() => void importMedia()} aria-label="导入媒体">＋</button>
     </header>
     <input className="file-input" ref={picker} type="file" accept="audio/*,video/*,.m4a,.mp3,.mp4,.wav,.webm,.ogg,.flac,.aac,.mov" aria-label="选择音频或视频" onChange={event => { chooseFile(event.target.files?.[0]); event.target.value = ''; }}/>
     <div className="desktop-topbar">
-      <button className="desktop-import" onClick={() => picker.current?.click()}><span aria-hidden="true">⌕</span><span>{file?.name || '导入你喜欢的影音素材...'}</span><b aria-hidden="true">＋</b></button>
+      <button className="desktop-import" onClick={() => void importMedia()}><span aria-hidden="true">⌕</span><span>{file?.name || '导入你喜欢的影音素材...'}</span><b aria-hidden="true">＋</b></button>
       <button className="notification" aria-label="通知">♧</button>
     </div>
+    {!!library.length && <div className="import-status" id="library"><label>素材库 <select aria-label="已保存素材" value={savedMedia?.id || ''} onChange={event => void openSaved(event.target.value)}>{library.map(item => <option key={item.id} value={item.id}>{item.name}{item.missing ? '（文件丢失）' : ''}</option>)}</select></label></div>}
+    {savedMedia?.missing && <button className="process-button" onClick={() => void openSaved(savedMedia.id, true)}>重新关联媒体</button>}
     <div className="practice-layout">
     <div className="practice-column">
     <section className="media-card" aria-label="媒体播放器">
       {src && video ? <video key={src} ref={el => { media.current = el; }} {...mediaProps} playsInline onClick={() => void play()} aria-label="视频播放器"/> : <>
         {src && <audio key={src} ref={el => { media.current = el; }} {...mediaProps} aria-label="音频播放器"/>}
-        <div className="audio-art"><div className="sun" aria-hidden="true">☀</div><div className="soundwave" aria-hidden="true">{[18,36,58,82,48,68,94,54,36,62,24].map((height,n) => <i key={n} style={{ height }}/> )}</div><h1>{file ? '听见每一句' : '从一段喜欢的声音开始'}</h1><p>{file ? '先听，再慢慢揭晓。' : '导入韩语音频或视频，开启精听。'}</p>{!file && <button className="primary" onClick={() => picker.current?.click()}>选择媒体 ＋</button>}</div>
+        <div className="audio-art"><div className="sun" aria-hidden="true">☀</div><div className="soundwave" aria-hidden="true">{[18,36,58,82,48,68,94,54,36,62,24].map((height,n) => <i key={n} style={{ height }}/> )}</div><h1>{file ? '听见每一句' : '从一段喜欢的声音开始'}</h1><p>{file ? '先听，再慢慢揭晓。' : '导入韩语音频或视频，开启精听。'}</p>{!file && <button className="primary" onClick={() => void importMedia()}>选择媒体 ＋</button>}</div>
       </>}
       {src && <span className="media-duration">{clock(duration)}</span>}
     </section>
@@ -193,7 +258,7 @@ export default function Practice() {
         }
         if (media.current) media.current.currentTime = time; setPosition(time);
       }}/><span>{clock(position)} / {clock(duration)}</span></div>
-    <div className="import-status"><span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>{file && <button className="process-button" disabled={!duration || duration > 600 || busy} onClick={() => void processMedia()}>{busy ? '正在转写与切句…' : segments.length ? '重新处理' : '开始处理'}</button>}</div>
+    <div className="import-status"><span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>{file && <button className="process-button" disabled={!src || !duration || duration > 600 || busy} onClick={() => void processMedia()}>{busy ? '正在转写与切句…' : segments.length ? '重新处理' : '开始处理'}</button>}</div>
     {busy && <button className="process-button" onClick={() => { processing.current?.abort(); setBusy(false); }}>取消处理</button>}
     <p className="processing-note">媒体在当前 Inflow 服务上处理，不发送至第三方。{busy ? '处理期间仍可试听。' : '自动结果可能有误。'}</p>
     {error && <p className="notice" role="alert">{error}</p>}

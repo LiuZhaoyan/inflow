@@ -1,7 +1,11 @@
 # Generation baseline
 
-Status: provider adapter and deterministic contract checks implemented; live account and Korean-quality evaluation remain open.
-Updated: 2026-09-30
+Status: authenticated four-case evaluation completed; the owner accepted the current Korean generation quality and recorded limitations.
+Updated: 2026-10-01
+
+## Accepted live evaluation
+
+DeepSeek `deepseek-flash` returned all four prepared cases through the existing adapter on 2026-10-01. Latencies were 1,765 / 2,013 / 1,598 / 2,492 ms; usage totaled 1,833 input and 1,666 output tokens. The runner reads the owner's ignored `.env` and optional `.env.local` without copying credentials into evidence. [Unmodified samples and review](generated-samples/run-2026-10-01T03-34-27-466Z-990f1311/review.md) record limited coherence in the inflection case and awkward wording in the unrelated-target case. The owner explicitly accepted current quality with those limitations. Ticket 02 is complete; this does not claim error-free Korean.
 
 ## Provider and request
 

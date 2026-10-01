@@ -33,11 +33,11 @@ function processorPaths(root: string, env: NodeJS.ProcessEnv, platform: NodeJS.P
 
 // ponytail: one local inference at a time; use a bounded job queue only for a multi-user deployment.
 let busy = false;
-export async function runProcessor(mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string): Promise<unknown> {
+export async function runProcessor(mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string, root = process.cwd()): Promise<unknown> {
   if (busy) throw new Error('正在处理另一项请求，请稍后重试。');
   busy = true;
   try {
-    const paths = processorPaths(process.cwd(), process.env, process.platform);
+    const paths = processorPaths(root, process.env, process.platform);
     try { await access(paths.python); }
     catch { throw new Error('本地处理环境尚未安装，请按 README 完成模型安装后重试。'); }
     return await new Promise((resolve, reject) => {

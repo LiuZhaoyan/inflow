@@ -2,14 +2,17 @@
   "name": "inflow",
   "version": "0.2.0",
   "private": true,
+  "main": "build/desktop/desktop/main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit --pretty false",
-    "test": "node --import tsx --test src/listening/*.test.ts src/generation/*.test.ts",
-    "generation:evaluate": "node --env-file-if-exists=.env.local --import tsx scripts/evaluate-generation.ts"
+    "test": "node --import tsx --test src/listening/*.test.ts src/generation/*.test.ts desktop/*.test.ts",
+    "desktop:build": "node scripts/build-desktop.mjs",
+    "desktop:start": "electron .",
+    "generation:evaluate": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/evaluate-generation.ts"
   },
   "dependencies": {
     "next": "16.1.1",
@@ -17,9 +20,10 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "24.19.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "electron": "44.5.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "tsx": "^4.23.0",

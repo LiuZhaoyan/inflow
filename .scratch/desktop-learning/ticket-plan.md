@@ -2,7 +2,7 @@
 
 Status: approved
 Confirmation: the owner approved ticket granularity and blocking edges on 2026-09-30; all seven issues are published. Individual issues carry their current triage state.
-Updated: 2026-09-30
+Updated: 2026-10-01
 Parent specification: [Windows Korean Learning Desktop MVP](spec.md).
 
 ## Approach
@@ -40,4 +40,4 @@ Tickets 01 and 02 have no ticket blockers. Ticket 03 does not depend on generati
 
 ## Publication boundary
 
-The approved breakdown is published as seven self-contained local issues linked above, in dependency order. This document remains the planning index rather than a combined implementation issue. Each issue records canonical status, blockers, acceptance and verification. Publication does not establish completion. Tickets 01 and 02 are the initial frontier. Ticket 01 has native Windows processing/player evidence and awaits owner quality acceptance; ticket 02 awaits configured access and live generation review. Both remain needs-info. Tickets 03–07 have not started and remain blocked by the accepted dependencies.
+The approved breakdown is published as seven self-contained local issues linked above, in dependency order. Individual issues own acceptance and evidence. Tickets 01 and 02 are complete after owner listening and generation quality acceptance on 2026-10-01. Ticket 03 is complete with native static Electron/SQLite restoration evidence. Tickets 04 and 06 are unblocked and unstarted. Ticket 05 still requires ticket 04; ticket 07 still requires tickets 05 and 06.

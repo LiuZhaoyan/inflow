@@ -1,7 +1,7 @@
 # 01: Validate Korean media listening on native Windows
 
-Status: needs-info
-Reason: the rejected base model has been replaced by a measured turbo candidate with Korean sentence detection; owner review of revised quality and the longer wait remains pending.
+Status: completed
+Reason: the owner accepted the revised native Windows listening baseline on 2026-10-01 and authorized the next stage.
 Blocked by: None (can start immediately).
 Approved: 2026-09-30
 Specification: [Windows Korean Learning Desktop MVP](../spec.md).
@@ -18,10 +18,10 @@ This is a Windows-first Korean learning application for the owner's personal use
 
 - [x] Run the existing interface and processing flow with native Windows dependencies and an isolated Python 3.12 environment.
 - [x] Adapt development-specific interpreter/model paths only as necessary; leave the user's base Python environment untouched.
-- [ ] A representative Korean video without subtitles produces validated transcript text, meaning groups and playable sentence ranges.
+- [x] A representative Korean video without subtitles produces validated transcript text, meaning groups and playable sentence ranges.
 - [x] Demonstrate full playback, sentence navigation, loop/speed/reveal/translation and cancel/retry behavior; original media remains usable after processing failure.
 - [x] Record media characteristics, runtime/model versions, elapsed time, recognition errors, incomplete boundaries and replay behavior. Linux acceptance does not count as Windows evidence.
-- [ ] Keep the existing processing limits. If Windows usability fails, record the failure and compare the affected approach before closing the gate; do not implement several processing backends.
+- [x] Keep the existing processing limits. If Windows usability fails, record the failure and compare the affected approach before closing the gate; do not implement several processing backends.
 
 ## Verification
 
@@ -36,6 +36,8 @@ Native Windows execution and representative owner-appropriate media. A WSL-only 
 Initial media processing and intensive-listening behavior, especially user stories 3 and 5–14.
 
 ## Comments
+
+- 2026-10-01: the owner accepted the revised turbo recognition, sentence boundaries and waiting time ("验收通过，可以进入下一阶段"). Ticket 01 is complete and ticket 03 is unblocked. This acceptance does not establish generation quality, packaged worker or installer acceptance.
 
 Published after the owner approved the seven-ticket breakdown and blocking edges on 2026-09-30. Windows acceptance remains incomplete.
 
