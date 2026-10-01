@@ -3,6 +3,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DesktopOperations } from './operations';
 import { serveMedia } from './media';
+import { GenerationCredential } from './credentials';
+import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
 import type { LearningState, SaveVocabularyInput } from '../src/listening/desktop';
 
@@ -15,6 +17,8 @@ const trustedUrl = (value: string) => { const url = new URL(value); return url.p
 
 async function start() {
   operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text) => runProcessor(mode, signal, file, text, root));
+  const credential = new GenerationCredential(app.getPath('userData'));
+  await credential.initialize(root);
   const renderer = path.join(root, 'build', 'renderer');
   protocol.handle('inflow', async request => {
     const url = new URL(request.url);
@@ -55,6 +59,25 @@ async function start() {
     listVocabulary: () => operations.listVocabulary(),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
+    credentialStatus: () => credential.status(),
+    configureCredential: (key: string) => credential.configure(key),
+    generateArtifact: async (ids: string[], topic: string, job: string) => {
+      try { return await operations.generateArtifact(ids, topic, job, credential.get()); }
+      catch (error) {
+        if (!(error instanceof GenerationError)) throw error;
+        const messages: Record<GenerationError['code'], string> = {
+          missing_key: '请先配置 DeepSeek API key。', invalid_input: '所选词汇或主题无效，请检查后重试。',
+          unauthorized: 'DeepSeek 密钥验证失败，请更换密钥后重试。', quota: 'DeepSeek 余额、额度或调用频率受限，请检查账户后重试。',
+          service: 'DeepSeek 暂时不可用，请稍后重试。', request: 'DeepSeek 拒绝了请求，请检查所选词汇后重试。',
+          incomplete: '短文未完成，已有材料保留，请重试。', invalid_response: '短文内容或目标标注不完整，已有材料保留，请重试。',
+          timeout: '生成超时，请重试。', network: '无法连接 DeepSeek，请检查网络后重试。',
+        };
+        throw new Error(messages[error.code]);
+      }
+    },
+    listArtifacts: () => operations.listArtifacts(),
+    restoreArtifact: () => operations.restoreArtifact(),
+    openArtifact: (id: string) => operations.openArtifact(id),
   };
   for (const [method, handler] of Object.entries(handlers)) ipcMain.handle(`inflow:${method}`, (event, ...args) => {
     if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error('访问被拒绝。');

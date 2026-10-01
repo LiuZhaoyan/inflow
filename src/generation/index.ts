@@ -102,7 +102,7 @@ function validateInput(input: GeneratePassageInput): void {
   }
 }
 
-function validatePassage(value: unknown, targets: GenerationTarget[]): Pick<GeneratedPassage, 'title' | 'sentences'> {
+export function validatePassage(value: unknown, targets: GenerationTarget[]): Pick<GeneratedPassage, 'title' | 'sentences'> {
   if (!isRecord(value) || !hasOnlyKeys(value, ['title', 'sentences']) || !nonEmptyText(value.title) || !Array.isArray(value.sentences) || value.sentences.length === 0) {
     throw new GenerationError('invalid_response', 'DeepSeek returned an incomplete passage. Retry generation.');
   }

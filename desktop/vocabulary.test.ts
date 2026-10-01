@@ -45,6 +45,7 @@ test('collection, distinct senses, correction and target selection survive repro
     assert.equal(first.lemma, '걸리다');
     assert.equal(first.sources[0].surface, '걸렸어요');
     assert.equal(first.sources[0].sentence, result[0].text);
+    assert.ok('segmentId' in first.sources[0]);
     assert.equal(first.sources[0].mediaId, media.id);
     assert.equal(first.sources[0].mediaName, '视频.webm');
     const again = app.saveVocabulary({ lemma: '걸리다', meaningZh: '花费时间', source: { segmentId: media.segments[1].id, surface: '걸렸어요' } });

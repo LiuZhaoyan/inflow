@@ -148,3 +148,17 @@ p,h1 { margin:0; }
 .vocabulary-context { margin-top:12px; padding:12px; border-radius:10px; background:var(--soft); overflow-wrap:anywhere; }
 .vocabulary-entry summary { cursor:pointer; margin-top:12px; color:var(--muted); }
 .vocabulary-source { margin-top:8px; text-align:left; color:#735000; text-decoration:underline; }
+.artifact-library h2 { margin:0 0 12px; font-size:22px; }
+.generation-credential { margin:16px 0; }
+.generation-credential summary,.artifact-targets summary { cursor:pointer; }
+.artifact-generation,.generation-credential form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:16px 0; }
+.artifact-generation label,.generation-credential label { flex:1; min-width:200px; }
+.artifact-library input,.artifact-selector select { display:block; width:100%; padding:10px 12px; border:1px solid #c7c6c0; border-radius:10px; background:#fff; }
+.artifact-selector { display:block; margin:20px 0; }
+.artifact-reader { padding:20px; border:1px solid #e8e6e1; border-radius:16px; }
+.artifact-reader h3 { margin:0 0 8px; font-size:24px; }
+.artifact-targets { margin:16px 0; }
+.artifact-sentence { margin:20px 0; }
+.artifact-korean { font-size:20px; line-height:1.9; overflow-wrap:anywhere; }
+.artifact-korean mark { color:inherit; background:#fff0ab; border-radius:3px; }
+.artifact-translation { color:var(--muted); margin-top:8px; }

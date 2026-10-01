@@ -8,16 +8,19 @@ const root = path.resolve(__dirname, '..');
 async function run() {
   if (!process.versions.electron) {
     const vocabulary = process.argv[2] === '--vocabulary';
-    const source = vocabulary ? process.argv[3] : process.argv[2];
+    const artifacts = process.argv[2] === '--artifacts';
+    const resumeArtifacts = process.argv[2] === '--resume-artifacts';
+    const source = vocabulary || artifacts || resumeArtifacts ? process.argv[3] : process.argv[2];
     if (!source) throw new Error('Usage: node scripts/verify-desktop.cjs <representative Korean media>');
-    const output = await fs.mkdtemp(path.join(root, '.scratch/desktop-learning/generated-samples/desktop-acceptance-'));
-    if (vocabulary) await fs.cp(source, path.join(output, 'profile'), { recursive: true });
+    const output = resumeArtifacts ? path.resolve(source) : await fs.mkdtemp(path.join(root, '.scratch/desktop-learning/generated-samples/desktop-acceptance-'));
+    if (resumeArtifacts) await fs.access(path.join(output, 'expected-artifacts.json'));
+    else if (vocabulary || artifacts) await fs.cp(source, path.join(output, 'profile'), { recursive: true });
     else await fs.copyFile(source, path.join(output, '韩语 sample' + path.extname(source)));
-    for (const phase of vocabulary ? ['vocabulary', 'vocabulary-reopen'] : ['first', 'reopen', 'missing']) {
+    for (const phase of resumeArtifacts ? ['artifacts-reopen'] : artifacts ? ['artifacts', 'artifacts-reopen'] : vocabulary ? ['vocabulary', 'vocabulary-reopen'] : ['first', 'reopen', 'missing']) {
       await new Promise((resolve, reject) => {
         const env = { ...process.env };
         delete env.ELECTRON_RUN_AS_NODE;
-        const child = spawn(require('electron'), [__filename, phase, output, vocabulary ? '.webm' : path.extname(source)], { stdio: 'inherit', env });
+        const child = spawn(require('electron'), [__filename, phase, output, vocabulary || artifacts || resumeArtifacts ? '.webm' : path.extname(source)], { stdio: 'inherit', env });
         child.on('error', reject);
         child.on('exit', code => code === 0 ? resolve() : reject(new Error(`${phase} exited ${code}`)));
       });
@@ -32,6 +35,7 @@ async function run() {
   const output = process.argv[3];
   const source = path.join(output, '韩语 sample' + process.argv[4]);
   app.setPath('userData', path.join(output, 'profile'));
+  if (phase === 'artifacts-reopen') global.fetch = async () => { throw new Error('Reopening must not contact the generation provider'); };
   dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [source] });
   const errors = [];
   app.on('browser-window-created', (_event, window) => {
@@ -42,7 +46,7 @@ async function run() {
   });
   require(path.join(root, 'build/desktop/desktop/main.js'));
   await app.whenReady();
-  const window = BrowserWindow.getAllWindows()[0];
+  const window = BrowserWindow.getAllWindows()[0] || await new Promise(resolve => app.once('browser-window-created', (_event, created) => resolve(created)));
   assert.ok(window);
   const evaluate = expression => window.webContents.executeJavaScript('{\n' + expression + '\n}', true);
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -58,7 +62,109 @@ async function run() {
   const click = text => evaluate(`Array.from(document.querySelectorAll('button')).find(button => button.textContent.trim().includes(${JSON.stringify(text)}))?.click()`);
   const snapshot = () => evaluate(`({ url: location.href, count: document.querySelectorAll('.segment-list button').length, sentence: document.querySelector('.sentence-meta').textContent, rate: document.querySelector('[aria-label="播放倍速"]').value, loop: document.querySelector('.tools button').getAttribute('aria-pressed'), currentTime: document.querySelector('video')?.currentTime, duration: document.querySelector('video')?.duration, decodedFrames: document.querySelector('video')?.webkitDecodedFrameCount, videoWidth: document.querySelector('video')?.videoWidth, errors: [...document.querySelectorAll('[role="alert"]')].map(el => el.textContent), sourceHidden: !document.querySelector('.meaning-group'), translationHidden: !document.querySelector('.translation.expanded') })`);
   let evidence = { phase, electron: process.versions.electron, node: process.versions.node };
-  if (phase === 'vocabulary' || phase === 'vocabulary-reopen') {
+  if (phase === 'artifacts' || phase === 'artifacts-reopen') {
+    await wait('!!document.querySelector("#artifacts") && document.querySelectorAll(".vocabulary-entry").length >= 3');
+    await wait('document.querySelector(".generation-credential summary").textContent.includes("已配置")');
+    assert.equal((await evaluate('window.inflow.credentialStatus()')).configured, true);
+    const readArtifacts = () => evaluate('window.inflow.listArtifacts()');
+    if (phase === 'artifacts') {
+      assert.deepEqual(await readArtifacts(), []);
+      const field = (selector, value) => evaluate(`const input = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, ${JSON.stringify(value)}); input.dispatchEvent(new Event('input', { bubbles: true }));`);
+      await field('[name=topic]', '친구와 타이완 여행');
+      await click('生成短文');
+      await wait('!!document.querySelector(".artifact-reader")', 100000);
+      const first = (await readArtifacts())[0];
+      assert.equal(first.targets.length, 2);
+      assert.equal(await evaluate('document.querySelectorAll(".artifact-translation").length'), 0);
+      assert.ok(await evaluate('document.querySelectorAll(".artifact-korean mark").length >= 2'));
+      await click('显示短文翻译');
+      assert.equal(await evaluate('document.querySelectorAll(".artifact-translation").length'), first.sentences.length);
+      const candidates = [['친구', '朋友'], ['여행', '旅行'], ['바다', '大海'], ['항구', '港口'], ['사진', '照片'], ['아침', '早晨'], ['사람', '人']];
+      let found;
+      for (const [surface, meaning] of candidates) {
+        const index = first.sentences.findIndex(sentence => sentence.parts.some(part => !part.targetId && part.text.includes(surface)));
+        if (index >= 0) { found = { surface, meaning, index }; break; }
+      }
+      assert.ok(found, 'The real passage needs a common supporting word for the second collection');
+      await evaluate(`const p = document.getElementById('artifact-sentence-${found.index}'); const walker = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode())) { const offset = node.textContent.indexOf(${JSON.stringify(found.surface)}); if (offset >= 0) { const range = document.createRange(); range.setStart(node, offset); range.setEnd(node, offset + ${found.surface.length}); const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range); break; } } document.querySelectorAll('.artifact-sentence button')[${found.index}].click();`);
+      await wait('!!document.querySelector(".vocabulary-editor")');
+      await field('.vocabulary-editor [name=lemma]', found.surface);
+      await field('.vocabulary-editor [name=meaningZh]', found.meaning);
+      await click('保存词汇'); await wait('!document.querySelector(".vocabulary-editor")');
+      let entries = await evaluate('window.inflow.listVocabulary()');
+      const collected = entries.find(entry => entry.lemma === found.surface && entry.meaningZh === found.meaning);
+      assert.ok(collected); assert.equal(collected.sources[0].artifactId, first.id);
+      assert.equal(collected.sources[0].sentence, first.sentences[found.index].parts.map(part => part.text).join(''));
+      const oldTarget = first.targets[0];
+      await evaluate(`document.querySelector('[data-entry-id="${oldTarget.id}"] button').click()`);
+      await wait('!!document.querySelector(".vocabulary-editor")');
+      await field('.vocabulary-editor [name=meaningZh]', oldTarget.meaningZh + '（复习用）');
+      await click('保存词汇'); await wait('!document.querySelector(".vocabulary-editor")');
+      assert.equal((await evaluate(`window.inflow.openArtifact('${first.id}')`)).targets[0].meaningZh, oldTarget.meaningZh);
+      entries = await evaluate('window.inflow.listVocabulary()');
+      for (const entry of entries.filter(entry => entry.selected).concat(collected)) {
+        await evaluate(`document.querySelector('[data-entry-id="${entry.id}"] input[type=checkbox]').click()`);
+        await wait('!document.querySelector(".vocabulary-target input:disabled")');
+      }
+      await evaluate(`document.querySelector('[data-entry-id="${collected.id}"] details').open = true; document.querySelector('[data-entry-id="${collected.id}"] .vocabulary-source').click()`);
+      await wait('document.querySelectorAll(".artifact-translation").length === 0');
+      await field('[name=topic]', ''); await click('生成短文');
+      await wait('document.querySelectorAll(".artifact-selector option").length === 2', 100000);
+      const second = (await readArtifacts())[0];
+      assert.notEqual(second.id, first.id); assert.equal(second.targets.length, 1);
+      assert.equal(second.targets[0].id, collected.id); assert.equal(second.topic, undefined);
+      assert.equal(second.targets[0].sourceSentence, collected.sources[0].sentence);
+      await fs.writeFile(path.join(output, 'expected-artifacts.json'), JSON.stringify(await readArtifacts(), null, 2));
+      await fs.writeFile(path.join(output, 'expected-artifact-vocabulary.json'), JSON.stringify(await evaluate('window.inflow.listVocabulary()'), null, 2));
+      const { GenerationCredential } = require(path.join(root, 'build/desktop/desktop/credentials.js'));
+      const credentialDir = path.join(output, 'credential-check'); await fs.mkdir(credentialDir);
+      const credential = new GenerationCredential(credentialDir);
+      await credential.configure('verification-only-key');
+      assert.equal((await fs.readFile(path.join(credentialDir, 'deepseek.key'))).includes(Buffer.from('verification-only-key')), false);
+      const restoredCredential = new GenerationCredential(credentialDir); await restoredCredential.initialize(credentialDir);
+      assert.equal(restoredCredential.get(), 'verification-only-key');
+      await assert.rejects(credential.configure('invalid\nkey'));
+      assert.equal(credential.get(), 'verification-only-key');
+      evidence.windowsCredentialRoundtrip = true;
+    } else {
+      await wait('document.querySelectorAll(".artifact-selector option").length === 2 && !!document.querySelector(".artifact-reader")');
+      assert.deepEqual(await readArtifacts(), JSON.parse(await fs.readFile(path.join(output, 'expected-artifacts.json'), 'utf8')));
+      assert.deepEqual(await evaluate('window.inflow.listVocabulary()'), JSON.parse(await fs.readFile(path.join(output, 'expected-artifact-vocabulary.json'), 'utf8')));
+      const items = await readArtifacts();
+      assert.equal(await evaluate('document.querySelector(".artifact-reader").dataset.artifactId'), (await evaluate('window.inflow.restoreArtifact()')).id);
+      await evaluate(`const select = document.querySelector('.artifact-selector select'); select.value = '${items[1].id}'; select.dispatchEvent(new Event('change', {bubbles:true}));`);
+      await wait(`document.querySelector('.artifact-reader').dataset.artifactId === '${items[1].id}'`);
+      assert.equal(await evaluate('document.querySelectorAll(".artifact-translation").length'), 0);
+      const entries = await evaluate('window.inflow.listVocabulary()');
+      const collected = entries.find(entry => entry.sources.some(source => source.artifactId === items[1].id));
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await evaluate(`const select = document.querySelector('.artifact-selector select'); select.value = '${items[0].id}'; select.dispatchEvent(new Event('change', {bubbles:true}));`);
+        await wait(`document.querySelector('.artifact-reader').dataset.artifactId === '${items[0].id}'`);
+        await evaluate(`document.querySelector('[data-entry-id="${collected.id}"] details').open = true; document.querySelector('[data-entry-id="${collected.id}"] .vocabulary-source').click()`);
+        await wait(`document.querySelector('.artifact-reader').dataset.artifactId === '${items[1].id}'`);
+      }
+      global.fetch = async () => new Response('private-provider-body', { status: 429 });
+      await click('生成短文');
+      await wait('Array.from(document.querySelectorAll("[role=alert]")).some(el => el.textContent.includes("余额、额度"))');
+      assert.deepEqual(await readArtifacts(), items);
+      global.fetch = async (_url, init) => new Promise((_resolve, reject) => init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true }));
+      await click('生成短文');
+      await wait('Array.from(document.querySelectorAll("button")).some(el => el.textContent === "取消生成")');
+      await click('取消生成');
+      await wait('Array.from(document.querySelectorAll("[role=alert]")).some(el => el.textContent.includes("已取消"))');
+      assert.deepEqual(await readArtifacts(), items);
+      assert.deepEqual(await evaluate('window.inflow.listVocabulary()'), entries);
+      await evaluate(`const select = document.querySelector('.artifact-selector select'); select.value = '${items[1].id}'; select.dispatchEvent(new Event('change', {bubbles:true}));`);
+      await wait('document.querySelectorAll("[role=alert]").length === 0');
+      global.fetch = async () => { throw new Error('Reopening must not contact the generation provider'); };
+      evidence.simulatedQuotaAndCancellationPreservedWork = true;
+      evidence.offlineReopen = true;
+    }
+    evidence.artifacts = await readArtifacts(); evidence.vocabulary = await evaluate('window.inflow.listVocabulary()');
+    evidence.activeArtifactId = (await evaluate('window.inflow.restoreArtifact()')).id;
+    await evaluate('document.querySelector(".artifact-targets").open = true; document.querySelector("#artifacts").scrollIntoView({block:"start",behavior:"instant"})');
+    await delay(200);
+  } else if (phase === 'vocabulary' || phase === 'vocabulary-reopen') {
     await wait('!!document.querySelector("#notebook") && document.querySelectorAll(".segment-list button").length === 33');
     const readEntries = () => evaluate('window.inflow.listVocabulary()');
     if (phase === 'vocabulary') {
@@ -198,7 +304,8 @@ async function run() {
   evidence.ui = await snapshot(); evidence.consoleErrors = errors;
   assert.deepEqual(evidence.ui.errors, []); assert.deepEqual(errors, []);
   await fs.writeFile(path.join(output, `${phase}.json`), JSON.stringify(evidence, null, 2));
-  await fs.writeFile(path.join(output, `${phase}.png`), (await window.webContents.capturePage()).toPNG());
+  const capture = await Promise.race([window.webContents.capturePage(undefined, { stayHidden: true, stayAwake: true }), delay(10000).then(() => { throw new Error('Native screenshot timed out'); })]);
+  await fs.writeFile(path.join(output, `${phase}.png`), capture.toPNG());
   console.log('Verified desktop phase: ' + phase);
   app.quit();
 }

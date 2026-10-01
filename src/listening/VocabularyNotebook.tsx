@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import type { SaveVocabularyInput, VocabularyEntry, VocabularySource } from './desktop';
+import type { SaveVocabularyInput, VocabularyEntry, MediaVocabularySource, ArtifactVocabularySource } from './desktop';
+import ArtifactLibrary from './ArtifactLibrary';
 
 export type VocabularyDraft = {
   key: string; id?: string; lemma: string; meaningZh: string;
-  source?: { segmentId: string; surface: string; sentence: string; mediaName: string };
+  source?: { reference: NonNullable<SaveVocabularyInput['source']>; surface: string; sentence: string; sourceName: string };
 };
 
 function VocabularyEditor({ draft, busy, onSave, onCancel }: {
@@ -16,11 +17,11 @@ function VocabularyEditor({ draft, busy, onSave, onCancel }: {
   const [error, setError] = useState('');
   return <form className="vocabulary-editor" aria-label="词汇审阅" onSubmit={event => {
     event.preventDefault(); setError('');
-    void onSave({ id: draft.id, lemma, meaningZh: meaning, source: draft.source ? { segmentId: draft.source.segmentId, surface: draft.source.surface } : undefined })
+    void onSave({ id: draft.id, lemma, meaningZh: meaning, source: draft.source?.reference })
       .catch(failure => setError(failure instanceof Error ? failure.message : '保存失败，请重试。'));
   }}>
     <h3>{draft.id ? '修正词汇' : draft.source ? '确认收藏词汇' : '手动添加词汇'}</h3>
-    {draft.source ? <div className="vocabulary-context"><p>遇到的形式：<strong lang="ko">{draft.source.surface}</strong></p><p lang="ko">{draft.source.sentence}</p><small>来源：{draft.source.mediaName}</small></div> : !draft.id && <p>手动添加的词汇没有原句来源。</p>}
+    {draft.source ? <div className="vocabulary-context"><p>遇到的形式：<strong lang="ko">{draft.source.surface}</strong></p><p lang="ko">{draft.source.sentence}</p><small>来源：{draft.source.sourceName}</small></div> : !draft.id && <p>手动添加的词汇没有原句来源。</p>}
     <fieldset disabled={busy}>
       <label>韩语词典形<input autoFocus name="lemma" value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
       <label>当前语境的中文词义<input name="meaningZh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
@@ -32,13 +33,14 @@ function VocabularyEditor({ draft, busy, onSave, onCancel }: {
 }
 
 export default function VocabularyNotebook({ collection, onDismiss, onOpenSource }: {
-  collection: VocabularyDraft | null; onDismiss: () => void; onOpenSource: (source: VocabularySource) => void;
+  collection: VocabularyDraft | null; onDismiss: () => void; onOpenSource: (source: MediaVocabularySource) => void;
 }) {
   const [entries, setEntries] = useState<VocabularyEntry[]>([]);
   const [editing, setEditing] = useState<VocabularyDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
+  const [artifactSource, setArtifactSource] = useState<ArtifactVocabularySource | null>(null);
   const draft = collection || editing;
   const selected = entries.filter(entry => entry.selected);
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function VocabularyNotebook({ collection, onDismiss, onOpenSource
     finally { setBusy(false); }
   }
 
-  return <section className="vocabulary-notebook" id="notebook" aria-label="词汇本">
+  return <><section className="vocabulary-notebook" id="notebook" aria-label="词汇本">
     <div className="vocabulary-heading"><div><h2>词汇本</h2><p>已选 {selected.length} / 20 个目标词汇</p></div><button className="process-button" disabled={busy} onClick={() => { onDismiss(); setEditing({ key: crypto.randomUUID(), lemma: '', meaningZh: '' }); }}>手动添加</button></div>
     {draft && <VocabularyEditor key={draft.key} draft={draft} busy={busy} onSave={save} onCancel={dismiss}/>}
     {error && <p className="notice" role="alert">{error}</p>}
@@ -72,8 +74,8 @@ export default function VocabularyNotebook({ collection, onDismiss, onOpenSource
       <p>{entry.meaningZh}</p>
       {entry.sources.length ? <details><summary>来源 · {entry.sources.length} 处</summary>{entry.sources.map(source => <div className="vocabulary-context" key={source.id}>
         <p>遇到的形式：<span lang="ko">{source.surface}</span></p><p lang="ko">{source.sentence}</p>
-        <button className="vocabulary-source" onClick={() => onOpenSource(source)}>{source.mediaName} · {Math.floor(source.start / 60)}:{String(Math.floor(source.start % 60)).padStart(2, '0')} ↗</button>
+        {'artifactId' in source ? <button className="vocabulary-source" onClick={() => setArtifactSource({ ...source })}>短文：{source.artifactTitle} · 第 {source.sentenceIndex + 1} 句 ↗</button> : <button className="vocabulary-source" onClick={() => onOpenSource(source)}>{source.mediaName} · {Math.floor(source.start / 60)}:{String(Math.floor(source.start % 60)).padStart(2, '0')} ↗</button>}
       </div>)}</details> : <small>手动添加 · 无原句来源</small>}
     </article>)}</div>
-  </section>;
+  </section><ArtifactLibrary selected={selected} source={artifactSource} onCollect={next => { onDismiss(); setEditing(next); document.getElementById('notebook')?.scrollIntoView({ block: 'start' }); }}/></>;
 }

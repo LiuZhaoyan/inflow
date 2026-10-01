@@ -4,7 +4,8 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { validateSegments } from '../src/listening/processing';
-import type { LearningState, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource } from '../src/listening/desktop';
+import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
+import type { LearningArtifact, LearningState, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource, MediaVocabularySource } from '../src/listening/desktop';
 
 type Processor = (mode: 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string };
@@ -15,7 +16,7 @@ export class DesktopOperations {
   private jobs = new Map<string, AbortController>();
   private mediaDirectory: string;
 
-  constructor(directory: string, private processor: Processor) {
+  constructor(directory: string, private processor: Processor, private generator = generatePassage) {
     mkdirSync(directory, { recursive: true });
     this.mediaDirectory = path.join(directory, 'media');
     mkdirSync(this.mediaDirectory, { recursive: true });
@@ -25,7 +26,9 @@ export class DesktopOperations {
       CREATE TABLE IF NOT EXISTS segments (id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES media(id), ordinal INTEGER NOT NULL, content TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS vocabulary (id TEXT PRIMARY KEY, lemma TEXT NOT NULL, meaning TEXT NOT NULL, selected INTEGER NOT NULL DEFAULT 0, UNIQUE(lemma, meaning));
-      CREATE TABLE IF NOT EXISTS vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), segment_id TEXT NOT NULL REFERENCES segments(id), surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, segment_id, surface));`);
+      CREATE TABLE IF NOT EXISTS vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), segment_id TEXT NOT NULL REFERENCES segments(id), surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, segment_id, surface));
+      CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, content TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS artifact_vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), artifact_id TEXT NOT NULL REFERENCES artifacts(id), sentence_index INTEGER NOT NULL, surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, artifact_id, sentence_index, surface));`);
     if (!(this.db.prepare('PRAGMA table_info(segments)').all() as { name: string }[]).some(column => column.name === 'active')) {
       this.db.exec('ALTER TABLE segments ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
     }
@@ -105,21 +108,24 @@ export class DesktopOperations {
     this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration }), id);
   }
 
-  private async process(job: string, mode: 'transcribe' | 'translate', file?: string, text?: string): Promise<unknown> {
+  private async runJob<T>(job: string, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
     if (typeof job !== 'string' || !/^[\w-]{1,100}$/.test(job) || this.jobs.has(job)) throw new Error('处理编号无效。');
     const controller = new AbortController();
     this.jobs.set(job, controller);
     try {
-      const result = await this.processor(mode, controller.signal, file, text);
+      const result = await work(controller.signal);
       if (controller.signal.aborted) throw new Error('处理已取消。');
       return result;
+    } catch (error) {
+      if (controller.signal.aborted) throw new Error('处理已取消。');
+      throw error;
     } finally { this.jobs.delete(job); }
   }
 
   async transcribe(id: string, job: string): Promise<SavedMedia> {
     const media = this.get(id);
     if (media.missing) throw new Error('媒体文件丢失，请重新关联。已有原文和学习记录仍然保留。');
-    const result = await this.process(job, 'transcribe', this.mediaPath(id)) as { segments?: unknown };
+    const result = await this.runJob(job, signal => this.processor('transcribe', signal, this.mediaPath(id))) as { segments?: unknown };
     const segments = validateSegments(result?.segments);
     if (media.learning.duration && segments.at(-1)!.end > media.learning.duration + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
     this.db.exec('BEGIN');
@@ -138,7 +144,7 @@ export class DesktopOperations {
 
   async translate(text: string, job: string): Promise<string> {
     if (typeof text !== 'string' || !text.trim() || text.length > 10000) throw new Error('翻译内容为空或过长。');
-    const result = await this.process(job, 'translate', undefined, text) as { translation?: unknown };
+    const result = await this.runJob(job, signal => this.processor('translate', signal, undefined, text)) as { translation?: unknown };
     if (typeof result?.translation !== 'string' || !result.translation.trim()) throw new Error('翻译失败，请重试。');
     return result.translation;
   }
@@ -150,8 +156,11 @@ export class DesktopOperations {
     const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
       s.media_id AS mediaId, m.name AS mediaName, json_extract(s.content, '$.start') AS start
       FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
-      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as VocabularySource[];
-    return { ...entry, selected: entry.selected === 1, sources };
+      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as MediaVocabularySource[];
+    const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS artifactTitle,
+      o.sentence_index AS sentenceIndex, o.surface, o.sentence
+      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as VocabularySource[];
+    return { ...entry, selected: entry.selected === 1, sources: [...sources, ...artifactSources] };
   }
 
   listVocabulary(): VocabularyEntry[] {
@@ -170,22 +179,33 @@ export class DesktopOperations {
       this.vocabulary(input.id);
       if (matching && matching.id !== input.id) throw new Error('已有同词同义的词条。请保留不同词义，或从原文收集到已有词条。');
     }
-    let source: { segmentId: string; surface: string; sentence: string } | undefined;
+    let source: { segmentId?: string; artifactId?: string; sentenceIndex?: number; surface: string; sentence: string } | undefined;
     if (input.source !== undefined) {
-      if (!input.source || typeof input.source.segmentId !== 'string') throw new Error('原句来源无效。');
-      const segment = this.db.prepare('SELECT content FROM segments WHERE id = ?').get(input.source.segmentId) as { content: string } | undefined;
-      if (!segment) throw new Error('原句已更新，请从当前原文重新收集。');
-      const sentence = JSON.parse(segment.content).text as string;
+      if (!input.source || typeof input.source !== 'object') throw new Error('原句来源无效。');
+      let sentence: string;
+      if ('segmentId' in input.source) {
+        if ('artifactId' in input.source || typeof input.source.segmentId !== 'string') throw new Error('原句来源无效。');
+        const segment = this.db.prepare('SELECT content FROM segments WHERE id = ?').get(input.source.segmentId) as { content: string } | undefined;
+        if (!segment) throw new Error('原句已更新，请从当前原文重新收集。');
+        sentence = JSON.parse(segment.content).text as string;
+        source = { segmentId: input.source.segmentId, surface: '', sentence };
+      } else if ('artifactId' in input.source) {
+        const artifact = this.artifact(input.source.artifactId);
+        if (!Number.isInteger(input.source.sentenceIndex) || !artifact.sentences[input.source.sentenceIndex]) throw new Error('短文原句编号无效。');
+        sentence = artifact.sentences[input.source.sentenceIndex].parts.map(part => part.text).join('');
+        source = { artifactId: artifact.id, sentenceIndex: input.source.sentenceIndex, surface: '', sentence };
+      } else throw new Error('原句来源无效。');
       const surface = text(input.source.surface, 100);
       if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
-      source = { segmentId: input.source.segmentId, surface, sentence };
+      source.surface = surface;
     }
     const id = input.id ?? matching?.id ?? randomUUID();
     this.db.exec('BEGIN');
     try {
       if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ? WHERE id = ?').run(lemma, meaning, id);
       else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning) VALUES (?, ?, ?) ON CONFLICT(lemma, meaning) DO NOTHING').run(id, lemma, meaning);
-      if (source) this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, source.segmentId, source.surface, source.sentence);
+      if (source?.segmentId) this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, source.segmentId, source.surface, source.sentence);
+      else if (source?.artifactId) this.db.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(entry_id, artifact_id, sentence_index, surface) DO NOTHING').run(randomUUID(), id, source.artifactId, source.sentenceIndex!, source.surface, source.sentence);
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.vocabulary(id);
@@ -202,6 +222,55 @@ export class DesktopOperations {
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.listVocabulary();
+  }
+
+  private artifact(id: string): LearningArtifact {
+    if (typeof id !== 'string') throw new Error('短文编号无效。');
+    const row = this.db.prepare('SELECT content FROM artifacts WHERE id = ?').get(id) as { content: string } | undefined;
+    if (!row) throw new Error('短文不存在。');
+    return { ...JSON.parse(row.content), id };
+  }
+
+  listArtifacts(): LearningArtifact[] {
+    return (this.db.prepare('SELECT id FROM artifacts ORDER BY rowid DESC').all() as { id: string }[]).map(row => this.artifact(row.id));
+  }
+
+  restoreArtifact(): LearningArtifact | null {
+    const row = this.db.prepare("SELECT value FROM settings WHERE key = 'artifact'").get() as { value: string } | undefined;
+    return row ? this.artifact(row.value) : null;
+  }
+
+  openArtifact(id: string): LearningArtifact {
+    const artifact = this.artifact(id);
+    this.db.prepare("INSERT INTO settings VALUES ('artifact', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
+    return artifact;
+  }
+
+  async generateArtifact(ids: string[], topic: string, job: string, apiKey: string): Promise<LearningArtifact> {
+    if (!Array.isArray(ids) || !ids.length || ids.length > 20 || new Set(ids).size !== ids.length) throw new Error('请选择 1–20 个不同的目标词汇。');
+    if (typeof topic !== 'string' || topic.length > 200 || topic.includes('\0')) throw new Error('主题请控制在 200 字以内。');
+    const targets: GenerationTarget[] = ids.map(id => {
+      const entry = this.vocabulary(id);
+      const sentence = entry.sources[0]?.sentence;
+      return { id: entry.id, lemma: entry.lemma, meaningZh: entry.meaningZh, ...(sentence ? { sourceSentence: sentence.slice(0, 1000) } : {}) };
+    });
+    const started = Date.now();
+    const result = await this.runJob(job, signal => this.generator({ targets, ...(topic.trim() ? { topic: topic.trim() } : {}) }, { apiKey, signal }));
+    const content = {
+      ...validatePassage({ title: result.title, sentences: result.sentences }, targets), targets,
+      createdAt: new Date().toISOString(), elapsedMs: Date.now() - started, requestedModel: result.requestedModel,
+      ...(result.model ? { model: result.model } : {}), ...(result.responseId ? { responseId: result.responseId } : {}),
+      ...(result.usage ? { usage: result.usage } : {}), ...(topic.trim() ? { topic: topic.trim() } : {}),
+    };
+    const id = randomUUID();
+    // One JSON record commits passage, translations, highlights, metadata and target snapshots together.
+    this.db.exec('BEGIN');
+    try {
+      this.db.prepare('INSERT INTO artifacts VALUES (?, ?)').run(id, JSON.stringify(content));
+      this.db.prepare("INSERT INTO settings VALUES ('artifact', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+    return this.artifact(id);
   }
 
   cancel(job: string): void { this.jobs.get(job)?.abort(); }

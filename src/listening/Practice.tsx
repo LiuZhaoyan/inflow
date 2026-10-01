@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import RevealMenu from './RevealMenu';
 import { revealedGroupCount, type RevealChoice } from './reveal';
 import { validateSegments, type Segment } from './processing';
-import { managedMediaUrl, type SavedMedia, type VocabularySource } from './desktop';
+import { managedMediaUrl, type SavedMedia, type MediaVocabularySource } from './desktop';
 import VocabularyNotebook, { type VocabularyDraft } from './VocabularyNotebook';
 
 const clock = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
@@ -141,11 +141,11 @@ export default function Practice() {
       setCollectionError('请在已揭晓的当前句原文中选中要收藏的词语（100 字以内）。'); return;
     }
     setCollectionError('');
-    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', source: { segmentId: source.id, surface, sentence: source.text, mediaName: savedMedia!.name } });
+    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', source: { reference: { segmentId: source.id, surface }, surface, sentence: source.text, sourceName: savedMedia!.name } });
     document.getElementById('notebook')?.scrollIntoView({ block: 'start' });
   }
 
-  async function openVocabularySource(source: VocabularySource) {
+  async function openVocabularySource(source: MediaVocabularySource) {
     try {
       const saved = await window.inflow!.open(source.mediaId);
       let next = saved.segments.findIndex(item => item.id === source.segmentId);
@@ -257,6 +257,7 @@ export default function Practice() {
         <a className="active" href="#practice"><span aria-hidden="true">⌂</span>学习</a>
         <a href="#library"><span aria-hidden="true">▱</span>素材库</a>
         {desktop && <a href="#notebook"><span aria-hidden="true">♡</span>词汇本</a>}
+        {desktop && <a href="#artifacts"><span aria-hidden="true">▤</span>学习短文</a>}
         <a href="#history"><span aria-hidden="true">▥</span>学习记录</a>
       </nav>
       <div className="sidebar-secondary">
