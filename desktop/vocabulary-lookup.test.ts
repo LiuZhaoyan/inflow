@@ -15,7 +15,9 @@ test('lookup suggests a dictionary form without saving, validates selection, and
   });
   const input = { surface: '갔어요', sentence: '학교에 갔어요.', start: 4, language: 'ko' } as const;
   try {
-    assert.deepEqual(await app.lookupVocabulary(input, 'lookup'), { surface: '갔어요', lemma: '가다', language: 'ko' });
+    const lookup = await app.lookupVocabulary(input, 'lookup');
+    assert.equal(lookup.lemma, '가다'); assert.equal(lookup.surface, '갔어요'); assert.equal(lookup.language, 'ko');
+    assert.ok(lookup.candidates.includes('去'));
     assert.deepEqual(app.listVocabulary(), []);
     for (const invalid of [
       { ...input, surface: '학교에 갔어요', start: 0 }, { ...input, start: 0 },

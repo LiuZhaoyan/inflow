@@ -6,7 +6,7 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
-import type { LearningStateInput, SaveVocabularyInput, LookupVocabularyInput } from '../src/listening/desktop';
+import type { LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const root = path.resolve(__dirname, '../../..');
@@ -60,11 +60,12 @@ async function start() {
     },
     relink: async (id: string) => { operations.get(id); const file = await choose(); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
-    translate: (text: string, job: string) => operations.translate(text, job),
+    translate: (input: SentenceTranslationInput, job: string, options?: TranslationOptions) => operations.translate(input, job, credential.get(), options),
     cancel: (job: string) => operations.cancel(job),
     saveLearning: (id: string, state: LearningStateInput) => operations.saveLearning(id, state),
     listVocabulary: () => operations.listVocabulary(),
     lookupVocabulary: (input: LookupVocabularyInput, job: string) => operations.lookupVocabulary(input, job),
+    glossVocabulary: (input: LookupVocabularyInput & { lemma: string }, job: string) => operations.glossVocabulary(input, job, credential.get()),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
     credentialStatus: () => credential.status(),

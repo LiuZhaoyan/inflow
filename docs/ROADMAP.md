@@ -37,11 +37,11 @@ Do not expand the data model merely because finer alignment exists. First determ
 
 If such a requirement is confirmed, define the migration and provenance behavior before persisting word alignment.
 
-## 3. Improve translation quality when evidence justifies it
+## 3. Evaluate translation and dictionary quality
 
-The current local Korean → English → Chinese translation path is sufficient as a baseline but can produce literal or lossy Chinese.
+Listen now supports explicit cloud sentence translation with a latest-result cache and an explicit local reference fallback. Word collection uses bundled offline dictionary candidates and optional user-requested contextual glosses.
 
-Evaluate translation changes against representative Korean learning sentences before replacing the current path. Keep translation implementation details outside the core learning domain so a future model change does not require redesigning saved learning records.
+Evaluate live cloud output and dictionary coverage against representative Korean learning sentences. The local Korean → English → Chinese fallback can still be literal or lossy. Keep provider and model details outside the learning domain; saved results remain reusable independently of the current provider.
 
 ## 4. Package the Windows runtime
 
@@ -62,7 +62,11 @@ Installed-app behavior, not successful execution from the repository, is the acc
 
 Subtitle-region masking is a confirmed follow-up to the current workspace. Its interaction and persistence contract should be specified before implementation.
 
-English learning support is planned after the Korean single-word collection flow. It requires English processing and dictionary-form analysis; saved material and vocabulary already retain source-language identity. Automatic contextual Chinese glosses are deferred until a meaning provider is chosen. Phrase and grammatical-construction collection remain outside the current scope.
+English learning support is planned after the Korean single-word collection flow. It requires English processing and dictionary-form analysis; saved material and vocabulary already retain source-language identity. Automatic contextual sense selection remains deferred; explicit cloud glosses are available. Phrase and grammatical-construction collection remain outside the current scope.
+
+A settings page for separate sentence-translation and vocabulary-gloss model configurations is deferred. The first implementation keeps task-specific model, prompt, output-limit and timeout settings in code while sharing the existing provider credential.
+
+Optional follow-up: cloud Jev contextual selection from offline dictionary sense candidates. This is outside the initial translation work and requires explicit user opt-in for automatic network requests. Offline candidates and manual editing must remain available when disabled, offline or unavailable. Local JevEmbed deployment and evaluation are not planned; the initial vocabulary flow presents offline candidates and calls the cloud LLM only on user request.
 
 Other possible improvements remain demand-driven rather than roadmap commitments: A–B looping, revisit marks, notes, lightweight transcript/timing correction, generated audio/TTS, and additional platforms.
 

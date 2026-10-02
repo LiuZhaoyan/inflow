@@ -290,26 +290,31 @@ export default function LearningWorkspace() {
     } finally { if (!controller.signal.aborted) setBusy(false); }
   }
 
-  async function toggleTranslation() {
-    if (translationOpen) { setTranslationOpen(false); return; }
+  async function requestTranslation(options: { refresh?: boolean; local?: boolean } = {}) {
     if (!segment) return;
-    setTranslationOpen(true);
-    if (translation || translationBusy) return;
     const controller = new AbortController(); translating.current?.abort(); translating.current = controller;
-    setTranslationBusy(true); setTranslationError('');
+    setTranslationOpen(true); setTranslationBusy(true); setTranslationError('');
     try {
-      if (window.inflow) {
-        const translated = await window.inflow.translate(segment.text, desktopJob(controller));
+      if (window.inflow && savedMedia) {
+        const source = savedMedia.segments[index];
+        if (!source) throw new Error('Please select a saved sentence.');
+        const translated = await window.inflow.translate({ mediaId: savedMedia.id, segmentId: source.id }, desktopJob(controller), options);
         if (!controller.signal.aborted) setTranslation(translated);
         return;
       }
       const response = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
       const data = await response.json();
-      if (!response.ok || typeof data.translation !== 'string' || !data.translation.trim()) throw new Error(data.error || '翻译失败，请收起后重试。');
+      if (!response.ok || typeof data.translation !== 'string' || !data.translation.trim()) throw new Error(data.error || 'Translation failed. Please retry.');
       if (!controller.signal.aborted) setTranslation(data.translation);
     } catch (failure) {
-      if (!controller.signal.aborted) setTranslationError(failure instanceof Error ? failure.message : '翻译失败，请重试。');
+      if (!controller.signal.aborted) setTranslationError(failure instanceof Error ? failure.message : 'Translation failed. Please retry.');
     } finally { if (!controller.signal.aborted) setTranslationBusy(false); }
+  }
+
+  function toggleTranslation() {
+    if (translationOpen) { setTranslationOpen(false); return; }
+    setTranslationOpen(true);
+    if (!translation && !translationBusy) void requestTranslation();
   }
 
   const mediaProps = {
@@ -366,7 +371,7 @@ export default function LearningWorkspace() {
       <div className="workspace-main-column">
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>导入媒体</button>}
-        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} reveal={reveal} onReveal={selectReveal} onHideText={() => { if (allowChange()) setReveal(null); }} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={() => void toggleTranslation()}/>
+        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} reveal={reveal} onReveal={selectReveal} onHideText={() => { if (allowChange()) setReveal(null); }} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
       </div>
       <ContextPanel segments={segments} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>

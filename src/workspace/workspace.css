@@ -199,8 +199,13 @@
 .vocabulary-selection small { display: block; color: #aaa5b5; margin: 6px 0 14px; overflow-wrap: anywhere; }
 .vocabulary-selection fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .vocabulary-selection label { display: grid; gap: 6px; margin-bottom: 12px; font-size: 12px; color: #bcb6ca; }
-.vocabulary-selection input { width: 100%; box-sizing: border-box; border: 1px solid #484251; border-radius: 7px; padding: 9px 10px; background: #12121a; color: #f1eef6; font: inherit; font-size: 16px; }
-.vocabulary-selection input:focus-visible, .vocabulary-selection button:focus-visible { outline: 2px solid #b89cff; outline-offset: 2px; }
+.vocabulary-selection input, .vocabulary-selection select { width: 100%; box-sizing: border-box; border: 1px solid #484251; border-radius: 7px; padding: 9px 10px; background: #12121a; color: #f1eef6; font: inherit; font-size: 16px; }
+.vocabulary-selection input:focus-visible, .vocabulary-selection select:focus-visible, .vocabulary-selection button:focus-visible { outline: 2px solid #b89cff; outline-offset: 2px; }
 .vocabulary-selection p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .vocabulary-selection [role="alert"] { color: #ffb5b5; }
 .vocabulary-selection footer { margin-top: 14px; }
+.cloud-credential { margin-top: 12px; font-size: 12px; }
+.cloud-credential summary { cursor: pointer; }
+.cloud-credential label { display: grid; gap: 6px; margin: 10px 0; }
+.cloud-credential input { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid #484251; border-radius: 7px; background: #12121a; color: #f1eef6; }
+.workspace-translation-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }

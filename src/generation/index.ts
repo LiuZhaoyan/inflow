@@ -227,14 +227,23 @@ export async function generatePassage(
   options: { apiKey: string; signal?: AbortSignal; fetcher?: typeof fetch },
 ): Promise<GeneratedPassage> {
   validateInput(input);
-  if (!options.apiKey.trim()) throw new GenerationError('missing_key', 'Configure a DeepSeek API key before generating a passage.');
-
   const payload = JSON.stringify({
     targets: input.targets.map(({ id, lemma, meaningZh, sourceSentence }) => ({ id, lemma, meaningZh, ...(sourceSentence === undefined ? {} : { sourceSentence }) })),
     ...(input.topic?.trim() ? { topic: input.topic.trim() } : {}),
   });
   if (payload.length > 40_000) throw new GenerationError('invalid_input', 'Selected vocabulary context exceeds the request size limit.');
+  const result = await requestStructuredOutput({ model, instructions, payload, schema, name: 'korean_learning_passage', maxOutputTokens, timeoutMs }, options);
+  return { ...validatePassage(result.value, input.targets), requestedModel: model,
+    ...(result.model ? { model: result.model } : {}), responseId: result.responseId,
+    ...(result.usage ? { usage: result.usage } : {}) };
+}
 
+export async function requestStructuredOutput(
+  request: { model: string; instructions: string; payload: string; schema: object; name: string; maxOutputTokens: number; timeoutMs: number },
+  options: { apiKey: string; signal?: AbortSignal; fetcher?: typeof fetch },
+): Promise<{ value: unknown; responseId: string; model?: string; usage?: GeneratedPassage['usage'] }> {
+  if (!options.apiKey.trim()) throw new GenerationError('missing_key', 'Configure a DeepSeek API key before using cloud assistance.');
+  const { model, instructions, payload, schema, maxOutputTokens, timeoutMs } = request;
   const timedSignal = AbortSignal.timeout(timeoutMs);
   const signal = options.signal ? AbortSignal.any([options.signal, timedSignal]) : timedSignal;
   const fetcher = options.fetcher ?? fetch;
@@ -251,7 +260,7 @@ export async function generatePassage(
         input: payload,
         reasoning: { effort: 'none' },
         max_output_tokens: maxOutputTokens,
-        text: { format: { type: 'json_schema', name: 'korean_learning_passage', schema } },
+        text: { format: { type: 'json_schema', name: request.name, schema } },
       }),
       signal,
     });
@@ -285,11 +294,9 @@ export async function generatePassage(
   } catch {
     throw new GenerationError('invalid_response', 'DeepSeek returned malformed passage data. Retry generation.');
   }
-  const validated = validatePassage(passage, input.targets);
   ensureActive(signal, options.signal, timedSignal);
   return {
-    ...validated,
-    requestedModel: model,
+    value: passage,
     ...(parsed.model ? { model: parsed.model } : {}),
     responseId: parsed.responseId,
     ...(parsed.usage ? { usage: parsed.usage } : {}),

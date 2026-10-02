@@ -49,7 +49,7 @@ Whisper word timestamps are intermediate processing data. Sentence start/end tim
 
 ### Vocabulary
 
-Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Korean is the currently supported source language. Kiwi provides read-only contextual dictionary-form lookup using the selected span; Chinese meaning is entered manually. Both Listen and Story collect in place and retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
+Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Korean is the currently supported source language. Kiwi provides read-only contextual dictionary-form lookup using the selected span. A bundled KRDict Chinese text snapshot provides 42,908 headwords and offline sense candidates, with attribution and its separate CC BY-SA 2.0 KR license. Learners select or edit a meaning and can explicitly request a cloud contextual gloss. Only collected meanings persist; saved meanings are automatically reused only for the same source sentence and selected occurrence. Both Listen and Story collect in place and retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
 
 Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Re-transcription preserves old segments that are still referenced by vocabulary provenance. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
@@ -59,7 +59,7 @@ Up to 20 selected vocabulary entries can be sent to DeepSeek to generate one sho
 
 Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.## 4. Processing and service boundaries
 
-Transcription, sentence segmentation, and translation run locally. The current processing path is:
+Transcription and sentence segmentation run locally. Listen translation uses the cloud on explicit request, with an explicitly selected local reference fallback. The current processing path is:
 
 ```text
 media
@@ -73,7 +73,7 @@ Kiwi sentence splitting + phrase grouping
 Segment[]
 ```
 
-Chinese translation is also local and currently uses a Korean → English → Chinese CTranslate2 pipeline. The English pivot is an implementation detail of the current translation models, not part of the product domain model.
+Listen sends the current sentence and neighboring context to DeepSeek and keeps one latest successful translation in SQLite for offline revisits and restart. Refresh failure or cancellation preserves that result. The local Korean → English → Chinese CTranslate2 path remains available as an explicit reference fallback after cloud failure. Story keeps its generation-time translations. Sentence translation, word gloss and passage generation share the host-owned credential, with independent task settings in code.
 
 Passage generation is not local. It uses the DeepSeek Responses API and therefore requires network access and an owner-configured credential. Saved media, learning state, vocabulary, provenance, and generated artifacts remain local.
 
@@ -82,7 +82,7 @@ Passage generation is not local. It uses the DeepSeek Responses API and therefor
 The Electron host stores learning records in SQLite. The current persisted domains are:
 
 - media and learning state;
-- active and provenance-retained segments;
+- active and provenance-retained segments, plus latest successful sentence translations and their input context;
 - vocabulary entries and media-source occurrences;
 - generated artifacts and artifact-source vocabulary occurrences;
 - small application settings such as the current media or artifact.
@@ -93,7 +93,7 @@ Large media files and local model resources are stored outside SQLite.
 
 The desktop implementation has automated coverage around listening processing/reveal behavior, managed media, desktop operations, vocabulary persistence, artifact generation, and media serving. The persistent listening, vocabulary, and generated-artifact slices have also been exercised during their task-level acceptance work.
 
-The current frontend workspace has been implemented and locally verified. Native Electron acceptance covers shared Listen/Story selection, real Kiwi lookup, manual fallback, stale-result protection, saving retry, source provenance, and notebook refresh. Visual/product acceptance of the broader redesigned workspace is still evolving.
+The current frontend workspace has been implemented and locally verified. Native Electron acceptance covers shared Listen/Story selection, real Kiwi and bundled dictionary lookup, explicit cloud actions, translation cache reuse, failed refresh preservation, manual fallback, stale-result protection, suggestion application, discarded glosses, saving retry, source provenance, and notebook refresh. Cloud HTTP and local reference translation use deterministic fixtures in this acceptance; live provider translation quality is not assessed. Visual/product acceptance of the broader redesigned workspace is still evolving.
 
 Task-specific verification records live under `.scratch/`; this document records only the resulting current state.
 
@@ -102,10 +102,10 @@ Task-specific verification records live under `.scratch/`; this document records
 The main known gaps are:
 
 - the frontend is being redesigned around the existing desktop/domain capabilities;
-- English processing and automatic contextual vocabulary meanings are deferred;
+- English processing and automatic contextual dictionary disambiguation are deferred;
 - individual ASR word timestamps are not part of the persisted domain model;
 - local Chinese translation depends on an English pivot and can be literal or lossy;
-- generated passages depend on the remote DeepSeek service;
+- new cloud translations, contextual glosses and generated passages depend on the remote DeepSeek service; saved results and offline dictionary lookup remain local;
 - packaged processing resources and installed-application acceptance are not yet complete;
 - subtitle masking is deferred work.
 

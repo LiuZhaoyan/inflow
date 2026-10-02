@@ -2,8 +2,10 @@ import type { Segment } from './processing';
 import type { GeneratedPassage, GenerationTarget } from '../generation';
 
 export type SourceLanguage = 'ko';
-export type LookupVocabularyInput = { surface: string; sentence: string; start: number; language: SourceLanguage };
-export type VocabularyLookup = { surface: string; lemma: string; language: SourceLanguage };
+export type LookupVocabularyInput = { surface: string; sentence: string; start: number; language: SourceLanguage; lemma?: string; source?: VocabularyContext['source'] };
+export type VocabularyLookup = { surface: string; lemma: string; language: SourceLanguage; candidates: string[]; meaningZh?: string };
+export type SentenceTranslationInput = { mediaId: string; segmentId: string };
+export type TranslationOptions = { refresh?: boolean; local?: boolean };
 export type PlaybackMode = 'full' | 'sentence';
 export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number; mode: PlaybackMode };
 export type LearningStateInput = Omit<LearningState, 'mode'> & { mode?: PlaybackMode };
@@ -12,7 +14,7 @@ export type SavedMedia = {
   segments: (Segment & { id: string })[]; learning: LearningState;
 };
 export type VocabularyContext = {
-  id: string; surface: string; sentence: string;
+  id: string; surface: string; sentence: string; surfaceStart?: number;
   source:
     | { type: 'media'; mediaId: string; segmentId: string; name: string; start: number }
     | { type: 'artifact'; artifactId: string; sentenceIndex: number; name: string };
@@ -30,11 +32,12 @@ export type DesktopBridge = {
   importMedia(): Promise<SavedMedia | null>;
   relink(id: string): Promise<SavedMedia | null>;
   transcribe(id: string, job: string): Promise<SavedMedia>;
-  translate(text: string, job: string): Promise<string>;
+  translate(input: SentenceTranslationInput, job: string, options?: TranslationOptions): Promise<string>;
   cancel(job: string): Promise<void>;
   saveLearning(id: string, state: LearningStateInput): Promise<void>;
   listVocabulary(): Promise<VocabularyEntry[]>;
   lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup>;
+  glossVocabulary(input: LookupVocabularyInput & { lemma: string }, job: string): Promise<string>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
   selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;
   credentialStatus(): Promise<CredentialStatus>;

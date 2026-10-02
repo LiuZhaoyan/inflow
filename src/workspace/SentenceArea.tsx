@@ -5,6 +5,7 @@ import RevealMenu from '@/listening/RevealMenu';
 import { revealedGroupCount, type RevealChoice } from '@/listening/reveal';
 import type { Segment } from '@/listening/processing';
 import type { PlaybackMode } from '@/listening/desktop';
+import CloudCredential from '@/listening/CloudCredential';
 
 export type SentenceAreaProps = {
   segment: Segment | null;
@@ -30,6 +31,8 @@ export type SentenceAreaProps = {
   translationBusy: boolean;
   translationError: string;
   onToggleTranslation: () => void;
+  onTranslate: (options: { refresh?: boolean; local?: boolean }) => void;
+  onCancelTranslation: () => void;
 };
 
 export default function SentenceArea({
@@ -56,6 +59,8 @@ export default function SentenceArea({
   translationBusy,
   translationError,
   onToggleTranslation,
+  onTranslate,
+  onCancelTranslation,
 }: SentenceAreaProps) {
   const revealCount = segment && reveal ? revealedGroupCount(segment.groups, reveal) : 0;
   const currentNumber = String(index + 1).padStart(2, '0');
@@ -79,7 +84,14 @@ export default function SentenceArea({
       className={groupIndex < revealCount ? 'meaning-group' : 'hidden-group'}>{groupIndex < revealCount ? group : <span aria-label="Unrevealed meaning group">•••</span>}{' '}</span>)}</span></p>
       : <p className="workspace-sentence-empty">Process a media file to see its sentences.</p>}
     {translationOpen && <section className="workspace-translation" aria-label="Current sentence translation" aria-live="polite">
-      <p lang="zh">{translationBusy ? 'Preparing translation…' : translationError || translation || 'No translation is available yet.'}</p>
+      {translation && <p lang="zh">{translation}</p>}
+      {translationBusy && <p role="status">Preparing translation… <button type="button" onClick={onCancelTranslation}>Cancel</button></p>}
+      {translationError && <p role="alert">{translationError}</p>}
+      {!translationBusy && <div className="workspace-translation-actions">
+        <button type="button" onClick={() => onTranslate({ refresh: true })}>{translation ? 'Translate again' : 'Retry translation'}</button>
+        {translationError && <button type="button" onClick={() => onTranslate({ local: true })}>Use local reference translation</button>}
+      </div>}
+      {typeof window !== 'undefined' && window.inflow && <CloudCredential/>}
     </section>}
     </div>
     <div className="workspace-player-toolbar">
