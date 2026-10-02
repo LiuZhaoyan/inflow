@@ -121,7 +121,7 @@ def transcribe(filename):
         duration = media.duration / av.time_base if media.duration else None
         if duration is None or not 0 < duration <= 600: raise ProcessingError('请选择时长可读取、10 分钟以内的媒体。')
     model = WhisperModel(str(_models_root()/'whisper-turbo'), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
-    segments, info = model.transcribe(filename, language='ko', word_timestamps=True, vad_filter=True, beam_size=5, condition_on_previous_text=False)
+    segments, info = model.transcribe(filename, language='ko', word_timestamps=True, vad_filter=False, beam_size=5, condition_on_previous_text=False)
     result = sentences([word for segment in segments for word in (segment.words or [])])
     if not result: raise ProcessingError('没有识别到语音，请换一段声音清晰的韩语媒体重试。')
     # Word alignment can overlap by milliseconds; preserve text while making playback ranges monotonic.

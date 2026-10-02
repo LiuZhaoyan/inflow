@@ -14,19 +14,20 @@ The project currently targets personal use on Windows. The desktop implementatio
 
 ## What can I do with it?
 
-The current desktop application supports:
+Inflow helps you turn Korean audio and video into an active learning workflow:
 
-- importing and retaining local audio/video;
-- local Korean transcription and sentence segmentation;
-- full-media and sentence playback, seeking, speed control, and sentence looping;
-- progressive Korean text reveal using Kiwi-derived phrase groups;
-- on-demand Chinese translation;
-- source-linked vocabulary collection and correction;
-- persistent learning state, vocabulary, and generated artifacts in SQLite;
-- generating short Korean passages from selected vocabulary through DeepSeek;
-- collecting new vocabulary from generated passages.
+- listen to media sentence by sentence and reveal the Korean text or translation only when needed;
+- collect and manage unfamiliar vocabulary together with its source and learning context, whether it came from media or generated artifacts;
+- generate personalized Korean reading passages that reuse words you are learning;
+- discover new vocabulary from those passages and continue the learning loop.
 
-Automatic transcription, grouping, translation, and generated passages are learning assistance rather than authoritative answers.
+Transcriptions, translations, and generated content are learning aids rather than authoritative answers.
+
+## Set up the LLM API key
+
+Inflow uses DeepSeek for opt-in, context-aware Chinese translation and vocabulary meaning suggestions, and for generating Korean reading passages from selected vocabulary. Configure `DEEPSEEK_API_KEY` in the environment, `.env`, or `.env.local` before using these features.
+
+LLM use is deliberately narrow to keep token consumption to a minimum. Translation and vocabulary lookup are requested only on explicit user action, send only the small amount of context needed for the task, and reuse successful results instead of making repeated requests. Ordinary transcription, sentence grouping, Korean word analysis, and dictionary lookup remain local; vocabulary lookup uses the bundled Korean-Chinese dictionary first and calls the LLM only when explicitly requested.
 
 ## Run the desktop app
 
@@ -44,9 +45,7 @@ npm run desktop:build
 npm run desktop:start
 ```
 
-Passage generation additionally requires an owner-configured `DEEPSEEK_API_KEY` in the environment, `.env`, or `.env.local`.
-
-Local transcription and translation use resources under `.models/` and the Windows Python environment under `.venv-win/`. These directories are not committed to Git.
+Local processing uses resources under `.models/` and the Windows Python environment under `.venv-win/`. These directories are not committed to Git.
 
 For development details, repository structure, architecture, and documentation guidance, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
