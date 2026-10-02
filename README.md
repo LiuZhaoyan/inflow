@@ -1,5 +1,7 @@
 # Inflow
 
+**English** | [简体中文](README.zh-CN.md)
+
 Inflow is a Korean learning desktop application built around one learning loop:
 
 ```text
