@@ -37,7 +37,7 @@ export default function ContextPanel({
         aria-current={itemIndex === index ? 'true' : undefined} aria-label={showText ? `${formatTime(segment.start)} ${segment.text}` : `Sentence at ${formatTime(segment.start)}`}
         onClick={() => onSelect(itemIndex)}>
         <time>{formatTime(segment.start)}</time><span lang={showText ? 'ko' : undefined}>{showText ? segment.text : '••••••'}</span>
-      </button>) : <p className="workspace-context-empty">No sentence context yet.</p>}
+      </button>) : <p className="workspace-context-empty">Your sentences will appear here after processing a media file.</p>}
     </div>
   </aside>;
 }

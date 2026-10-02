@@ -1,15 +1,15 @@
 .vocab-workspace {
-  --vocab-panel:#111317;
-  --vocab-line:#24252d;
-  --vocab-text:#eeedf3;
-  --vocab-muted:#9696a7;
-  --vocab-accent:#b78af2;
+  --vocab-panel:var(--workspace-panel);
+  --vocab-line:var(--workspace-line);
+  --vocab-text:var(--workspace-text);
+  --vocab-muted:var(--workspace-muted);
+  --vocab-accent:var(--workspace-accent);
   width:100%;
-  height:calc(100dvh - 88px);
+  height:calc(100dvh - 68px);
   min-height:0;
   display:grid;
   grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);
-  gap:20px;
+  gap:0;
   color:var(--vocab-text);
   font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
   line-height:1.45;
@@ -24,9 +24,9 @@
   min-width:0;
   min-height:0;
   overflow:hidden;
-  border:1px solid var(--vocab-line);
-  border-radius:8px;
-  background:linear-gradient(145deg,#121419 0%,var(--vocab-panel) 62%,#101115 100%);
+  border:0;
+  border-radius:0;
+  background:var(--vocab-panel);
 }
 .vocab-list-panel { display:flex; flex-direction:column; }
 .vocab-list-heading {
@@ -37,8 +37,8 @@
   padding:20px 24px 16px;
 }
 .vocab-title { display:flex; align-items:baseline; gap:20px; min-width:0; }
-.vocab-title h1 { margin:0; color:var(--vocab-text); font-size:34px; font-weight:650; line-height:1.15; letter-spacing:-.035em; }
-.vocab-title>span { color:var(--vocab-muted); font-size:18px; white-space:nowrap; }
+.vocab-title h1 { margin:0; color:var(--vocab-text); font-size:28px; font-weight:650; line-height:1.15; letter-spacing:-.035em; }
+.vocab-title>span { color:var(--vocab-muted); font-size:13px; white-space:nowrap; }
 .vocab-heading-actions { display:flex; align-items:center; gap:14px; flex:none; }
 .vocab-add-word { min-height:40px; padding:0 4px; color:#c8b6e7!important; font-size:13px!important; }
 .vocab-generate {
@@ -48,13 +48,13 @@
   justify-content:center;
   gap:9px;
   padding:0 20px;
-  border:1px solid #a778eb!important;
+  border:1px solid var(--vocab-accent)!important;
   border-radius:12px;
-  background:linear-gradient(105deg,#925cf1,#a95cf1)!important;
-  color:#fff!important;
+  background:var(--vocab-accent)!important;
+  color:var(--workspace-accent-ink)!important;
   font-size:15px!important;
   font-weight:600!important;
-  box-shadow:0 5px 18px #884de333;
+  box-shadow:none;
 }
 .vocab-generate svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
 .vocab-generate:disabled { opacity:.5!important; }
@@ -118,9 +118,9 @@
 }
 .vocab-row:hover { background:#ffffff06!important; }
 .vocab-row[aria-pressed="true"] {
-  border-color:var(--vocab-accent)!important;
-  border-radius:6px;
-  background:linear-gradient(105deg,#211c2a,#1b1a23)!important;
+  border-color:#685780!important;
+  border-radius:10px;
+  background:var(--workspace-accent-soft)!important;
 }
 .vocab-row-word { min-width:0; overflow:hidden; color:#f1eff5; font-size:22px; font-weight:660; text-overflow:ellipsis; white-space:nowrap; }
 .vocab-row-example { min-width:0; display:flex; flex-direction:column; gap:3px; }
@@ -136,7 +136,7 @@
 .vocab-manual-mark { width:32px; height:32px; flex:none; display:grid; place-items:center; border:1px solid #393344; border-radius:6px; color:#b99de6; font-size:12px; font-weight:650; }
 .vocab-empty { padding:28px 12px; color:var(--vocab-muted); font-size:14px; }
 .vocab-sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
-.vocab-detail-panel { overflow:auto; padding:24px; scrollbar-color:#3a3943 transparent; scrollbar-width:thin; }
+.vocab-detail-panel { overflow:auto; padding:24px; border-left:1px solid var(--vocab-line); scrollbar-color:#3a3943 transparent; scrollbar-width:thin; }
 .vocab-detail-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:27px; }
 .vocab-detail-title { display:flex; align-items:center; gap:14px; min-width:0; }
 .vocab-detail-title h2 { margin:0; color:#f0eef5; font-size:36px; font-weight:680; line-height:1.2; letter-spacing:-.03em; overflow-wrap:anywhere; }
@@ -186,7 +186,7 @@
   padding:14px 16px;
   border:1px solid #2b2c34;
   border-radius:10px;
-  background:linear-gradient(115deg,#191a20,#17181d);
+  background:var(--workspace-raised);
   color:#e4e2e9;
   font-size:16px;
 }
@@ -205,10 +205,10 @@
   padding:13px 10px;
   border-bottom:1px solid #282930;
 }
-.vocab-context-card:first-child { border:1px solid #2d2937; border-radius:8px; background:linear-gradient(105deg,#211d29,#1a1921); }
+.vocab-context-card:first-child { border:1px solid #2d2937; border-radius:8px; background:var(--workspace-accent-soft); }
 .vocab-context-thumbnail { width:115px; height:68px; overflow:hidden; border:1px solid #34343d; border-radius:6px; background:#1b1c22; }
 .vocab-context-copy { min-width:0; display:flex; flex-direction:column; gap:10px; }
-.vocab-context-copy>p { overflow:hidden; color:#e2e0e7; font-size:15px; line-height:1.55; overflow-wrap:anywhere; }
+.vocab-context-copy>p { overflow:hidden; color:#e2e0e7; font-size:15px; line-height:1.7; word-break:keep-all; overflow-wrap:anywhere; }
 .vocab-context-copy mark { padding:0; background:transparent; color:#c696ff; font-weight:650; }
 .vocab-context-source { min-width:0; display:flex; align-items:center; gap:6px; overflow:hidden; color:#aaa8b4; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .vocab-context-source svg { width:14px; height:14px; flex:none; fill:none; stroke:#b99de7; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.5; }
@@ -274,7 +274,7 @@
 .vocab-editor-note { margin:11px 0 16px; color:var(--vocab-muted); font-size:12px; }
 .vocab-editor-actions { display:flex; align-items:center; gap:10px; }
 .vocab-editor-actions button { min-height:40px; padding:0 14px; border:1px solid #3a3a43!important; border-radius:7px; background:#191a20!important; font-size:13px!important; }
-.vocab-editor-actions .vocab-primary { border-color:#a778eb!important; background:linear-gradient(105deg,#925cf1,#a95cf1)!important; color:white!important; }
+.vocab-editor-actions .vocab-primary { border-color:#a778eb!important; background:var(--vocab-accent)!important; color:var(--workspace-accent-ink)!important; }
 .vocab-error { margin:12px 0; padding:9px 11px; border:1px solid #654147; border-radius:6px; background:#2a1c22; color:#f1cbd0; font-size:13px; overflow-wrap:anywhere; }
 .vocab-workspace .workspace-source-thumbnail { width:100%; height:100%; display:grid; place-items:center; overflow:hidden; border-radius:inherit; background:#1a1b21; }
 .vocab-workspace .workspace-source-thumbnail>video { width:100%; height:100%; display:block; object-fit:cover; }
@@ -292,11 +292,17 @@
   .vocab-row-source-copy { font-size:11px; }
   .vocab-row-source-copy small { font-size:10px; }
   .vocab-detail-panel { padding:20px; }
+  .vocab-context-card { grid-template-columns:84px minmax(0,1fr); gap:12px; }
+  .vocab-context-thumbnail { width:84px; height:54px; }
+  .vocab-open-source { grid-column:2; justify-self:start; }
+  .vocab-source-card { grid-template-columns:110px minmax(0,1fr); }
+  .vocab-source-art { width:110px; height:70px; }
+  .vocab-source-card>button { grid-column:2; justify-self:start; }
 }
 @media(max-width:899px) {
-  .vocab-workspace { height:auto; min-height:calc(100dvh - 88px); grid-template-columns:minmax(0,1fr); gap:16px; }
+  .vocab-workspace { height:auto; min-height:calc(100dvh - 68px); grid-template-columns:minmax(0,1fr); }
   .vocab-list-panel { height:min(68dvh,700px); min-height:460px; }
-  .vocab-detail-panel { height:660px; }
+  .vocab-detail-panel { height:660px; border-left:0; border-top:1px solid var(--vocab-line); }
   .vocab-toolbar { flex-wrap:nowrap; }
   .vocab-search { flex:1 1 220px; }
   .vocab-filters { width:auto; flex:none; }
@@ -323,3 +329,7 @@
   .vocab-source-card>button { grid-column:2; justify-self:start; }
 }
 
+.vocab-search:focus-within { border-color:var(--vocab-accent); outline:2px solid var(--vocab-accent); outline-offset:2px; }
+@media(hover:hover) {
+  .vocab-generate:hover:not(:disabled),.vocab-editor-actions .vocab-primary:hover:not(:disabled) { background:#cbb7ff!important; }
+}

@@ -38,7 +38,7 @@ export default function VideoStage({
         </div>
       </> : <div className="workspace-stage-empty">
         <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="5" y="9" width="54" height="46" rx="8"/><path d="m27 22 15 10-15 10z"/></svg>
-        <strong>No media selected</strong><span>Open Library to choose audio or video</span>
+        <strong>Your next listening session</strong><span>Import audio or video, then take it one sentence at a time.</span>
       </div>}
     </div>
     <div className="workspace-progress">
