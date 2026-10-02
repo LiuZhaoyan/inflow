@@ -48,55 +48,6 @@ npm run desktop:start
 
 本地语音识别和翻译使用 `.models/` 下的资源，以及 `.venv-win/` 下的 Windows Python 环境。这些目录不会提交到 Git。
 
-常规开发检查：
-
-```bash
-npm test
-npm run lint
-npm run typecheck
-npm run build
-```
-
-仓库中仍保留了早期实现阶段使用的浏览器/API 开发路径和验证工具。它们仍可用于开发和回归测试，但上面的 Electron 桌面端路径代表当前的产品方向。
-
-## 接下来应该阅读什么？
-
-仓库文档有三个主要入口：
-
-- [产品规格](docs/PRODUCT_SPEC.md) — **Inflow 应该是什么？** 产品行为、范围和边界。
-- [项目状态](docs/PROJECT_STATUS.md) — **Inflow 现在是什么？** 当前架构、已实现能力、持久化、处理流程、验证状态和已知缺口。
-- [路线图](docs/ROADMAP.md) — **接下来做什么？** 剩余工作、优先级和依赖关系。
-
-正在进行的实现工作，其任务级规格、研究、工单、决策和验收证据保存在 `.scratch/<effort>/` 下。已经完成的 scratch 记录属于历史任务记忆，不要求继续描述当前系统状态。
-
-仓库中供 Agent 使用的工作流规则位于 [docs/agents](docs/agents/)。
-
-## 代码在哪里？
-
-主要实现区域如下：
-
-```text
-src/workspace/       当前学习工作区 UI
-src/listening/       听力、渐进显示、词汇以及桌面桥接类型
-src/generation/      生成短文的契约与生成逻辑
-desktop/             Electron 宿主、操作层、持久化、媒体与凭据
-scripts/             本地媒体处理、模型安装与桌面端验证
-docs/                产品、项目状态、路线图和 Agent 文档
-.scratch/            任务级工作历史与验收证据
-```
-
-桌面端架构有意将渲染层与宿主层分开：
-
-```text
-React / Next.js 渲染层
-        ↓
-DesktopBridge / Electron IPC
-        ↓
-DesktopOperations
-        ↓
-SQLite        Python worker        DeepSeek API
-```
-
-如果你准备在修改代码前了解当前实现，请先阅读 [项目状态](docs/PROJECT_STATUS.md)。
+开发检查、仓库结构、架构以及文档维护方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 项目许可证见 [LICENSE](LICENSE)。
