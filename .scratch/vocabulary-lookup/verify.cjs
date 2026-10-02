@@ -36,12 +36,14 @@ async function run() {
     { start: 4, end: 6, text: '학교에 갔다가 학교에 왔어요.', groups: ['학교에 갔다가', '학교에 왔어요.'] },
     { start: 6, end: 8, text: '😀 학교에 갔어요.', groups: ['😀 학교에', '갔어요.'] },
   ];
+  let generated = 0;
   const ops = new DesktopOperations(profile, async mode => mode === 'probe' ? { duration: 8 } : { segments: sentences }, async input => ({
-    requestedModel: 'native-fixture', title: '학교에 가요', sentences: [{ parts: [{ text: '친구', targetId: input.targets[0].id }, { text: '하고 학교에 갔어요.', targetId: null }], translationZh: '和朋友去了学校。' }, { parts: [{ text: '오늘 밥을 먹었어요.', targetId: null }], translationZh: '今天吃了饭。' }],
+    requestedModel: 'native-fixture', title: '학교에 가요 ' + ++generated, sentences: [{ parts: [{ text: '친구', targetId: input.targets[0].id }, { text: '하고 학교에 갔어요.', targetId: null }], translationZh: '和朋友去了学校。' }, { parts: [{ text: '오늘 밥을 먹었어요.', targetId: null }], translationZh: '今天吃了饭。' }],
   }));
   const media = await ops.transcribe((await ops.importMedia(sample)).id, 'seed');
   const friend = ops.saveVocabulary({ lemma: '친구', meaningZh: '朋友' });
   const story = await ops.generateArtifact([friend.id], '', 'story', 'fixture');
+  const secondStory = await ops.generateArtifact([friend.id], '', 'second-story', 'fixture');
   ops.close();
   const handlers = new Map();
   const handle = ipcMain.handle.bind(ipcMain);
@@ -202,7 +204,7 @@ async function run() {
   await clickText('.workspace-topnav button', 'Library');
   await wait('document.querySelector(".workspace-library-dialog").open');
   assert.ok(await evaluate(`(() => { const el = [...document.querySelectorAll('.workspace-library-item')].find(el => el.textContent.includes(${JSON.stringify(story.title)})); if (!el) return false; el.click(); return true; })()`));
-  await wait('!document.querySelector(".workspace-story").hidden && document.querySelector(".artifact-korean")?.textContent.includes("갔어요")');
+  await wait(`!document.querySelector('.workspace-story').hidden && document.querySelector('.story-sentences')?.dataset.artifactId === ${JSON.stringify(story.id)}`);
   await evaluate(`(() => {
     document.activeElement?.blur(); const range = document.createRange();
     range.setStart(document.querySelector('#artifact-sentence-0').firstChild.firstChild, 0);
@@ -212,6 +214,46 @@ async function run() {
   await wait('!!document.querySelector(".vocabulary-selection")');
   assert.equal(await evaluate('!!document.querySelector(".vocabulary-selection input")'), false);
   await clickText('.vocabulary-selection button', 'Close');
+  const navigation = [];
+  replace('inflow:openArtifact', (event, ...args) => new Promise(resolve => navigation.push(() => resolve(handlers.get('inflow:openArtifact')(event, ...args)))));
+  async function chooseStory(id) {
+    await evaluate(`(() => { const el = document.querySelector('select[aria-label="Open saved story"]'); el.value = ${JSON.stringify(id)}; el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    while (!navigation.length) await delay(60);
+  }
+  await chooseStory(secondStory.id);
+  await select('.artifact-korean', '갔어요'); await fill('meaningZh', '保留草稿');
+  navigation.shift()();
+  await wait('document.querySelector(".vocabulary-selection [role=alert]")?.textContent.includes("Save or discard")');
+  assert.equal(await evaluate('document.querySelector(".story-sentences").dataset.artifactId'), story.id);
+  await clickText('.vocabulary-selection button', 'Discard');
+  await chooseStory(secondStory.id);
+  await select('.artifact-korean', '갔어요'); navigation.shift()();
+  await wait(`document.querySelector('.story-sentences').dataset.artifactId === ${JSON.stringify(secondStory.id)} && !document.querySelector('.vocabulary-selection')`);
+  replace('inflow:openArtifact', handlers.get('inflow:openArtifact'));
+  await evaluate(`(() => { const el = document.querySelector('select[aria-label="Open saved story"]'); el.value = ${JSON.stringify(story.id)}; el.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  await wait(`document.querySelector('.story-sentences').dataset.artifactId === ${JSON.stringify(story.id)}`);
+
+  replace('inflow:openArtifact', (event, ...args) => new Promise(resolve => navigation.push(() => resolve(handlers.get('inflow:openArtifact')(event, ...args)))));
+  await clickText('.workspace-topnav button', 'Library');
+  await wait('document.querySelector(".workspace-library-dialog").open');
+  await clickText('.workspace-library-item', 'STORY' + secondStory.title + '1 words · 2 sentences');
+  while (!navigation.length) await delay(60);
+  await select('.artifact-korean', '갔어요'); await fill('meaningZh', '保留来源跳转草稿'); navigation.shift()();
+  await wait('document.querySelector(".vocabulary-selection [role=alert]")?.textContent.includes("Save or discard")');
+  assert.equal(await evaluate('document.querySelector(".story-sentences").dataset.artifactId'), story.id);
+  await clickText('.vocabulary-selection button', 'Discard');
+  replace('inflow:openArtifact', handlers.get('inflow:openArtifact'));
+
+  replace('inflow:listVocabulary', event => new Promise(resolve => navigation.push(() => resolve(handlers.get('inflow:listVocabulary')(event)))));
+  await clickText('.story-options button', 'Generate a story');
+  while (!navigation.length) await delay(60);
+  await select('.artifact-korean', '갔어요'); await fill('meaningZh', '保留生成前草稿'); navigation.shift()();
+  await wait('document.querySelector(".vocabulary-selection [role=alert]")?.textContent.includes("Save or discard")');
+  assert.equal(await evaluate('!!document.querySelector(".workspace-target-dialog")'), false);
+  await clickText('.vocabulary-selection button', 'Discard');
+  replace('inflow:listVocabulary', handlers.get('inflow:listVocabulary'));
+  console.log('PASS: delayed Story opening, source navigation and target dialog preserve edited drafts; unedited drafts close');
+
   await select('.artifact-korean', '갔어요');
   await wait('document.querySelector(".vocabulary-selection input[name=lemma]")?.value === "가다"');
   await fill('meaningZh', '去'); await click('.vocabulary-selection button[type=submit]');

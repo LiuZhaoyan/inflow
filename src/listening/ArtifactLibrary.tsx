@@ -67,7 +67,7 @@ export default function ArtifactLibrary({
     const { artifactId, sentenceIndex } = source;
     let current = true;
     window.inflow!.openArtifact(artifactId).then(next => {
-      if (!current) return;
+      if (!current || !onBeforeChange()) return;
       setArtifact(next);
       onArtifactChange?.(next);
       const index = Math.max(0, Math.min(sentenceIndex, Math.max(0, next.sentences.length - 1)));
@@ -81,7 +81,7 @@ export default function ArtifactLibrary({
       if (current) setError(failure instanceof Error ? failure.message : "The source story could not be opened.");
     });
     return () => { current = false; };
-  }, [loaded, source, onArtifactChange]);
+  }, [loaded, source, onArtifactChange, onBeforeChange]);
 
   useEffect(() => {
     const element = dialog.current;
@@ -133,6 +133,7 @@ export default function ArtifactLibrary({
     if (!onBeforeChange()) return;
     try {
       const next = await window.inflow!.openArtifact(id);
+      if (!onBeforeChange()) return;
       setArtifact(next);
       onArtifactChange?.(next);
       setActiveSentence(0);

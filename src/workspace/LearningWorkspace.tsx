@@ -126,7 +126,7 @@ export default function LearningWorkspace() {
     return () => cancelAnimationFrame(frame);
   }, [playing, syncPlayback]);
 
-  function allowChange() { return vocabularySelection.current?.beforeChange() !== false; }
+  const allowChange = useCallback(() => vocabularySelection.current?.beforeChange() !== false, []);
   function showVocab() { if (allowChange()) { media.current?.pause(); setView('vocab'); } }
 
   async function importMedia() {
@@ -235,7 +235,11 @@ export default function LearningWorkspace() {
   async function requestStory() {
     if (!allowChange()) return;
     if (editing) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
-    try { setVocabularyEntries(await window.inflow!.listVocabulary()); setTargetSelectionOpen(true); }
+    try {
+      const entries = await window.inflow!.listVocabulary();
+      if (!allowChange()) return;
+      setVocabularyEntries(entries); setTargetSelectionOpen(true);
+    }
     catch (failure) { setError(failure instanceof Error ? failure.message : '词汇读取失败，请重试。'); }
   }
 
