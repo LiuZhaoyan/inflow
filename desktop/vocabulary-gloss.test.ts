@@ -20,6 +20,12 @@ test('offline candidates and saved meanings distinguish occurrences; an uncollec
     assert.equal((await app.lookupVocabulary(input, 'first')).meaningZh, '肚子');
     assert.equal((await app.lookupVocabulary({ ...input, start: 3 }, 'second')).meaningZh, '船');
     assert.equal((await app.lookupVocabulary({ ...input, source: undefined }, 'no-source')).meaningZh, undefined);
+    const single = await app.lookupVocabulary({ ...input, lemma: '학생', source: undefined }, 'single-sense');
+    assert.equal(single.meaningZh, '学生');
+    app.saveVocabulary({ lemma: '없는단어', meaningZh: '其他语境的释义' });
+    const otherContext = await app.lookupVocabulary({ ...input, lemma: '없는단어', source: undefined }, 'other-context');
+    assert.deepEqual(otherContext.candidates, ['其他语境的释义']);
+    assert.equal(otherContext.meaningZh, undefined);
     const before = app.listVocabulary();
     assert.equal(await app.glossVocabulary(input, 'gloss', 'test'), '腹部');
     app.close(); app = new DesktopOperations(root, processor);

@@ -204,7 +204,8 @@ export class DesktopOperations {
 
   private vocabularySuggestions(input: LookupVocabularyInput, lemma: string): Pick<VocabularyLookup, 'candidates' | 'meaningZh'> {
     const entries = (this.db.prepare('SELECT id FROM vocabulary WHERE language = ? AND lemma = ? ORDER BY rowid DESC').all(input.language, lemma) as { id: string }[]).map(row => this.vocabulary(row.id));
-    const candidates = [...new Set([...dictionaryMeanings(lemma), ...entries.map(entry => entry.meaningZh)])];
+    const dictionary = dictionaryMeanings(lemma);
+    const candidates = [...new Set([...dictionary, ...entries.map(entry => entry.meaningZh)])];
     const matching = entries.filter(entry => entry.contexts.some(context => {
       if (!input.source || context.sentence !== input.sentence || context.surface !== input.surface) return false;
       const source = context.source, requested = input.source;
@@ -216,7 +217,9 @@ export class DesktopOperations {
       return positions.length ? positions.some(position => position.start === input.start)
         : input.sentence.indexOf(input.surface) === input.start && input.sentence.lastIndexOf(input.surface) === input.start;
     }));
-    return { candidates, ...(matching.length === 1 ? { meaningZh: matching[0].meaningZh } : {}) };
+    const meaningZh = matching.length === 1 ? matching[0].meaningZh
+      : matching.length === 0 && dictionary.length === 1 && candidates.length === 1 ? dictionary[0] : undefined;
+    return { candidates, ...(meaningZh ? { meaningZh } : {}) };
   }
 
   async lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup> {

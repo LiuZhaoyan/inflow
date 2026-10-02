@@ -19,6 +19,12 @@ Word selection uses real Kiwi analysis and the bundled KRDict Chinese text snaps
 
 Native acceptance writes screenshots, its isolated application profile and `result.json` beneath the ignored `.scratch/desktop-learning/generated-samples/translation-acceptance-*` directory. It injects deterministic cloud HTTP and local translation worker results; it neither uses an owner's secret nor makes paid provider requests.
 
+Final native run: `.scratch/desktop-learning/generated-samples/translation-acceptance-VfCsHL`. The added regression verifies that a sole meaning saved in another context stays a candidate, cancellation and a newer selection reject late cloud results, and an explicit cloud request may replace a meaning edited before that request. Focused host tests, typechecking, lint and the desktop build passed again after this correction.
+
+## Review
+
+Parallel Standards and Spec reviews compared the implementation against `f001640aae0defcffec8cd24013b84af64023664`. See [review.md](review.md). No unresolved findings remain. The implementation check caught and corrected the unrelated-context single-candidate autofill boundary, with host and native regressions.
+
 ## Limits
 
 Live cloud output quality and service latency were not assessed. The dictionary is a fixed, incomplete text snapshot with separate CC BY-SA 2.0 KR attribution; missing entries remain manually editable. Settings UI and opt-in cloud Jev automatic sense selection remain in the roadmap. Installed-application packaging remains separate work.

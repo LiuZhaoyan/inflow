@@ -12,7 +12,7 @@ Baseline: `f001640aae0defcffec8cd24013b84af64023664` on `main`.
 - Cloud word lookup returns a concise contextual Chinese gloss, with dictionary candidates as references rather than mandatory options. It changes the meaning, not the lemma.
 - Never call a cloud service merely on word selection. Do not persist uncollected glosses; closing or discarding a draft abandons the result.
 - Reuse a saved meaning for the same source sentence and selected occurrence. Other contexts supply candidates only. Preserve existing VocabularyContext provenance and vocabulary sense identity.
-- Pending results cannot overwrite edits made during a request or a newer selection. Changed meanings receive an explicit Apply suggestion action. Save and discard protection remains.
+- Pending results cannot overwrite edits made during a request or a newer selection. An explicit cloud request may replace the meaning present at request time; edits made while it is pending receive an explicit Apply suggestion action. Save and discard protection remains.
 - Share the host-owned encrypted DeepSeek key; sentence and gloss tasks have independent model/prompt/output-limit/timeout code settings. Model configuration UI and optional opt-in cloud Jev selection remain deferred in the roadmap. No local JevEmbed deployment or evaluation.
 
 ## Agreed verification seams

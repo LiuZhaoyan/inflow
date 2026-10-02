@@ -138,7 +138,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
       if (latest.lemmaEdited && latest.lemma !== result.lemma) { update({ ...latest, loading: false }); return; }
       const candidates = result.candidates ?? [];
       update({ ...latest, loading: false, lemma: result.lemma, candidates,
-        meaningZh: latest.meaningEdited ? latest.meaningZh : result.meaningZh ?? (candidates.length === 1 ? candidates[0] : '') });
+        meaningZh: latest.meaningEdited ? latest.meaningZh : result.meaningZh ?? '' });
     }).catch(failure => {
       const latest = current.current;
       if (latest?.key !== entry.key || lookupJob.current !== job) return;
