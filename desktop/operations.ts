@@ -5,7 +5,7 @@ import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { validateSegments } from '../src/listening/processing';
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
-import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularySource, MediaVocabularySource } from '../src/listening/desktop';
+import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource } from '../src/listening/desktop';
 
 type Processor = (mode: 'probe' | 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string };
@@ -156,16 +156,20 @@ export class DesktopOperations {
 
   private vocabulary(id: string): VocabularyEntry {
     if (typeof id !== 'string') throw new Error('词汇编号无效。');
-    const entry = this.db.prepare('SELECT id, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'sources' | 'selected'> & { selected: number } | undefined;
+    const entry = this.db.prepare('SELECT id, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
     if (!entry) throw new Error('词汇不存在。');
     const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
-      s.media_id AS mediaId, m.name AS mediaName, json_extract(s.content, '$.start') AS start
+      s.media_id AS mediaId, m.name AS name, json_extract(s.content, '$.start') AS start
       FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
-      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as MediaVocabularySource[];
-    const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS artifactTitle,
+      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Omit<VocabularyContext, 'source'> & Omit<MediaVocabularySource, 'type'>)[];
+    const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS name,
       o.sentence_index AS sentenceIndex, o.surface, o.sentence
-      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as VocabularySource[];
-    return { ...entry, selected: entry.selected === 1, sources: [...sources, ...artifactSources] };
+      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Omit<VocabularyContext, 'source'> & Omit<ArtifactVocabularySource, 'type'>)[];
+    const contexts: VocabularyContext[] = [
+      ...sources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'media' as const, ...source } })),
+      ...artifactSources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'artifact' as const, ...source } })),
+    ];
+    return { ...entry, selected: entry.selected === 1, contexts };
   }
 
   listVocabulary(): VocabularyEntry[] {
@@ -184,33 +188,34 @@ export class DesktopOperations {
       this.vocabulary(input.id);
       if (matching && matching.id !== input.id) throw new Error('已有同词同义的词条。请保留不同词义，或从原文收集到已有词条。');
     }
-    let source: { segmentId?: string; artifactId?: string; sentenceIndex?: number; surface: string; sentence: string } | undefined;
-    if (input.source !== undefined) {
-      if (!input.source || typeof input.source !== 'object') throw new Error('原句来源无效。');
+    let context: SaveVocabularyInput['context'];
+    if (input.context !== undefined) {
+      if (!input.context || typeof input.context !== 'object' || !input.context.source || typeof input.context.source !== 'object') throw new Error('原句来源无效。');
+      const source = input.context.source;
       let sentence: string;
-      if ('segmentId' in input.source) {
-        if ('artifactId' in input.source || typeof input.source.segmentId !== 'string') throw new Error('原句来源无效。');
-        const segment = this.db.prepare('SELECT content FROM segments WHERE id = ?').get(input.source.segmentId) as { content: string } | undefined;
+      if (source.type === 'media') {
+        if ('artifactId' in source || typeof source.segmentId !== 'string' || typeof source.mediaId !== 'string') throw new Error('原句来源无效。');
+        const segment = this.db.prepare('SELECT content FROM segments WHERE id = ? AND media_id = ?').get(source.segmentId, source.mediaId) as { content: string } | undefined;
         if (!segment) throw new Error('原句已更新，请从当前原文重新收集。');
         sentence = JSON.parse(segment.content).text as string;
-        source = { segmentId: input.source.segmentId, surface: '', sentence };
-      } else if ('artifactId' in input.source) {
-        const artifact = this.artifact(input.source.artifactId);
-        if (!Number.isInteger(input.source.sentenceIndex) || !artifact.sentences[input.source.sentenceIndex]) throw new Error('短文原句编号无效。');
-        sentence = artifact.sentences[input.source.sentenceIndex].parts.map(part => part.text).join('');
-        source = { artifactId: artifact.id, sentenceIndex: input.source.sentenceIndex, surface: '', sentence };
+      } else if (source.type === 'artifact') {
+        if ('segmentId' in source) throw new Error('原句来源无效。');
+        const artifact = this.artifact(source.artifactId);
+        if (!Number.isInteger(source.sentenceIndex) || !artifact.sentences[source.sentenceIndex]) throw new Error('短文原句编号无效。');
+        sentence = artifact.sentences[source.sentenceIndex].parts.map(part => part.text).join('');
       } else throw new Error('原句来源无效。');
-      const surface = text(input.source.surface, 100);
+      const surface = text(input.context.surface, 100);
       if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
-      source.surface = surface;
+      // Snapshot the host-owned sentence; source display metadata is rebuilt on read.
+      context = { source, surface, sentence };
     }
     const id = input.id ?? matching?.id ?? randomUUID();
     this.db.exec('BEGIN');
     try {
       if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ? WHERE id = ?').run(lemma, meaning, id);
       else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning) VALUES (?, ?, ?) ON CONFLICT(lemma, meaning) DO NOTHING').run(id, lemma, meaning);
-      if (source?.segmentId) this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, source.segmentId, source.surface, source.sentence);
-      else if (source?.artifactId) this.db.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(entry_id, artifact_id, sentence_index, surface) DO NOTHING').run(randomUUID(), id, source.artifactId, source.sentenceIndex!, source.surface, source.sentence);
+      if (context?.source.type === 'media') this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, context.source.segmentId, context.surface, context.sentence);
+      else if (context?.source.type === 'artifact') this.db.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(entry_id, artifact_id, sentence_index, surface) DO NOTHING').run(randomUUID(), id, context.source.artifactId, context.source.sentenceIndex, context.surface, context.sentence);
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.vocabulary(id);
@@ -256,7 +261,7 @@ export class DesktopOperations {
     if (typeof topic !== 'string' || topic.length > 200 || topic.includes('\0')) throw new Error('主题请控制在 200 字以内。');
     const targets: GenerationTarget[] = ids.map(id => {
       const entry = this.vocabulary(id);
-      const sentence = entry.sources[0]?.sentence;
+      const sentence = entry.contexts[0]?.sentence;
       return { id: entry.id, lemma: entry.lemma, meaningZh: entry.meaningZh, ...(sentence ? { sourceSentence: sentence.slice(0, 1000) } : {}) };
     });
     const started = Date.now();

@@ -8,14 +8,16 @@ export type SavedMedia = {
   id: string; name: string; video: boolean; missing: boolean;
   segments: (Segment & { id: string })[]; learning: LearningState;
 };
-export type MediaVocabularySource = {
-  id: string; segmentId: string; mediaId: string; mediaName: string;
-  surface: string; sentence: string; start: number;
+export type VocabularyContext = {
+  id: string; surface: string; sentence: string;
+  source:
+    | { type: 'media'; mediaId: string; segmentId: string; name: string; start: number }
+    | { type: 'artifact'; artifactId: string; sentenceIndex: number; name: string };
 };
-export type ArtifactVocabularySource = { id: string; artifactId: string; artifactTitle: string; sentenceIndex: number; surface: string; sentence: string };
-export type VocabularySource = MediaVocabularySource | ArtifactVocabularySource;
-export type VocabularyEntry = { id: string; lemma: string; meaningZh: string; selected: boolean; sources: VocabularySource[] };
-export type SaveVocabularyInput = { id?: string; lemma: string; meaningZh: string; source?: { segmentId: string; surface: string } | { artifactId: string; sentenceIndex: number; surface: string } };
+export type MediaVocabularySource = Extract<VocabularyContext['source'], { type: 'media' }>;
+export type ArtifactVocabularySource = Extract<VocabularyContext['source'], { type: 'artifact' }>;
+export type VocabularyEntry = { id: string; lemma: string; meaningZh: string; selected: boolean; contexts: VocabularyContext[] };
+export type SaveVocabularyInput = { id?: string; lemma: string; meaningZh: string; context?: Omit<VocabularyContext, 'id'> };
 export type LearningArtifact = GeneratedPassage & { id: string; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
 export type CredentialStatus = { configured: boolean; error?: string };
 export type DesktopBridge = {

@@ -66,8 +66,8 @@ export default function ArtifactLibrary({ selected, source, onCollect }: {
     const sentence = artifact.sentences[sentenceIndex].parts.map(part => part.text).join('');
     if (!sentence.replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) { setError('选中文字不属于这一句，请重新选择。'); return; }
     setError('');
-    onCollect({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', source: {
-      reference: { artifactId: artifact.id, sentenceIndex, surface }, surface, sentence, sourceName: artifact.title,
+    onCollect({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', context: {
+      surface, sentence, source: { type: 'artifact', artifactId: artifact.id, sentenceIndex, name: artifact.title },
     } });
   }
 

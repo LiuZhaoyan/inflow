@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { DesktopOperations } from './operations';
 import { generatePassage, GenerationError } from '../src/generation';
+import type { SaveVocabularyInput } from '../src/listening/desktop';
 
 test('two artifact cycles preserve snapshots and source relationships across failure, retry and restart', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow artifacts 韩语 '));
@@ -34,24 +35,28 @@ test('two artifact cycles preserve snapshots and source relationships across fai
   try {
     const file = path.join(root, 'video.webm'); await writeFile(file, 'fixture');
     const media = await app.transcribe((await app.importMedia(file)).id, 'process');
-    const walk = app.saveVocabulary({ lemma: '걷다', meaningZh: '走路', source: { segmentId: media.segments[0].id, surface: '걸어요' } });
+    const walk = app.saveVocabulary({ lemma: '걷다', meaningZh: '走路', context: { surface: '걸어요', sentence: media.segments[0].text,
+      source: { type: 'media', mediaId: media.id, segmentId: media.segments[0].id, name: media.name, start: media.segments[0].start } } });
     app.selectVocabulary([walk.id]);
     const first = await app.generateArtifact([walk.id], '', 'first', 'fixture-secret');
     assert.equal(first.sentences[0].parts[1].text, '걸었어요.');
     assert.equal(first.sentences[0].parts[1].targetId, walk.id);
     assert.equal(first.targets[0].sourceSentence, media.segments[0].text);
     assert.equal(first.topic, undefined); assert.deepEqual(first.usage, { inputTokens: 10, outputTokens: 20, totalTokens: 30 });
-    assert.throws(() => app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', source: { artifactId: first.id, sentenceIndex: 0, surface: 'absent' } }), /不属于/);
-    assert.throws(() => app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', source: { artifactId: first.id, sentenceIndex: -1, surface: '친구' } }), /编号/);
-    const friend = app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', source: { artifactId: first.id, sentenceIndex: 0, surface: '친구' } });
-    assert.deepEqual({ ...friend.sources[0] }, { id: friend.sources[0].id, artifactId: first.id, artifactTitle: first.title, sentenceIndex: 0, surface: '친구', sentence: '친구와 공원을 걸었어요.' });
-    assert.equal(app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', source: { artifactId: first.id, sentenceIndex: 0, surface: '친구' } }).sources.length, 1);
+    const context: NonNullable<SaveVocabularyInput['context']> = { surface: '친구', sentence: 'untrusted sentence',
+      source: { type: 'artifact', artifactId: first.id, sentenceIndex: 0, name: 'untrusted title' } };
+    assert.throws(() => app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', context: { ...context, surface: 'absent' } }), /不属于/);
+    assert.throws(() => app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', context: { ...context, source: { type: 'artifact', artifactId: first.id, sentenceIndex: -1, name: first.title } } }), /编号/);
+    const friend = app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', context });
+    assert.deepEqual(friend.contexts[0], { id: friend.contexts[0].id, surface: '친구', sentence: '친구와 공원을 걸었어요.',
+      source: { type: 'artifact', artifactId: first.id, sentenceIndex: 0, name: first.title } });
+    assert.equal(app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', context }).contexts.length, 1);
     app.saveVocabulary({ id: walk.id, lemma: '걷다', meaningZh: '步行' });
     assert.equal(app.openArtifact(first.id).targets[0].meaningZh, '走路');
     app.selectVocabulary([friend.id]);
     const second = await app.generateArtifact([friend.id], '朋友的一天', 'second', 'fixture-secret');
     assert.notEqual(first.id, second.id); assert.equal(second.topic, '朋友的一天');
-    assert.equal(second.targets[0].sourceSentence, friend.sources[0].sentence);
+    assert.equal(second.targets[0].sourceSentence, friend.contexts[0].sentence);
     const saved = app.listArtifacts(), vocabulary = app.listVocabulary();
     for (mode of ['401', '429', 'incomplete', 'unknown', 'missing', 'malformed']) {
       await assert.rejects(app.generateArtifact([friend.id], '', 'failure', 'fixture-secret'), error => error instanceof GenerationError);

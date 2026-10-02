@@ -93,8 +93,8 @@ async function run() {
       await click('保存词汇'); await wait('!document.querySelector(".vocabulary-editor")');
       let entries = await evaluate('window.inflow.listVocabulary()');
       const collected = entries.find(entry => entry.lemma === found.surface && entry.meaningZh === found.meaning);
-      assert.ok(collected); assert.equal(collected.sources[0].artifactId, first.id);
-      assert.equal(collected.sources[0].sentence, first.sentences[found.index].parts.map(part => part.text).join(''));
+      assert.ok(collected); assert.equal(collected.contexts[0].source.artifactId, first.id);
+      assert.equal(collected.contexts[0].sentence, first.sentences[found.index].parts.map(part => part.text).join(''));
       const oldTarget = first.targets[0];
       await evaluate(`document.querySelector('[data-entry-id="${oldTarget.id}"] button').click()`);
       await wait('!!document.querySelector(".vocabulary-editor")');
@@ -113,7 +113,7 @@ async function run() {
       const second = (await readArtifacts())[0];
       assert.notEqual(second.id, first.id); assert.equal(second.targets.length, 1);
       assert.equal(second.targets[0].id, collected.id); assert.equal(second.topic, undefined);
-      assert.equal(second.targets[0].sourceSentence, collected.sources[0].sentence);
+      assert.equal(second.targets[0].sourceSentence, collected.contexts[0].sentence);
       await fs.writeFile(path.join(output, 'expected-artifacts.json'), JSON.stringify(await readArtifacts(), null, 2));
       await fs.writeFile(path.join(output, 'expected-artifact-vocabulary.json'), JSON.stringify(await evaluate('window.inflow.listVocabulary()'), null, 2));
       const { GenerationCredential } = require(path.join(root, 'build/desktop/desktop/credentials.js'));
@@ -136,7 +136,7 @@ async function run() {
       await wait(`document.querySelector('.artifact-reader').dataset.artifactId === '${items[1].id}'`);
       assert.equal(await evaluate('document.querySelectorAll(".artifact-translation").length'), 0);
       const entries = await evaluate('window.inflow.listVocabulary()');
-      const collected = entries.find(entry => entry.sources.some(source => source.artifactId === items[1].id));
+      const collected = entries.find(entry => entry.contexts.some(context => context.source.type === 'artifact' && context.source.artifactId === items[1].id));
       for (let attempt = 0; attempt < 2; attempt++) {
         await evaluate(`const select = document.querySelector('.artifact-selector select'); select.value = '${items[0].id}'; select.dispatchEvent(new Event('change', {bubbles:true}));`);
         await wait(`document.querySelector('.artifact-reader').dataset.artifactId === '${items[0].id}'`);
@@ -192,10 +192,10 @@ async function run() {
       }
       await collect(1); await save('대만', '台湾');
       const first = (await readEntries())[0];
-      assert.equal(first.sources[0].surface, '대만을');
+      assert.equal(first.contexts[0].surface, '대만을');
       await collect(2); await save('대만', '台湾');
       const added = (await readEntries())[0];
-      assert.equal(added.id, first.id); assert.equal(added.sources.length, 2); assert.deepEqual(added.sources[0], first.sources[0]);
+      assert.equal(added.id, first.id); assert.equal(added.contexts.length, 2); assert.deepEqual(added.contexts[0], first.contexts[0]);
       await evaluate(`document.querySelector('[data-entry-id="${first.id}"] button').click()`);
       await wait('!!document.querySelector(".vocabulary-editor")');
       await save('타이완', '台湾（地名）');
@@ -207,7 +207,7 @@ async function run() {
       let entries = await readEntries();
       assert.equal(entries.length, 3);
       assert.equal(entries.filter(entry => entry.lemma === '배').length, 2);
-      assert.equal(entries.find(entry => entry.meaningZh === '船').sources.length, 0);
+      assert.equal(entries.find(entry => entry.meaningZh === '船').contexts.length, 0);
       for (const entry of [entries.find(entry => entry.id === first.id), entries.find(entry => entry.meaningZh === '船')]) {
         await evaluate(`document.querySelector('[data-entry-id="${entry.id}"] input[type=checkbox]').click()`);
         await wait('!document.querySelector(".vocabulary-target input:disabled")');

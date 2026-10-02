@@ -5,7 +5,7 @@ import type { SaveVocabularyInput, VocabularyEntry, MediaVocabularySource } from
 
 export type VocabularyDraft = {
   key: string; id?: string; lemma: string; meaningZh: string;
-  source?: { reference: NonNullable<SaveVocabularyInput['source']>; surface: string; sentence: string; sourceName: string };
+  context?: SaveVocabularyInput['context'];
 };
 
 function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
@@ -16,11 +16,11 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
   const [error, setError] = useState('');
   return <form className="vocabulary-editor" aria-label="词汇审阅" onSubmit={event => {
     event.preventDefault(); setError('');
-    void onSave({ id: draft.id, lemma, meaningZh: meaning, source: draft.source?.reference })
+    void onSave({ id: draft.id, lemma, meaningZh: meaning, context: draft.context })
       .catch(failure => setError(failure instanceof Error ? failure.message : '保存失败，请重试。'));
   }}>
-    <h3>{draft.id ? '修正词汇' : draft.source ? '确认收藏词汇' : '手动添加词汇'}</h3>
-    {draft.source ? <div className="vocabulary-context"><p>遇到的形式：<strong lang="ko">{draft.source.surface}</strong></p><p lang="ko">{draft.source.sentence}</p><small>来源：{draft.source.sourceName}</small></div> : !draft.id && <p>手动添加的词汇没有原句来源。</p>}
+    <h3>{draft.id ? '修正词汇' : draft.context ? '确认收藏词汇' : '手动添加词汇'}</h3>
+    {draft.context ? <div className="vocabulary-context"><p>遇到的形式：<strong lang="ko">{draft.context.surface}</strong></p><p lang="ko">{draft.context.sentence}</p><small>来源：{draft.context.source.name}</small></div> : !draft.id && <p>手动添加的词汇没有原句来源。</p>}
     <fieldset disabled={busy}>
       <label>韩语词典形<input autoFocus={active} name="lemma" value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
       <label>当前语境的中文词义<input name="meaningZh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
@@ -68,9 +68,9 @@ export default function VocabularyNotebook({ collection, onDismiss, onOpenSource
     <div className="vocabulary-list">{entries.map(entry => <article className="vocabulary-entry" key={entry.id} data-entry-id={entry.id}>
       <div className="vocabulary-heading"><strong lang="ko">{entry.lemma}</strong><button disabled={hasPendingEdit} onClick={() => { onDismiss(); setEditing({ key: crypto.randomUUID(), id: entry.id, lemma: entry.lemma, meaningZh: entry.meaningZh }); }}>修正</button></div>
       <p>{entry.meaningZh}</p>
-      {entry.sources.length ? <details><summary>来源 · {entry.sources.length} 处</summary>{entry.sources.map(source => <div className="vocabulary-context" key={source.id}>
-        <p>遇到的形式：<span lang="ko">{source.surface}</span></p><p lang="ko">{source.sentence}</p>
-        {'artifactId' in source ? <small>短文：{source.artifactTitle} · 第 {source.sentenceIndex + 1} 句</small> : <button className="vocabulary-source" onClick={() => onOpenSource(source)}>{source.mediaName} · {Math.floor(source.start / 60)}:{String(Math.floor(source.start % 60)).padStart(2, '0')} ↗</button>}
+      {entry.contexts.length ? <details><summary>来源 · {entry.contexts.length} 处</summary>{entry.contexts.map(({ id, surface, sentence, source }) => <div className="vocabulary-context" key={id}>
+        <p>遇到的形式：<span lang="ko">{surface}</span></p><p lang="ko">{sentence}</p>
+        {source.type === 'artifact' ? <small>短文：{source.name} · 第 {source.sentenceIndex + 1} 句</small> : <button className="vocabulary-source" onClick={() => onOpenSource(source)}>{source.name} · {Math.floor(source.start / 60)}:{String(Math.floor(source.start % 60)).padStart(2, '0')} ↗</button>}
       </div>)}</details> : <small>手动添加 · 无原句来源</small>}
     </article>)}</div>
   </section></>;

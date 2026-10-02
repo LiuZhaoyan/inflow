@@ -196,7 +196,7 @@ export default function LearningWorkspace() {
       setError('请在已揭晓的当前句中选中要收藏的词语（100 字以内）。'); return;
     }
     setError('');
-    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', source: { reference: { segmentId: source.id, surface }, surface, sentence: source.text, sourceName: savedMedia!.name } });
+    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', context: { surface, sentence: source.text, source: { type: 'media', mediaId: savedMedia!.id, segmentId: source.id, name: savedMedia!.name, start: source.start } } });
     showVocab();
   }
 
