@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { validateSegments, type Segment } from '@/listening/processing';
 import { managedMediaUrl, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type LearningArtifact, type VocabularyContext, type VocabularyEntry, type PlaybackMode } from '@/listening/desktop';
 import { type RevealChoice } from '@/listening/reveal';
-import VocabularyNotebook, { type VocabularyDraft } from '@/listening/VocabularyNotebook';
+import VocabularyNotebook from '@/listening/VocabularyNotebook';
+import VocabularySelection, { type VocabularySelectionHandle } from '@/listening/VocabularySelection';
 import ArtifactLibrary from '@/listening/ArtifactLibrary';
 import TopNav from '@/workspace/TopNav';
 import LibraryDrawer from '@/workspace/LibraryDrawer';
@@ -50,7 +51,8 @@ export default function LearningWorkspace() {
   const [reveal, setReveal] = useState<RevealChoice | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [collection, setCollection] = useState<VocabularyDraft | null>(null);
+  const vocabularySelection = useRef<VocabularySelectionHandle>(null);
+  const [vocabularyRevision, setVocabularyRevision] = useState(0);
   const [editing, setEditing] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
   const [translation, setTranslation] = useState('');
@@ -59,13 +61,15 @@ export default function LearningWorkspace() {
   const segment = segments[index] ?? null;
   const video = !!file && (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name));
   const canPlay = !!src && ready && duration > 0 && duration <= 600;
-  const selectReveal = useCallback((choice: RevealChoice) => setReveal(choice), []);
+  const selectReveal = useCallback((choice: RevealChoice) => { if (vocabularySelection.current?.beforeChange() !== false) setReveal(choice); }, []);
   const hideText = useCallback(() => {
+    if (vocabularySelection.current?.beforeChange() === false) return;
     setReveal(null); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
     translating.current?.abort();
   }, []);
 
   const applySaved = useCallback((next: SavedMedia) => {
+    if (vocabularySelection.current?.beforeChange() === false) return false;
     processing.current?.abort(); translating.current?.abort(); media.current?.pause(); autoProcess.current = '';
     setSavedMedia(next); setFile({ name: next.name, type: next.video ? 'video/' : 'audio/' });
     setSrc(next.missing || next.learning.duration > 600 ? '' : managedMediaUrl(next.id));
@@ -73,6 +77,7 @@ export default function LearningWorkspace() {
     setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments);
     setPlaying(false); setBusy(false); setShowContext(false); hideText();
     setError(next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '');
+    return true;
   }, [hideText]);
 
   useEffect(() => () => { if (src.startsWith('blob:')) URL.revokeObjectURL(src); }, [src]);
@@ -106,7 +111,10 @@ export default function LearningWorkspace() {
       }
     } else if (mode === 'full' && segments.length) {
       const next = Math.max(0, segments.findLastIndex(item => item.start <= el.currentTime));
-      if (next !== index) { setIndex(next); hideText(); }
+      if (next !== index) {
+        if (vocabularySelection.current?.beforeChange() === false) { el.pause(); return; }
+        setIndex(next); hideText();
+      }
     }
     if (updateTime) setPosition(el.currentTime);
   }, [mode, segment, loop, segments, index, hideText]);
@@ -118,24 +126,29 @@ export default function LearningWorkspace() {
     return () => cancelAnimationFrame(frame);
   }, [playing, syncPlayback]);
 
-  function showVocab() { media.current?.pause(); setView('vocab'); }
+  const allowChange = useCallback(() => vocabularySelection.current?.beforeChange() !== false, []);
+  function showVocab() { if (allowChange()) { media.current?.pause(); setView('vocab'); } }
 
   async function importMedia() {
+    if (!allowChange()) return;
     if (!window.inflow) { picker.current?.click(); return; }
     try {
       const next = await window.inflow.importMedia();
       if (!next) return;
-      applySaved(next); autoProcess.current = managedMediaUrl(next.id);
+      if (!applySaved(next)) return;
+      autoProcess.current = managedMediaUrl(next.id);
       setContentKind('media'); setView('video'); setLibraryOpen(false); setLibrary(await window.inflow.list());
     } catch (failure) { setError(failure instanceof Error ? failure.message : '导入失败，请重试。'); }
   }
 
   async function openSaved(id: string, relink = false) {
+    if (!allowChange()) return;
     if (!relink && id === savedMedia?.id) { setContentKind('media'); setView('video'); setLibraryOpen(false); return; }
     try {
       const next = relink ? await window.inflow!.relink(id) : await window.inflow!.open(id);
       if (!next) return;
-      applySaved(next); setContentKind('media'); setView('video'); setLibraryOpen(false); setLibrary(await window.inflow!.list());
+      if (!applySaved(next)) return;
+      setContentKind('media'); setView('video'); setLibraryOpen(false); setLibrary(await window.inflow!.list());
       if (media.current && next.id === savedMedia?.id && !next.missing && next.learning.duration <= 600) {
         media.current.currentTime = next.learning.position; media.current.playbackRate = next.learning.rate; setReady(true);
       }
@@ -149,7 +162,7 @@ export default function LearningWorkspace() {
   }
 
   async function chooseFile(next: File | undefined) {
-    if (!next) return;
+    if (!next || !allowChange()) return;
     const choice = ++fileChoice.current;
     if (!next.size || next.size > 50 * 1024 * 1024 || (!/^(audio|video)\//.test(next.type) && !/\.(mp3|mp4|wav|m4a|ogg|webm|mov|flac|aac)$/i.test(next.name))) {
       setError('请选择 50 MB 以内的音频或视频文件。'); return;
@@ -176,7 +189,7 @@ export default function LearningWorkspace() {
   }
 
   function select(next: number) {
-    if (!segments[next]) return;
+    if (!segments[next] || !allowChange()) return;
     media.current?.pause(); setMode('sentence'); setIndex(next); hideText();
     if (media.current) media.current.currentTime = segments[next].start;
     setPosition(segments[next].start);
@@ -187,37 +200,22 @@ export default function LearningWorkspace() {
     if (segments.length) {
       let next = mode === 'full' ? Math.max(0, segments.findLastIndex(item => item.start <= time)) : segments.findIndex(item => time < item.end);
       if (next < 0) next = segments.length - 1;
-      if (next !== index) { setIndex(next); hideText(); }
+      if (next !== index) { if (!allowChange()) return; setIndex(next); hideText(); }
       if (mode === 'sentence') time = Math.max(segments[next].start, Math.min(time, segments[next].end - 0.02));
     }
     if (media.current) media.current.currentTime = time;
     setPosition(time);
   }
 
-  function collectSelection() {
-    if (editing || collection) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
-    const selection = window.getSelection();
-    const surface = selection?.toString().trim();
-    const source = savedMedia?.segments[index];
-    if (!source || !selection?.rangeCount || !surface || surface.length > 100 ||
-      !transcript.current?.contains(selection.anchorNode) || !transcript.current.contains(selection.focusNode) ||
-      selection.getRangeAt(0).cloneContents().querySelector('.hidden-group') ||
-      !source.text.replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) {
-      setError('请在已揭晓的当前句中选中要收藏的词语（100 字以内）。'); return;
-    }
-    setError('');
-    setCollection({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', context: { surface, sentence: source.text, source: { type: 'media', mediaId: savedMedia!.id, segmentId: source.id, name: savedMedia!.name, start: source.start } } });
-    showVocab();
-  }
-
   async function openVocabularySource(source: MediaVocabularySource) {
+    if (!allowChange()) return;
     try {
       const saved = await window.inflow!.open(source.mediaId);
       let next = saved.segments.findIndex(item => item.id === source.segmentId);
       const historical = next < 0;
       if (historical) next = Math.max(0, saved.segments.findLastIndex(item => item.start <= source.start));
       const position = saved.segments[next]?.start ?? source.start;
-      applySaved({ ...saved, learning: { ...saved.learning, index: next, position, mode: 'sentence' } });
+      if (!applySaved({ ...saved, learning: { ...saved.learning, index: next, position, mode: 'sentence' } })) return;
       setContentKind('media'); setView('video'); setLibraryOpen(false);
       if (media.current && saved.id === savedMedia?.id && !saved.missing && saved.learning.duration <= 600) { media.current.currentTime = position; setReady(true); }
       if (historical && !saved.missing) setError('素材已重新转写，已打开相近位置；收藏时的原句仍保留。');
@@ -225,6 +223,7 @@ export default function LearningWorkspace() {
   }
 
   function openStory(source: ArtifactVocabularySource) {
+    if (!allowChange()) return;
     media.current?.pause(); setArtifactSource({ ...source }); setContentKind('story'); setView('video'); setLibraryOpen(false);
   }
 
@@ -234,8 +233,13 @@ export default function LearningWorkspace() {
   }
 
   async function requestStory() {
-    if (editing || collection) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
-    try { setVocabularyEntries(await window.inflow!.listVocabulary()); setTargetSelectionOpen(true); }
+    if (!allowChange()) return;
+    if (editing) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
+    try {
+      const entries = await window.inflow!.listVocabulary();
+      if (!allowChange()) return;
+      setVocabularyEntries(entries); setTargetSelectionOpen(true);
+    }
     catch (failure) { setError(failure instanceof Error ? failure.message : '词汇读取失败，请重试。'); }
   }
 
@@ -243,11 +247,6 @@ export default function LearningWorkspace() {
     const entries = await window.inflow!.selectVocabulary(ids);
     setVocabularyEntries(entries); setGenerationTargets(entries.filter(entry => ids.includes(entry.id)));
     setTargetSelectionOpen(false); media.current?.pause(); setContentKind('story'); setView('video'); setGenerationOpen(true);
-  }
-
-  function collectStory(draft: VocabularyDraft) {
-    if (editing || collection) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
-    setError(''); setCollection(draft); showVocab();
   }
 
   async function play() {
@@ -259,7 +258,7 @@ export default function LearningWorkspace() {
   }
 
   async function processMedia(length = duration) {
-    if (!file || !length || length > 600 || busy) return;
+    if (!file || !length || length > 600 || busy || !allowChange()) return;
     const controller = new AbortController(); processing.current?.abort(); processing.current = controller;
     setBusy(true); setError('');
     try {
@@ -338,31 +337,47 @@ export default function LearningWorkspace() {
     onError: () => { setReady(false); setError('无法播放此媒体，请尝试 MP3、MP4 或 WebM 格式。'); },
   };
 
+  const selectionContext = useCallback((element: HTMLElement) => {
+    if (view !== 'video' || busy || editing) return null;
+    if (contentKind === 'media') {
+      const source = savedMedia?.segments[index];
+      if (!source || !reveal || element !== transcript.current) return null;
+      return { language: savedMedia!.language, context: { surface: '', sentence: source.text,
+        source: { type: 'media' as const, mediaId: savedMedia!.id, segmentId: source.id, name: savedMedia!.name, start: source.start } } };
+    }
+    const sentenceIndex = Number(element.dataset.sentenceIndex);
+    const sentence = activeArtifact?.sentences[sentenceIndex];
+    if (!activeArtifact || !sentence || !element.matches('.artifact-korean')) return null;
+    return { language: activeArtifact.language, context: { surface: '', sentence: sentence.parts.map(part => part.text).join(''),
+      source: { type: 'artifact' as const, artifactId: activeArtifact.id, sentenceIndex, name: activeArtifact.title } } };
+  }, [view, busy, editing, contentKind, savedMedia, index, reveal, activeArtifact]);
+
   const status = <div className="workspace-status">
     <span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>
-    {file && (busy ? <><span role="status">正在转写与切句…</span><button onClick={() => { processing.current?.abort(); setBusy(false); }}>取消处理</button></> : <button disabled={!canPlay || editing || !!collection} onClick={() => void processMedia()}>{segments.length ? '重新处理' : '开始处理 / 重试'}</button>)}
+    {file && (busy ? <><span role="status">正在转写与切句…</span><button onClick={() => { processing.current?.abort(); setBusy(false); }}>取消处理</button></> : <button disabled={!canPlay || editing} onClick={() => void processMedia()}>{segments.length ? '重新处理' : '开始处理 / 重试'}</button>)}
     {savedMedia?.missing && <button onClick={() => void openSaved(savedMedia.id, true)}>重新关联媒体</button>}
   </div>;
 
   return <div className="workspace-shell">
-    <TopNav activeView={view} libraryOpen={libraryOpen} onOpenLibrary={() => setLibraryOpen(true)} onShowVideo={() => setView('video')} onShowVocab={showVocab}/>
+    <TopNav activeView={view} libraryOpen={libraryOpen} onOpenLibrary={() => { if (allowChange()) setLibraryOpen(true); }} onShowVideo={() => { if (allowChange()) setView('video'); }} onShowVocab={showVocab}/>
     <input className="file-input" ref={picker} type="file" accept="audio/*,video/*,.m4a,.mp3,.mp4,.wav,.webm,.ogg,.flac,.aac,.mov" aria-label="选择音频或视频" onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = ''; }}/>
     {error && <p className="notice workspace-notice" role="alert">{error}</p>}
     <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column">
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>导入媒体</button>}
-        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} reveal={reveal} onReveal={selectReveal} onHideText={() => setReveal(null)} transcriptRef={transcript} collectionDisabled={!desktop || !savedMedia?.segments[index] || !reveal || busy || editing || !!collection} onCollect={collectSelection} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={() => void toggleTranslation()}/>
+        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} reveal={reveal} onReveal={selectReveal} onHideText={() => { if (allowChange()) setReveal(null); }} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={() => void toggleTranslation()}/>
       </div>
       <ContextPanel segments={segments} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>
     <section className="workspace-story" hidden={view !== 'video' || contentKind !== 'story'} aria-label="Story workspace">
-      {desktop && <ArtifactLibrary selected={generationTargets} source={artifactSource} onCollect={collectStory} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onArtifactChange={setActiveArtifact} onArtifactsChange={setArtifacts} onRequestGenerate={() => requestStory()}/>}
+      {desktop && <ArtifactLibrary selected={generationTargets} source={artifactSource} onBeforeChange={allowChange} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onArtifactChange={setActiveArtifact} onArtifactsChange={setArtifacts} onRequestGenerate={() => requestStory()}/>}
     </section>
     <section className="workspace-vocab" hidden={view !== 'vocab'} aria-label="Vocab workspace">
-      {desktop ? <VocabularyNotebook collection={collection} onDismiss={() => setCollection(null)} onOpenSource={openEntrySource} onEditingChange={setEditing} active={view === 'vocab'} onEntriesChange={setVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">词汇本在 Inflow 桌面应用中可用。</p>}
+      {desktop ? <VocabularyNotebook refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} active={view === 'vocab'} onEntriesChange={setVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">词汇本在 Inflow 桌面应用中可用。</p>}
     </section>
     <LibraryDrawer open={libraryOpen} items={library} currentId={contentKind === 'media' ? savedMedia?.id : null} artifacts={artifacts} currentArtifactId={contentKind === 'story' ? activeArtifact?.id : null} onOpenArtifact={artifact => openStory({ type: 'artifact', artifactId: artifact.id, sentenceIndex: 0, name: artifact.title })} onClose={() => setLibraryOpen(false)} onImport={() => void importMedia()} onOpen={id => void openSaved(id)} onRelink={id => void openSaved(id, true)}/>
+    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)}/>
     {targetSelectionOpen && <StoryTargetsDialog entries={vocabularyEntries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
   </div>;
 }

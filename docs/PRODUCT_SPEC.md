@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -62,11 +62,17 @@ Changing the active sentence hides source text and translation by default. Trans
 
 ## 6. Vocabulary notebook
 
-Vocabulary may be collected from source-media sentences or generated artifacts, and may also be added manually.
+Vocabulary may be collected from source-media sentences or generated artifacts, and may also be added manually. The current scope is individual words; phrase and grammatical-construction entries are deferred.
+
+Selecting one continuous word with no internal whitespace in revealed source text opens a lightweight popover in Listen or Story. Lookup suggests a Korean dictionary form locally without saving an entry. The learner enters its contextual Chinese meaning, can correct the suggestion, and explicitly confirms collection without leaving the learning view. Failed lookup still permits manual entry. Selections across sentences, hidden text, or multiple words are rejected with guidance to select one revealed word.
+
+The popover retains the selected surface and source when its inputs receive focus. Changing sentence or selection closes an unedited draft; an edited draft requires saving or explicitly discarding. Failed saving retains the draft for retry.
+
+The learner confirms the source language when importing media. Korean is supported initially and English is planned; contextual meanings remain Chinese. Source language is part of vocabulary identity.
 
 A vocabulary entry should preserve:
 
-- Korean dictionary form;
+- source language and dictionary form;
 - contextual Chinese meaning;
 - encountered surface form when available;
 - original sentence when available;

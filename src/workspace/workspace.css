@@ -85,7 +85,6 @@
 .workspace-play-button { width:36px; height:36px; display:grid; flex:none; place-items:center; border:1px solid #655b7a; border-radius:50%; background:#292630; color:#eeeaf6!important; }
 .workspace-play-button svg { width:15px; height:15px; fill:currentColor; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:2; }
 .workspace-play-button svg path { fill:currentColor; }
-.workspace-secondary-button { min-height:30px; display:inline-flex; align-items:center; justify-content:center; justify-self:start; padding:0 8px; border:1px solid #34353d; border-radius:3px; background:#1a1b20; color:#ccc9d3!important; font-size:12px; white-space:nowrap; }
 .workspace-sentence-options { min-width:0; display:flex; align-items:center; justify-self:end; gap:5px; }
 .workspace-mode-switch { display:flex; align-items:center; gap:1px; min-width:0; padding:1px; border:1px solid #34353d; border-radius:3px; }
 .workspace-mode-switch legend { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
@@ -192,3 +191,16 @@
   .workspace-sentence-tools { flex-wrap:wrap; }
   .workspace-sentence-tools>label,.workspace-sentence-tools>button { padding:0 4px; }
 }
+
+.vocabulary-selection { box-sizing: border-box; position: fixed; z-index: 80; width: min(320px, calc(100vw - 24px)); padding: 18px; overflow: auto; border: 1px solid var(--border, #34343c); border-radius: 14px; background: #1b1b24; color: #eeeaf5; box-shadow: 0 12px 36px #0006; }
+.vocabulary-selection header, .vocabulary-selection footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.vocabulary-selection header strong { font-size: 20px; }
+.vocabulary-selection button { cursor: pointer; }
+.vocabulary-selection small { display: block; color: #aaa5b5; margin: 6px 0 14px; overflow-wrap: anywhere; }
+.vocabulary-selection fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.vocabulary-selection label { display: grid; gap: 6px; margin-bottom: 12px; font-size: 12px; color: #bcb6ca; }
+.vocabulary-selection input { width: 100%; box-sizing: border-box; border: 1px solid #484251; border-radius: 7px; padding: 9px 10px; background: #12121a; color: #f1eef6; font: inherit; font-size: 16px; }
+.vocabulary-selection input:focus-visible, .vocabulary-selection button:focus-visible { outline: 2px solid #b89cff; outline-offset: 2px; }
+.vocabulary-selection p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.vocabulary-selection [role="alert"] { color: #ffb5b5; }
+.vocabulary-selection footer { margin-top: 14px; }

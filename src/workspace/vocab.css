@@ -271,9 +271,6 @@
   font:inherit;
   font-size:15px;
 }
-.vocab-editor-context { margin:0 0 20px; padding:12px; border:1px solid #2c2b35; border-radius:8px; background:#191a20; }
-.vocab-editor-context>span,.vocab-editor-context small { color:var(--vocab-muted); font-size:12px; }
-.vocab-editor-context p { margin:5px 0; color:#e0dee6; }
 .vocab-editor-note { margin:11px 0 16px; color:var(--vocab-muted); font-size:12px; }
 .vocab-editor-actions { display:flex; align-items:center; gap:10px; }
 .vocab-editor-actions button { min-height:40px; padding:0 14px; border:1px solid #3a3a43!important; border-radius:7px; background:#191a20!important; font-size:13px!important; }

@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import path from 'node:path';
+import type { LookupVocabularyInput } from './desktop';
 
 export async function readBody(request: Request, limit: number): Promise<Buffer> {
   if (Number(request.headers.get('content-length')) > limit) throw new Error('文件或请求过大，请选择 50 MB 以内的媒体。');
@@ -33,7 +34,7 @@ function processorPaths(root: string, env: NodeJS.ProcessEnv, platform: NodeJS.P
 
 // ponytail: one local inference at a time; use a bounded job queue only for a multi-user deployment.
 let busy = false;
-export async function runProcessor(mode: 'probe' | 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string, root = process.cwd()): Promise<unknown> {
+export async function runProcessor(mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput, root = process.cwd()): Promise<unknown> {
   if (mode !== 'probe' && busy) throw new Error('正在处理另一项请求，请稍后重试。');
   if (mode !== 'probe') busy = true;
   try {
@@ -42,7 +43,7 @@ export async function runProcessor(mode: 'probe' | 'transcribe' | 'translate', s
     catch { throw new Error('本地处理环境尚未安装，请按 README 完成模型安装后重试。'); }
     return await new Promise((resolve, reject) => {
       const child = execFile(paths.python, [paths.worker, mode, ...(file ? [file] : [])],
-        { timeout: 600_000, maxBuffer: 2 * 1024 * 1024, signal, killSignal: 'SIGKILL', env: { ...process.env, INFLOW_MODELS_DIR: paths.models, PYTHONIOENCODING: 'utf-8' } }, (error, stdout) => {
+        { timeout: mode === 'lookup' ? 30_000 : 600_000, windowsHide: true, maxBuffer: 2 * 1024 * 1024, signal, killSignal: 'SIGKILL', env: { ...process.env, INFLOW_MODELS_DIR: paths.models, PYTHONIOENCODING: 'utf-8' } }, (error, stdout) => {
           if (error) {
             reject(new Error(signal.aborted ? '处理已取消。' : '本地处理失败或超时，请确认模型已安装，并使用 10 分钟以内、声音清晰的韩语媒体重试。'));
             return;
@@ -54,7 +55,7 @@ export async function runProcessor(mode: 'probe' | 'transcribe' | 'translate', s
           } catch { reject(new Error('处理结果无法读取，请重新处理。')); }
         });
       child.stdin?.on('error', () => { /* Process exit is reported by execFile. */ });
-      child.stdin?.end(mode === 'translate' ? JSON.stringify({ text }) : undefined);
+      child.stdin?.end(mode === 'lookup' ? JSON.stringify(text) : mode === 'translate' ? JSON.stringify({ text }) : undefined);
     });
   } finally { if (mode !== 'probe') busy = false; }
 }

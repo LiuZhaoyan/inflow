@@ -1,11 +1,14 @@
 import type { Segment } from './processing';
 import type { GeneratedPassage, GenerationTarget } from '../generation';
 
+export type SourceLanguage = 'ko';
+export type LookupVocabularyInput = { surface: string; sentence: string; start: number; language: SourceLanguage };
+export type VocabularyLookup = { surface: string; lemma: string; language: SourceLanguage };
 export type PlaybackMode = 'full' | 'sentence';
 export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number; mode: PlaybackMode };
 export type LearningStateInput = Omit<LearningState, 'mode'> & { mode?: PlaybackMode };
 export type SavedMedia = {
-  id: string; name: string; video: boolean; missing: boolean;
+  id: string; name: string; language: SourceLanguage; video: boolean; missing: boolean;
   segments: (Segment & { id: string })[]; learning: LearningState;
 };
 export type VocabularyContext = {
@@ -16,9 +19,9 @@ export type VocabularyContext = {
 };
 export type MediaVocabularySource = Extract<VocabularyContext['source'], { type: 'media' }>;
 export type ArtifactVocabularySource = Extract<VocabularyContext['source'], { type: 'artifact' }>;
-export type VocabularyEntry = { id: string; lemma: string; meaningZh: string; selected: boolean; contexts: VocabularyContext[] };
-export type SaveVocabularyInput = { id?: string; lemma: string; meaningZh: string; context?: Omit<VocabularyContext, 'id'> };
-export type LearningArtifact = GeneratedPassage & { id: string; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
+export type VocabularyEntry = { id: string; language: SourceLanguage; lemma: string; meaningZh: string; selected: boolean; contexts: VocabularyContext[] };
+export type SaveVocabularyInput = { id?: string; language?: SourceLanguage; lemma: string; meaningZh: string; context?: Omit<VocabularyContext, 'id'> };
+export type LearningArtifact = GeneratedPassage & { id: string; language: SourceLanguage; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
 export type CredentialStatus = { configured: boolean; error?: string };
 export type DesktopBridge = {
   list(): Promise<SavedMedia[]>;
@@ -31,6 +34,7 @@ export type DesktopBridge = {
   cancel(job: string): Promise<void>;
   saveLearning(id: string, state: LearningStateInput): Promise<void>;
   listVocabulary(): Promise<VocabularyEntry[]>;
+  lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
   selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;
   credentialStatus(): Promise<CredentialStatus>;

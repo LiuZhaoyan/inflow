@@ -6,7 +6,7 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
-import type { LearningStateInput, SaveVocabularyInput } from '../src/listening/desktop';
+import type { LearningStateInput, SaveVocabularyInput, LookupVocabularyInput } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const root = path.resolve(__dirname, '../../..');
@@ -52,13 +52,19 @@ async function start() {
   };
   const handlers: Record<string, (...args: never[]) => unknown> = {
     list: () => operations.list(), restore: () => operations.restore(), open: (id: string) => operations.open(id),
-    importMedia: async () => { const file = await choose(); return file ? operations.importMedia(file) : null; },
+    importMedia: async () => {
+      const file = await choose();
+      if (!file) return null;
+      const { response } = await dialog.showMessageBox(window, { type: 'question', message: '选择素材语言', detail: '当前支持韩语；中文用于词汇释义。', buttons: ['韩语', '取消'], defaultId: 0, cancelId: 1 });
+      return response === 0 ? operations.importMedia(file, 'ko') : null;
+    },
     relink: async (id: string) => { operations.get(id); const file = await choose(); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (text: string, job: string) => operations.translate(text, job),
     cancel: (job: string) => operations.cancel(job),
     saveLearning: (id: string, state: LearningStateInput) => operations.saveLearning(id, state),
     listVocabulary: () => operations.listVocabulary(),
+    lookupVocabulary: (input: LookupVocabularyInput, job: string) => operations.lookupVocabulary(input, job),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
     credentialStatus: () => credential.status(),

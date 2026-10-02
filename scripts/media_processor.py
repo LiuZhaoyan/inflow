@@ -24,6 +24,46 @@ def korean_parser():
     return Kiwi(num_workers=1)
 
 
+def analyze_vocabulary(data):
+    if not isinstance(data, dict) or data.get('language') != 'ko':
+        raise ProcessingError('当前仅支持韩语词形解析。')
+    surface, sentence, offset = data.get('surface'), data.get('sentence'), data.get('start')
+    if not isinstance(surface, str) or not surface or len(surface) > 100 or any(c.isspace() for c in surface) or '\0' in surface:
+        raise ProcessingError('请只选择一个单词（100 字以内）。')
+    if not isinstance(sentence, str) or not sentence or len(sentence) > 10000 or '\0' in sentence or type(offset) is not int or offset < 0:
+        raise ProcessingError('原句或选中位置无效。')
+    # Renderer offsets count UTF-16 units; Kiwi offsets count Unicode characters.
+    try:
+        start = len(sentence.encode('utf-16-le')[:offset * 2].decode('utf-16-le'))
+    except UnicodeError:
+        raise ProcessingError('选中位置无效。')
+    end = start + len(surface)
+    if sentence[start:end] != surface:
+        raise ProcessingError('选中文字不属于该位置的原句。')
+    tokens = [t for t in korean_parser().tokenize(sentence) if t.start < end and t.end > start]
+    lemma, predicate = '', False
+    # ponytail: compound nouns and derivational suffixes only; ambiguous predicates fall back to manual entry.
+    for token in tokens:
+        tag = token.tag.split('-')[0]
+        if token.start < start or token.end > end:
+            raise ProcessingError('请选中完整单词，或手动填写词典形。')
+        if tag.startswith('N') or tag in {'XR', 'XPN', 'MAG', 'MAJ', 'MM', 'IC', 'SL', 'SH', 'SN'}:
+            if predicate:
+                raise ProcessingError('无法确定唯一词典形，请手动填写。')
+            lemma += token.form
+        elif tag in {'VV', 'VA', 'VX', 'VCN'}:
+            if lemma:
+                raise ProcessingError('无法确定唯一词典形，请手动填写。')
+            lemma, predicate = token.form, True
+        elif tag in {'XSV', 'XSA'} and lemma and not predicate:
+            lemma, predicate = lemma + token.form, True
+        elif tag == 'XSN' and lemma and not predicate:
+            lemma += token.form
+    if not lemma:
+        raise ProcessingError('无法确定词典形，请手动填写。')
+    return {'surface': surface, 'lemma': lemma + ('다' if predicate else ''), 'language': 'ko'}
+
+
 def meaning_groups(text):
     # ponytail: grammatical phrase boundaries, not semantic understanding; a reviewed semantic model is needed for idioms and ambiguous clauses.
     boundaries = {len(text)}
@@ -119,6 +159,7 @@ if __name__ == '__main__':
         if sys.argv[1] == 'probe': output = probe(sys.argv[2])
         elif sys.argv[1] == 'transcribe': output = transcribe(sys.argv[2])
         elif sys.argv[1] == 'translate': output = translate(json.load(sys.stdin).get('text'))
+        elif sys.argv[1] == 'lookup': output = analyze_vocabulary(json.load(sys.stdin))
         else: raise ProcessingError('未知的媒体处理操作。')
     except ProcessingError as error:
         output = {'error': str(error)}
