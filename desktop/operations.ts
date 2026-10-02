@@ -5,10 +5,10 @@ import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
 import { validateSegments } from '../src/listening/processing';
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
-import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource } from '../src/listening/desktop';
+import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource, LookupVocabularyInput, VocabularyLookup, SourceLanguage } from '../src/listening/desktop';
 
-type Processor = (mode: 'probe' | 'transcribe' | 'translate', signal: AbortSignal, file?: string, text?: string) => Promise<unknown>;
-type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string };
+type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput) => Promise<unknown>;
+type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string; language: SourceLanguage };
 const initialLearning: LearningState = { position: 0, index: 0, rate: 1, loop: false, duration: 0, mode: 'full' };
 
 export class DesktopOperations {
@@ -22,13 +22,27 @@ export class DesktopOperations {
     mkdirSync(this.mediaDirectory, { recursive: true });
     this.db = new DatabaseSync(path.join(directory, 'learning.sqlite'));
     this.db.exec(`PRAGMA foreign_keys = ON;
-      CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, name TEXT NOT NULL, filename TEXT NOT NULL, hash TEXT NOT NULL, learning TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, name TEXT NOT NULL, filename TEXT NOT NULL, hash TEXT NOT NULL, learning TEXT NOT NULL, language TEXT NOT NULL DEFAULT 'ko');
       CREATE TABLE IF NOT EXISTS segments (id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES media(id), ordinal INTEGER NOT NULL, content TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1);
       CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS vocabulary (id TEXT PRIMARY KEY, lemma TEXT NOT NULL, meaning TEXT NOT NULL, selected INTEGER NOT NULL DEFAULT 0, UNIQUE(lemma, meaning));
+      CREATE TABLE IF NOT EXISTS vocabulary (id TEXT PRIMARY KEY, lemma TEXT NOT NULL, meaning TEXT NOT NULL, selected INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT 'ko', UNIQUE(language, lemma, meaning));
       CREATE TABLE IF NOT EXISTS vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), segment_id TEXT NOT NULL REFERENCES segments(id), surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, segment_id, surface));
       CREATE TABLE IF NOT EXISTS artifacts (id TEXT PRIMARY KEY, content TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS artifact_vocabulary_sources (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL REFERENCES vocabulary(id), artifact_id TEXT NOT NULL REFERENCES artifacts(id), sentence_index INTEGER NOT NULL, surface TEXT NOT NULL, sentence TEXT NOT NULL, UNIQUE(entry_id, artifact_id, sentence_index, surface));`);
+    if (!(this.db.prepare('PRAGMA table_info(media)').all() as { name: string }[]).some(column => column.name === 'language')) {
+      this.db.exec("ALTER TABLE media ADD COLUMN language TEXT NOT NULL DEFAULT 'ko'");
+    }
+    if (!(this.db.prepare('PRAGMA table_info(vocabulary)').all() as { name: string }[]).some(column => column.name === 'language')) {
+      this.db.exec('PRAGMA foreign_keys = OFF; BEGIN');
+      try {
+        this.db.exec(`CREATE TABLE vocabulary_languages (id TEXT PRIMARY KEY, lemma TEXT NOT NULL, meaning TEXT NOT NULL, selected INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT 'ko', UNIQUE(language, lemma, meaning));
+          INSERT INTO vocabulary_languages (rowid, id, lemma, meaning, selected) SELECT rowid, id, lemma, meaning, selected FROM vocabulary;
+          DROP TABLE vocabulary;
+          ALTER TABLE vocabulary_languages RENAME TO vocabulary;
+          COMMIT;`);
+      } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+      finally { this.db.exec('PRAGMA foreign_keys = ON'); }
+    }
     if (!(this.db.prepare('PRAGMA table_info(segments)').all() as { name: string }[]).some(column => column.name === 'active')) {
       this.db.exec('ALTER TABLE segments ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
     }
@@ -47,7 +61,7 @@ export class DesktopOperations {
     const row = this.row(id);
     const segments = this.db.prepare('SELECT id, content FROM segments WHERE media_id = ? AND active = 1 ORDER BY ordinal').all(id) as { id: string; content: string }[];
     const learning = JSON.parse(row.learning) as Partial<LearningState>;
-    return { id, name: row.name, video: /\.(mp4|webm|mov)$/i.test(row.name), missing: !existsSync(this.mediaPath(id)),
+    return { id, name: row.name, language: row.language, video: /\.(mp4|webm|mov)$/i.test(row.name), missing: !existsSync(this.mediaPath(id)),
       segments: segments.map(segment => ({ ...JSON.parse(segment.content), id: segment.id })), learning: { ...initialLearning, ...learning, mode: learning.mode === 'sentence' ? 'sentence' : 'full' } };
   }
 
@@ -74,7 +88,8 @@ export class DesktopOperations {
     return createHash('sha256').update(await readFile(filename)).digest('hex');
   }
 
-  async importMedia(filename: string): Promise<SavedMedia> {
+  async importMedia(filename: string, language: SourceLanguage = 'ko'): Promise<SavedMedia> {
+    if (language !== 'ko') throw new Error('当前仅支持韩语素材。');
     const hash = await this.inspect(filename);
     const probe = await this.processor('probe', new AbortController().signal, filename) as { duration?: unknown };
     if (typeof probe?.duration !== 'number' || !Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('无法读取媒体时长，请重试。');
@@ -85,7 +100,7 @@ export class DesktopOperations {
     try {
       await copyFile(filename, destination);
       if (await this.inspect(destination) !== hash) throw new Error('媒体在导入时发生变化，请重试。');
-      this.db.prepare('INSERT INTO media VALUES (?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }));
+      this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
     } catch (error) { await rm(destination, { force: true }); throw error; }
     return this.open(id);
   }
@@ -154,9 +169,19 @@ export class DesktopOperations {
     return result.translation;
   }
 
+  async lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup> {
+    if (!input || input.language !== 'ko') throw new Error('当前仅支持韩语词形解析。');
+    const { surface, sentence, start } = input;
+    if (typeof surface !== 'string' || !surface || surface.length > 100 || /\s|\0/u.test(surface)) throw new Error('请只选择一个单词（100 字以内）。');
+    if (typeof sentence !== 'string' || !sentence || sentence.length > 10000 || sentence.includes('\0') || !Number.isInteger(start) || start < 0 || sentence.slice(start, start + surface.length) !== surface) throw new Error('选中文字不属于该位置的原句。');
+    const result = await this.runJob(job, signal => this.processor('lookup', signal, undefined, input)) as VocabularyLookup;
+    if (result?.surface !== surface || result?.language !== input.language || typeof result?.lemma !== 'string' || !result.lemma.trim() || result.lemma.length > 100 || /\s|\0/u.test(result.lemma)) throw new Error('无法确定词典形，请手动填写。');
+    return result;
+  }
+
   private vocabulary(id: string): VocabularyEntry {
     if (typeof id !== 'string') throw new Error('词汇编号无效。');
-    const entry = this.db.prepare('SELECT id, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
+    const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
     if (!entry) throw new Error('词汇不存在。');
     const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
       s.media_id AS mediaId, m.name AS name, json_extract(s.content, '$.start') AS start
@@ -183,7 +208,10 @@ export class DesktopOperations {
     };
     if (!input || typeof input !== 'object') throw new Error('词汇内容无效。');
     const lemma = text(input.lemma, 100), meaning = text(input.meaningZh, 300);
-    const matching = this.db.prepare('SELECT id FROM vocabulary WHERE lemma = ? AND meaning = ?').get(lemma, meaning) as { id: string } | undefined;
+    if (/\s/u.test(lemma)) throw new Error('请只收藏一个单词。');
+    const language = input.language ?? (input.id ? this.vocabulary(input.id).language : 'ko');
+    if (language !== 'ko') throw new Error('当前仅支持韩语词汇。');
+    const matching = this.db.prepare('SELECT id FROM vocabulary WHERE language = ? AND lemma = ? AND meaning = ?').get(language, lemma, meaning) as { id: string } | undefined;
     if (input.id !== undefined) {
       this.vocabulary(input.id);
       if (matching && matching.id !== input.id) throw new Error('已有同词同义的词条。请保留不同词义，或从原文收集到已有词条。');
@@ -197,23 +225,26 @@ export class DesktopOperations {
         if ('artifactId' in source || typeof source.segmentId !== 'string' || typeof source.mediaId !== 'string') throw new Error('原句来源无效。');
         const segment = this.db.prepare('SELECT content FROM segments WHERE id = ? AND media_id = ?').get(source.segmentId, source.mediaId) as { content: string } | undefined;
         if (!segment) throw new Error('原句已更新，请从当前原文重新收集。');
+        if (this.row(source.mediaId).language !== language) throw new Error('词汇语种与来源不一致。');
         sentence = JSON.parse(segment.content).text as string;
       } else if (source.type === 'artifact') {
         if ('segmentId' in source) throw new Error('原句来源无效。');
         const artifact = this.artifact(source.artifactId);
+        if (artifact.language !== language) throw new Error('词汇语种与来源不一致。');
         if (!Number.isInteger(source.sentenceIndex) || !artifact.sentences[source.sentenceIndex]) throw new Error('短文原句编号无效。');
         sentence = artifact.sentences[source.sentenceIndex].parts.map(part => part.text).join('');
       } else throw new Error('原句来源无效。');
       const surface = text(input.context.surface, 100);
       if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
+      if (/\s/u.test(surface)) throw new Error('请只选择一个单词。');
       // Snapshot the host-owned sentence; source display metadata is rebuilt on read.
       context = { source, surface, sentence };
     }
     const id = input.id ?? matching?.id ?? randomUUID();
     this.db.exec('BEGIN');
     try {
-      if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ? WHERE id = ?').run(lemma, meaning, id);
-      else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning) VALUES (?, ?, ?) ON CONFLICT(lemma, meaning) DO NOTHING').run(id, lemma, meaning);
+      if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ?, language = ? WHERE id = ?').run(lemma, meaning, language, id);
+      else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning, language) VALUES (?, ?, ?, ?) ON CONFLICT(language, lemma, meaning) DO NOTHING').run(id, lemma, meaning, language);
       if (context?.source.type === 'media') this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, context.source.segmentId, context.surface, context.sentence);
       else if (context?.source.type === 'artifact') this.db.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(entry_id, artifact_id, sentence_index, surface) DO NOTHING').run(randomUUID(), id, context.source.artifactId, context.source.sentenceIndex, context.surface, context.sentence);
       this.db.exec('COMMIT');
@@ -238,7 +269,7 @@ export class DesktopOperations {
     if (typeof id !== 'string') throw new Error('短文编号无效。');
     const row = this.db.prepare('SELECT content FROM artifacts WHERE id = ?').get(id) as { content: string } | undefined;
     if (!row) throw new Error('短文不存在。');
-    return { ...JSON.parse(row.content), id };
+    return { language: 'ko', ...JSON.parse(row.content), id };
   }
 
   listArtifacts(): LearningArtifact[] {
@@ -267,6 +298,7 @@ export class DesktopOperations {
     const started = Date.now();
     const result = await this.runJob(job, signal => this.generator({ targets, ...(topic.trim() ? { topic: topic.trim() } : {}) }, { apiKey, signal }));
     const content = {
+      language: 'ko',
       ...validatePassage({ title: result.title, sentences: result.sentences }, targets), targets,
       createdAt: new Date().toISOString(), elapsedMs: Date.now() - started, requestedModel: result.requestedModel,
       ...(result.model ? { model: result.model } : {}), ...(result.responseId ? { responseId: result.responseId } : {}),

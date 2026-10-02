@@ -5,9 +5,8 @@ import type { SaveVocabularyInput, VocabularyContext, VocabularyEntry } from './
 import SourceThumbnail from '@/workspace/SourceThumbnail';
 import '@/workspace/vocab.css';
 
-export type VocabularyDraft = {
-  key: string; id?: string; lemma: string; meaningZh: string;
-  context?: SaveVocabularyInput['context'];
+type VocabularyDraft = {
+  key: string; id?: string; language?: SaveVocabularyInput['language']; lemma: string; meaningZh: string;
 };
 
 function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
@@ -18,11 +17,10 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
   const [error, setError] = useState('');
   return <form className="vocab-editor" aria-label="Edit vocabulary" onSubmit={event => {
     event.preventDefault(); setError('');
-    void onSave({ id: draft.id, lemma, meaningZh: meaning, context: draft.context })
+    void onSave({ id: draft.id, language: draft.language, lemma, meaningZh: meaning })
       .catch(failure => setError(failure instanceof Error ? failure.message : 'Save failed. Please try again.'));
   }}>
-    <h2>{draft.id ? 'Edit vocabulary' : draft.context ? 'Save vocabulary from context' : 'Add vocabulary'}</h2>
-    {draft.context && <div className="vocab-editor-context"><span>Context</span><p lang="ko">{draft.context.sentence}</p><small>{draft.context.source.name}</small></div>}
+    <h2>{draft.id ? 'Edit vocabulary' : 'Add vocabulary'}</h2>
     <fieldset disabled={busy}>
       <label>Korean lemma<input autoFocus={active} name="lemma" value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
       <label>Chinese meaning<input name="meaningZh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
@@ -69,11 +67,10 @@ function thumbnailKey(source: VocabularyContext['source']) {
 }
 
 export default function VocabularyNotebook({
-  collection, onDismiss, onOpenSource, onGenerateStory, onEntriesChange,
+  refreshKey, onOpenSource, onGenerateStory, onEntriesChange,
   onEditingChange, active = true,
 }: {
-  collection: VocabularyDraft | null;
-  onDismiss: () => void;
+  refreshKey: number;
   onOpenSource: (source: VocabularyContext['source']) => void;
   onGenerateStory: (entries: VocabularyEntry[]) => void;
   onEntriesChange?: (entries: VocabularyEntry[]) => void;
@@ -88,7 +85,7 @@ export default function VocabularyNotebook({
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const draft = editing || collection;
+  const draft = editing;
   const hasPendingEdit = Boolean(draft) || busy;
 
   useEffect(() => {
@@ -100,7 +97,7 @@ export default function VocabularyNotebook({
       if (current) setError(failure instanceof Error ? failure.message : 'Could not load vocabulary.');
     });
     return () => { current = false; };
-  }, [onEntriesChange]);
+  }, [onEntriesChange, refreshKey]);
 
   useEffect(() => { onEditingChange?.(hasPendingEdit); }, [hasPendingEdit, onEditingChange]);
   useEffect(() => {
@@ -121,13 +118,11 @@ export default function VocabularyNotebook({
     manual: entries.filter(entry => entry.contexts.length === 0).length,
   };
 
-  function dismiss() { onDismiss(); setEditing(null); }
+  function dismiss() { setEditing(null); }
   function editEntry(entry: VocabularyEntry) {
-    onDismiss();
-    setEditing({ key: crypto.randomUUID(), id: entry.id, lemma: entry.lemma, meaningZh: entry.meaningZh });
+    setEditing({ key: crypto.randomUUID(), id: entry.id, language: entry.language, lemma: entry.lemma, meaningZh: entry.meaningZh });
   }
   function addEntry() {
-    onDismiss();
     setEditing({ key: crypto.randomUUID(), lemma: '', meaningZh: '' });
   }
   async function save(input: SaveVocabularyInput) {

@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -61,6 +61,8 @@ Installed-app behavior, not successful execution from the repository, is the acc
 ## 5. Deferred product work
 
 Subtitle-region masking is a confirmed follow-up to the current workspace. Its interaction and persistence contract should be specified before implementation.
+
+English learning support is planned after the Korean single-word collection flow. It requires English processing and dictionary-form analysis; saved material and vocabulary already retain source-language identity. Automatic contextual Chinese glosses are deferred until a meaning provider is chosen. Phrase and grammatical-construction collection remain outside the current scope.
 
 Other possible improvements remain demand-driven rather than roadmap commitments: A–B looping, revisit marks, notes, lightweight transcript/timing correction, generated audio/TTS, and additional platforms.
 

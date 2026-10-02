@@ -88,7 +88,7 @@ test('collection, distinct senses, correction and target selection survive repro
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('existing vocabulary rows adapt to contexts without changing the schema or losing historical provenance', async () => {
+test('existing vocabulary rows gain language identity without losing historical provenance', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow vocabulary compatibility '));
   const filename = path.join(root, 'learning.sqlite');
   const previous = new DatabaseSync(filename);
@@ -109,7 +109,6 @@ test('existing vocabulary rows adapt to contexts without changing the schema or 
   previous.prepare('INSERT INTO vocabulary VALUES (?, ?, ?, ?)').run('manual', '배', '船', 0);
   previous.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?)').run('artifact-context', 'entry', 'artifact', 0, '그대로', '그냥 그대로 있어.');
   previous.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?)').run('media-context', 'entry', 'historical-segment', '그대로', sentence);
-  const schema = previous.prepare('SELECT name, sql FROM sqlite_schema ORDER BY name').all();
   const mediaRows = previous.prepare('SELECT * FROM vocabulary_sources').all();
   const artifactRows = previous.prepare('SELECT * FROM artifact_vocabulary_sources').all();
   previous.close();
@@ -119,8 +118,8 @@ test('existing vocabulary rows adapt to contexts without changing the schema or 
   try {
     const entries = app.listVocabulary();
     assert.deepEqual(entries, [
-      { id: 'manual', lemma: '배', meaningZh: '船', selected: false, contexts: [] },
-      { id: 'entry', lemma: '그대로', meaningZh: '就那样', selected: true, contexts: [
+      { id: 'manual', language: 'ko', lemma: '배', meaningZh: '船', selected: false, contexts: [] },
+      { id: 'entry', language: 'ko', lemma: '그대로', meaningZh: '就那样', selected: true, contexts: [
         { id: 'media-context', surface: '그대로', sentence, source: { type: 'media', mediaId: 'media', segmentId: 'historical-segment', name: 'Queen of Tears', start: 133 } },
         { id: 'artifact-context', surface: '그대로', sentence: '그냥 그대로 있어.', source: { type: 'artifact', artifactId: 'artifact', sentenceIndex: 0, name: artifact.title } },
       ] },
@@ -133,23 +132,23 @@ test('existing vocabulary rows adapt to contexts without changing the schema or 
     assert.deepEqual(app.saveVocabulary({ lemma: '그대로', meaningZh: '就那样', context: {
       ...historical, sentence: 'forged sentence', source: { ...historical.source, name: 'forged name', start: 999 },
     } }), entries[1]);
-    const corrected = app.saveVocabulary({ id: 'entry', lemma: '그대로', meaningZh: '保持原样' });
+    const corrected = app.saveVocabulary({ id: 'entry', language: 'ko', lemma: '그대로', meaningZh: '保持原样' });
     assert.equal(corrected.selected, true);
     assert.deepEqual(corrected.contexts, entries[1].contexts);
     const extended = app.saveVocabulary({ lemma: corrected.lemma, meaningZh: corrected.meaningZh,
-      context: { ...entries[1].contexts[1], surface: '그대로 있어' } });
+      context: { ...entries[1].contexts[1], surface: '그냥' } });
     assert.equal(extended.id, 'entry');
     assert.equal(extended.contexts.length, 3);
     assert.deepEqual(extended.contexts.slice(0, 2), entries[1].contexts);
     const expected = app.listVocabulary();
     app.close(); app = new DesktopOperations(root, processor);
     assert.deepEqual(app.listVocabulary(), expected);
-    assert.deepEqual(app.openArtifact('artifact'), { ...artifact, id: 'artifact' });
+    assert.deepEqual(app.openArtifact('artifact'), { ...artifact, language: 'ko', id: 'artifact' });
     assert.equal(app.get('media').segments.length, 0);
     assert.equal(app.get('media').missing, true);
     const stored = new DatabaseSync(filename);
     try {
-      assert.deepEqual(stored.prepare('SELECT name, sql FROM sqlite_schema ORDER BY name').all(), schema);
+      assert.deepEqual(stored.prepare('PRAGMA foreign_key_check').all(), []);
       assert.deepEqual(stored.prepare('SELECT * FROM vocabulary_sources').all(), mediaRows);
       assert.deepEqual(stored.prepare('SELECT * FROM artifact_vocabulary_sources LIMIT 1').all(), artifactRows);
       assert.equal(stored.prepare('SELECT COUNT(*) AS count FROM artifact_vocabulary_sources').get()!.count, 2);

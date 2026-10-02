@@ -76,9 +76,6 @@
 .story-disabled-actions small { padding: 4px 2px 1px; color: #a49eb0; font-size: 11px; }
 .story-notice { margin: 7px 18px; color: #f2bbc4; font-size: 12px; }
 .story-reader-panel > .story-notice { margin: 0 20px 7px; }
-.story-selection-toolbar { position: fixed; z-index: 20; display: flex; align-items: center; gap: 2px; padding: 5px; border: 1px solid #34313e; border-radius: 8px; background: #1a1a20; box-shadow: 0 8px 26px #0009; }
-.story-selection-toolbar button { min-height: 31px; padding: 0 10px; border: 0; border-right: 1px solid #393640; background: transparent; color: #e7e1f0; cursor: pointer; font-size: 12px; white-space: nowrap; }
-.story-selection-toolbar button:last-child { border-right: 0; color: #d1b6fa; }
 
 .story-empty-state { flex: 1; min-height: 0; display: grid; align-content: center; justify-content: center; gap: 15px; padding: 30px; border: 1px solid #27282e; background: #111317; }
 .story-empty-state h1 { margin: 0; color: #f0edf5; font-size: 28px; font-weight: 550; }

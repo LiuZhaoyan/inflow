@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import "@/workspace/story.css";
 import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, VocabularyEntry } from "./desktop";
-import type { VocabularyDraft } from "./VocabularyNotebook";
 
 type Props = {
   selected: VocabularyEntry[];
   source: ArtifactVocabularySource | null;
-  onCollect: (draft: VocabularyDraft) => void;
+  onBeforeChange: () => boolean;
   active?: boolean;
   generationOpen?: boolean;
   onGenerationClose?: () => void;
@@ -22,7 +21,7 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 }
 
 export default function ArtifactLibrary({
-  selected, source, onCollect, active = true, generationOpen = false,
+  selected, source, onBeforeChange, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate, onArtifactChange, onArtifactsChange,
 }: Props) {
   const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
@@ -36,9 +35,7 @@ export default function ArtifactLibrary({
   const [error, setError] = useState("");
   const [activeSentence, setActiveSentence] = useState(0);
   const [translations, setTranslations] = useState<Set<number>>(() => new Set());
-  const [toolbar, setToolbar] = useState<{ index: number; top: number; left: number } | null>(null);
   const job = useRef<string | null>(null);
-  const reader = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -76,7 +73,6 @@ export default function ArtifactLibrary({
       const index = Math.max(0, Math.min(sentenceIndex, Math.max(0, next.sentences.length - 1)));
       setActiveSentence(index);
       setTranslations(new Set());
-      setToolbar(null);
       setError("");
       requestAnimationFrame(() => {
         if (current) document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center" });
@@ -94,35 +90,6 @@ export default function ArtifactLibrary({
     else if ((!active || !generationOpen) && element.open) element.close();
   }, [active, generationOpen]);
 
-  useEffect(() => {
-    const pane = reader.current;
-    function updateToolbar() {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.toString().trim()) {
-        setToolbar(null);
-        return;
-      }
-      const start = (selection.anchorNode instanceof Element ? selection.anchorNode : selection.anchorNode?.parentElement)?.closest<HTMLElement>(".artifact-korean");
-      const end = (selection.focusNode instanceof Element ? selection.focusNode : selection.focusNode?.parentElement)?.closest<HTMLElement>(".artifact-korean");
-      if (!start || start !== end) { setToolbar(null); return; }
-      const index = Number(start.dataset.sentenceIndex);
-      const rect = selection.getRangeAt(0).getBoundingClientRect();
-      const width = Math.min(320, window.innerWidth - 24);
-      if (!Number.isInteger(index) || (!rect.width && !rect.height)) { setToolbar(null); return; }
-      setToolbar({
-        index,
-        top: Math.min(Math.max(12, rect.bottom + 8), window.innerHeight - 56),
-        left: Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12)),
-      });
-    }
-    document.addEventListener("selectionchange", updateToolbar);
-    pane?.addEventListener("scroll", updateToolbar);
-    return () => {
-      document.removeEventListener("selectionchange", updateToolbar);
-      pane?.removeEventListener("scroll", updateToolbar);
-    };
-  }, [artifact?.id]);
-
   async function configure(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setConfiguring(true);
@@ -138,7 +105,7 @@ export default function ArtifactLibrary({
   }
 
   async function generate() {
-    if (selected.length < 1 || selected.length > 20 || !credential.configured) return;
+    if (selected.length < 1 || selected.length > 20 || !credential.configured || !onBeforeChange()) return;
     setBusy(true);
     setError("");
     const id = crypto.randomUUID();
@@ -152,7 +119,6 @@ export default function ArtifactLibrary({
       onArtifactChange?.(next);
       setActiveSentence(0);
       setTranslations(new Set());
-      setToolbar(null);
       if (dialog.current?.open) dialog.current.close();
       else onGenerationClose?.();
     } catch (failure) {
@@ -164,13 +130,13 @@ export default function ArtifactLibrary({
   }
 
   async function openStory(id: string) {
+    if (!onBeforeChange()) return;
     try {
       const next = await window.inflow!.openArtifact(id);
       setArtifact(next);
       onArtifactChange?.(next);
       setActiveSentence(0);
       setTranslations(new Set());
-      setToolbar(null);
       setError("");
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "The saved story could not be opened.");
@@ -178,7 +144,7 @@ export default function ArtifactLibrary({
   }
 
   function jump(index: number) {
-    if (!artifact || index < 0 || index >= artifact.sentences.length) return;
+    if (!artifact || index < 0 || index >= artifact.sentences.length || !onBeforeChange()) return;
     setActiveSentence(index);
     document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
@@ -186,34 +152,6 @@ export default function ArtifactLibrary({
   function jumpToTarget(id: string) {
     const index = artifact?.sentences.findIndex(sentence => sentence.parts.some(part => part.targetId === id)) ?? -1;
     if (index >= 0) jump(index);
-  }
-
-  function collect(index: number) {
-    const selection = window.getSelection();
-    const element = document.getElementById("artifact-sentence-" + index);
-    const start = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement;
-    const end = selection?.focusNode instanceof Element ? selection.focusNode : selection?.focusNode?.parentElement;
-    const surface = selection?.toString().trim() ?? "";
-    const sentence = artifact?.sentences[index];
-    if (!artifact || !selection?.rangeCount || !sentence || !element || !surface || surface.length > 100 ||
-      !start || !end || !element.contains(start) || !element.contains(end)) {
-      setError("Select up to 100 characters from one Korean sentence.");
-      return;
-    }
-    const fullSentence = textOf(sentence);
-    if (!fullSentence.replace(/\s+/gu, " ").includes(surface.replace(/\s+/gu, " "))) {
-      setError("The selection must belong to the selected sentence.");
-      return;
-    }
-    onCollect({
-      key: crypto.randomUUID(),
-      lemma: surface,
-      meaningZh: "",
-      context: { surface, sentence: fullSentence, source: { type: "artifact", artifactId: artifact.id, sentenceIndex: index, name: artifact.title } },
-    });
-    setError("");
-    setToolbar(null);
-    selection.removeAllRanges();
   }
 
   function closeDialog() {
@@ -258,10 +196,10 @@ export default function ArtifactLibrary({
           </div>
         </header>
 
-        <div className="story-reading-pane" ref={reader}>
+        <div className="story-reading-pane">
           <article className="story-sentences" data-artifact-id={artifact.id}>
             {artifact.sentences.map((sentence, index) => <div className="story-sentence" key={index}>
-              <p className="artifact-korean" id={"artifact-sentence-" + index} data-sentence-index={index} lang="ko" tabIndex={0} aria-current={activeSentence === index ? "location" : undefined} onFocus={() => setActiveSentence(index)} onClick={() => setActiveSentence(index)}>
+              <p className="artifact-korean" id={"artifact-sentence-" + index} data-sentence-index={index} lang="ko" tabIndex={0} aria-current={activeSentence === index ? "location" : undefined} onFocus={() => { if (index !== activeSentence && onBeforeChange()) setActiveSentence(index); }} onClick={() => { if (index !== activeSentence && onBeforeChange()) setActiveSentence(index); }}>
                 {sentence.parts.map((part, n) => part.targetId
                   ? <mark key={n} data-target-id={part.targetId} title={artifact.targets.find(target => target.id === part.targetId)?.meaningZh}>{part.text}</mark>
                   : <span key={n}>{part.text}</span>)}
@@ -273,6 +211,7 @@ export default function ArtifactLibrary({
         {error && !generationOpen && <p className="story-notice" role="alert">{error}</p>}
         <footer className="story-reader-footer">
           <button type="button" aria-label="Previous sentence" disabled={activeSentence <= 0} onClick={() => jump(activeSentence - 1)}>← &nbsp;Previous</button>
+          <button type="button" aria-label={translations.has(activeSentence) ? "Hide Chinese translation" : "Show Chinese translation"} aria-pressed={translations.has(activeSentence)} onClick={() => setTranslations(current => { const next = new Set(current); if (next.has(activeSentence)) next.delete(activeSentence); else next.add(activeSentence); return next; })}>中文</button>
           <span>{artifact.sentences.length ? activeSentence + 1 : 0} / {artifact.sentences.length} sentences</span>
           <button type="button" aria-label="Next sentence" disabled={activeSentence >= artifact.sentences.length - 1} onClick={() => jump(activeSentence + 1)}>Next &nbsp;→</button>
         </footer>
@@ -296,11 +235,6 @@ export default function ArtifactLibrary({
         </section>
       </aside>
 
-      {toolbar && active && <div className="story-selection-toolbar" role="toolbar" aria-label="Selected text actions" style={{ top: toolbar.top, left: toolbar.left }} onMouseDown={event => event.preventDefault()}>
-        <button type="button" onClick={() => collect(toolbar.index)}>＋ Collect</button>
-        <button type="button" disabled title="Available in a later update">Dictionary</button>
-        <button type="button" onClick={() => { const index = toolbar.index; setTranslations(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; }); setActiveSentence(index); window.getSelection()?.removeAllRanges(); setToolbar(null); }}>Translate</button>
-      </div>}
     </main> : <div className="story-empty-state">
       <h1>{loaded ? "Choose a story" : "Restoring your library…"}</h1>
       <p>{loaded ? "Saved stories remain available for offline reading." : "Reading saved stories from this device."}</p>

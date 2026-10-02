@@ -21,8 +21,6 @@ export type SentenceAreaProps = {
   onReveal: (choice: RevealChoice) => void;
   onHideText: () => void;
   transcriptRef: Ref<HTMLParagraphElement>;
-  collectionDisabled: boolean;
-  onCollect: () => void;
   rate: number;
   onRateChange: (rate: number) => void;
   loop: boolean;
@@ -49,8 +47,6 @@ export default function SentenceArea({
   onReveal,
   onHideText,
   transcriptRef,
-  collectionDisabled,
-  onCollect,
   rate,
   onRateChange,
   loop,
@@ -64,6 +60,12 @@ export default function SentenceArea({
   const revealCount = segment && reveal ? revealedGroupCount(segment.groups, reveal) : 0;
   const currentNumber = String(index + 1).padStart(2, '0');
   const totalNumber = String(total).padStart(2, '0');
+  const groupStarts: number[] = [];
+  let groupStart = 0;
+  for (const group of segment?.groups ?? []) {
+    const start = segment!.text.indexOf(group, groupStart);
+    groupStarts.push(start); groupStart = start + group.length;
+  }
 
   return <section className="workspace-sentence-area" aria-label="Sentence practice">
     <div className="workspace-sentence-meta">
@@ -73,7 +75,7 @@ export default function SentenceArea({
       {reveal && <button type="button" className="workspace-text-hide" onClick={onHideText}>Hide text</button>}
     </div>
     <div className="workspace-sentence-copy">
-    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => <span key={groupIndex}
+    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => <span key={groupIndex} data-source-start={groupStarts[groupIndex]}
       className={groupIndex < revealCount ? 'meaning-group' : 'hidden-group'}>{groupIndex < revealCount ? group : <span aria-label="Unrevealed meaning group">•••</span>}{' '}</span>)}</span></p>
       : <p className="workspace-sentence-empty">Process a media file to see its sentences.</p>}
     {translationOpen && <section className="workspace-translation" aria-label="Current sentence translation" aria-live="polite">
@@ -81,7 +83,6 @@ export default function SentenceArea({
     </section>}
     </div>
     <div className="workspace-player-toolbar">
-      <button type="button" className="workspace-secondary-button" aria-label="Collect selected text" title="Collect selected text" disabled={collectionDisabled || !segment} onMouseDown={event => event.preventDefault()} onClick={onCollect}>Collect</button>
       <div className="workspace-sentence-transport" role="group" aria-label="Sentence playback controls">
         <button type="button" aria-label="Previous sentence" title="Previous sentence" disabled={!segment || index <= 0} onClick={onPrevious}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5v14M19 6l-10 6 10 6z"/></svg>

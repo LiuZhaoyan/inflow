@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-01
+Last verified: 2026-10-02
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -14,7 +14,7 @@ Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 
 The desktop host owns persistence, managed media, local processing, and generation credentials. The renderer communicates with those capabilities through the preload/DesktopBridge contract rather than owning desktop business logic directly.
 
-The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, progressive source-text reveal, independent Chinese translation, source-linked vocabulary collection, and a local Library view. The vocabulary-to-artifact functionality exists in the desktop operations and persistence layer, while its frontend flow is currently hidden pending redesign.
+The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, progressive source-text reveal, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen and Story expose shared single-word collection through a local lookup and save popover; the vocabulary notebook manages the saved entries and passage generation targets.
 
 ## 2. Runtime architecture
 
@@ -49,9 +49,9 @@ Whisper word timestamps are intermediate processing data. Sentence start/end tim
 
 ### Vocabulary
 
-Vocabulary entries store a Korean lemma, contextual Chinese meaning, selection state, and one or more source occurrences. Sources can point either to a media segment or to a sentence in a generated artifact.
+Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Korean is the currently supported source language. Kiwi provides read-only contextual dictionary-form lookup using the selected span; Chinese meaning is entered manually. Both Listen and Story collect in place and retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
 
-Entries are unique by lemma plus meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Re-transcription preserves old segments that are still referenced by vocabulary provenance.
+Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Re-transcription preserves old segments that are still referenced by vocabulary provenance. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
 ### Generated artifacts
 
@@ -93,7 +93,7 @@ Large media files and local model resources are stored outside SQLite.
 
 The desktop implementation has automated coverage around listening processing/reveal behavior, managed media, desktop operations, vocabulary persistence, artifact generation, and media serving. The persistent listening, vocabulary, and generated-artifact slices have also been exercised during their task-level acceptance work.
 
-The current frontend workspace has been implemented and locally verified. Visual/product acceptance of the redesigned workspace is still evolving, and the vocabulary/artifact UI is intentionally awaiting its next redesign rather than representing the final product flow.
+The current frontend workspace has been implemented and locally verified. Native Electron acceptance covers shared Listen/Story selection, real Kiwi lookup, manual fallback, stale-result protection, saving retry, source provenance, and notebook refresh. Visual/product acceptance of the broader redesigned workspace is still evolving.
 
 Task-specific verification records live under `.scratch/`; this document records only the resulting current state.
 
@@ -102,7 +102,7 @@ Task-specific verification records live under `.scratch/`; this document records
 The main known gaps are:
 
 - the frontend is being redesigned around the existing desktop/domain capabilities;
-- the vocabulary → artifact → vocabulary cycle needs to be reintroduced through the new frontend;
+- English processing and automatic contextual vocabulary meanings are deferred;
 - individual ASR word timestamps are not part of the persisted domain model;
 - local Chinese translation depends on an English pivot and can be literal or lossy;
 - generated passages depend on the remote DeepSeek service;
