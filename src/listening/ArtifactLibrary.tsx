@@ -1,98 +1,336 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
-import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, VocabularyEntry } from './desktop';
-import type { VocabularyDraft } from './VocabularyNotebook';
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import "@/workspace/story.css";
+import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, VocabularyEntry } from "./desktop";
+import type { VocabularyDraft } from "./VocabularyNotebook";
 
-export default function ArtifactLibrary({ selected, source, onCollect }: {
-  selected: VocabularyEntry[]; source: ArtifactVocabularySource | null; onCollect: (draft: VocabularyDraft) => void;
-}) {
+type Props = {
+  selected: VocabularyEntry[];
+  source: ArtifactVocabularySource | null;
+  onCollect: (draft: VocabularyDraft) => void;
+  active?: boolean;
+  generationOpen?: boolean;
+  onGenerationClose?: () => void;
+  onRequestGenerate?: () => void;
+  onArtifactChange?: (artifact: LearningArtifact | null) => void;
+  onArtifactsChange?: (artifacts: LearningArtifact[]) => void;
+};
+
+function textOf(sentence: LearningArtifact["sentences"][number]) {
+  return sentence.parts.map(part => part.text).join("");
+}
+
+export default function ArtifactLibrary({
+  selected, source, onCollect, active = true, generationOpen = false,
+  onGenerationClose, onRequestGenerate, onArtifactChange, onArtifactsChange,
+}: Props) {
   const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
   const [artifact, setArtifact] = useState<LearningArtifact | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [credential, setCredential] = useState<CredentialStatus>({ configured: false });
-  const [key, setKey] = useState('');
-  const [topic, setTopic] = useState('');
+  const [key, setKey] = useState("");
+  const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(false);
   const [configuring, setConfiguring] = useState(false);
-  const [error, setError] = useState('');
-  const [translation, setTranslation] = useState(false);
+  const [error, setError] = useState("");
+  const [activeSentence, setActiveSentence] = useState(0);
+  const [translations, setTranslations] = useState<Set<number>>(() => new Set());
+  const [toolbar, setToolbar] = useState<{ index: number; top: number; left: number } | null>(null);
   const job = useRef<string | null>(null);
+  const reader = useRef<HTMLDivElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    let active = true;
+    let current = true;
     Promise.all([window.inflow!.listArtifacts(), window.inflow!.restoreArtifact(), window.inflow!.credentialStatus()])
-      .then(([items, restored, status]) => { if (active) { setArtifacts(items); setArtifact(restored); setCredential(status); } })
-      .catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '短文读取失败。'); });
-    return () => { active = false; if (job.current) void window.inflow!.cancel(job.current).catch(() => {}); };
-  }, []);
-  useEffect(() => {
-    if (!source) return;
-    let active = true;
-    window.inflow!.openArtifact(source.artifactId).then(next => {
-      if (active) { setArtifact(next); setTranslation(false); setError(''); }
-    }).catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '来源短文无法打开。'); });
-    return () => { active = false; };
-  }, [source]);
-  useEffect(() => {
-    if (source && source.artifactId === artifact?.id) document.getElementById(`artifact-sentence-${source.sentenceIndex}`)?.scrollIntoView({ block: 'center' });
-  }, [source, artifact]);
+      .then(([items, restored, status]) => {
+        if (!current) return;
+        setArtifacts(items);
+        setArtifact(restored);
+        onArtifactsChange?.(items);
+        onArtifactChange?.(restored);
+        setCredential(status);
+        setLoaded(true);
+      })
+      .catch(failure => {
+        if (current) {
+          setError(failure instanceof Error ? failure.message : "Saved stories could not be loaded.");
+          setLoaded(true);
+        }
+      });
+    return () => {
+      current = false;
+      if (job.current) void window.inflow!.cancel(job.current).catch(() => {});
+    };
+  }, [onArtifactChange, onArtifactsChange]);
 
-  async function configure(event: React.FormEvent) {
-    event.preventDefault(); setConfiguring(true); setError('');
-    try { setCredential(await window.inflow!.configureCredential(key)); setKey(''); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : '密钥保存失败。'); }
-    finally { setConfiguring(false); }
+  useEffect(() => {
+    if (!loaded || !source) return;
+    const { artifactId, sentenceIndex } = source;
+    let current = true;
+    window.inflow!.openArtifact(artifactId).then(next => {
+      if (!current) return;
+      setArtifact(next);
+      onArtifactChange?.(next);
+      const index = Math.max(0, Math.min(sentenceIndex, Math.max(0, next.sentences.length - 1)));
+      setActiveSentence(index);
+      setTranslations(new Set());
+      setToolbar(null);
+      setError("");
+      requestAnimationFrame(() => {
+        if (current) document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center" });
+      });
+    }).catch(failure => {
+      if (current) setError(failure instanceof Error ? failure.message : "The source story could not be opened.");
+    });
+    return () => { current = false; };
+  }, [loaded, source, onArtifactChange]);
+
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (active && generationOpen && !element.open) element.showModal();
+    else if ((!active || !generationOpen) && element.open) element.close();
+  }, [active, generationOpen]);
+
+  useEffect(() => {
+    const pane = reader.current;
+    function updateToolbar() {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.rangeCount || !selection.toString().trim()) {
+        setToolbar(null);
+        return;
+      }
+      const start = (selection.anchorNode instanceof Element ? selection.anchorNode : selection.anchorNode?.parentElement)?.closest<HTMLElement>(".artifact-korean");
+      const end = (selection.focusNode instanceof Element ? selection.focusNode : selection.focusNode?.parentElement)?.closest<HTMLElement>(".artifact-korean");
+      if (!start || start !== end) { setToolbar(null); return; }
+      const index = Number(start.dataset.sentenceIndex);
+      const rect = selection.getRangeAt(0).getBoundingClientRect();
+      const width = Math.min(320, window.innerWidth - 24);
+      if (!Number.isInteger(index) || (!rect.width && !rect.height)) { setToolbar(null); return; }
+      setToolbar({
+        index,
+        top: Math.min(Math.max(12, rect.bottom + 8), window.innerHeight - 56),
+        left: Math.max(12, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 12)),
+      });
+    }
+    document.addEventListener("selectionchange", updateToolbar);
+    pane?.addEventListener("scroll", updateToolbar);
+    return () => {
+      document.removeEventListener("selectionchange", updateToolbar);
+      pane?.removeEventListener("scroll", updateToolbar);
+    };
+  }, [artifact?.id]);
+
+  async function configure(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setConfiguring(true);
+    setError("");
+    try {
+      setCredential(await window.inflow!.configureCredential(key));
+      setKey("");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "The API key could not be saved.");
+    } finally {
+      setConfiguring(false);
+    }
   }
+
   async function generate() {
-    setBusy(true); setError('');
-    const id = crypto.randomUUID(); job.current = id;
+    if (selected.length < 1 || selected.length > 20 || !credential.configured) return;
+    setBusy(true);
+    setError("");
+    const id = crypto.randomUUID();
+    job.current = id;
     try {
       const next = await window.inflow!.generateArtifact(selected.map(entry => entry.id), topic, id);
-      setArtifacts(items => [next, ...items]); setArtifact(next); setTranslation(false);
-    } catch (failure) { setError(failure instanceof Error ? failure.message : '生成失败，请重试。'); }
-    finally { job.current = null; setBusy(false); }
-  }
-  async function open(id: string) {
-    try { setArtifact(await window.inflow!.openArtifact(id)); setTranslation(false); setError(''); }
-    catch (failure) { setError(failure instanceof Error ? failure.message : '短文无法打开。'); }
-  }
-  function collect(sentenceIndex: number) {
-    const selection = window.getSelection();
-    const text = document.getElementById(`artifact-sentence-${sentenceIndex}`);
-    const surface = selection?.toString().trim();
-    if (!artifact || !surface || surface.length > 100 || !text?.contains(selection!.anchorNode) || !text.contains(selection!.focusNode)) {
-      setError('请在这句韩语短文中选中要收藏的词语（100 字以内）。'); return;
+      const items = [next, ...artifacts.filter(item => item.id !== next.id)];
+      setArtifacts(items);
+      onArtifactsChange?.(items);
+      setArtifact(next);
+      onArtifactChange?.(next);
+      setActiveSentence(0);
+      setTranslations(new Set());
+      setToolbar(null);
+      if (dialog.current?.open) dialog.current.close();
+      else onGenerationClose?.();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Story generation failed. Please try again.");
+    } finally {
+      job.current = null;
+      setBusy(false);
     }
-    const sentence = artifact.sentences[sentenceIndex].parts.map(part => part.text).join('');
-    if (!sentence.replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) { setError('选中文字不属于这一句，请重新选择。'); return; }
-    setError('');
-    onCollect({ key: crypto.randomUUID(), lemma: surface, meaningZh: '', context: {
-      surface, sentence, source: { type: 'artifact', artifactId: artifact.id, sentenceIndex, name: artifact.title },
-    } });
   }
 
-  return <section className="vocabulary-notebook artifact-library" id="artifacts" aria-label="学习短文">
-    <h2>学习短文</h2>
-    <p className="processing-note">使用词汇本选中的词汇生成一篇韩语短文。生成内容可能有误，请结合语境判断。</p>
-    <details className="generation-credential" open={!credential.configured || !!credential.error}><summary>{credential.configured ? 'DeepSeek 密钥已配置 · 更换密钥' : '配置 DeepSeek API key'}</summary>
-      <form onSubmit={event => void configure(event)}><label>DeepSeek API key<input type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} required onChange={event => setKey(event.target.value)}/></label><button type="submit" className="process-button" disabled={configuring || busy}>{configuring ? '正在保存…' : '保存密钥'}</button></form>
-      <p className="processing-note">密钥由 Windows 加密保存在本机。生成时只发送所选词汇、原句和主题。</p>{credential.error && <p role="alert">{credential.error}</p>}
-    </details>
-    <div className="artifact-generation"><label>主题（可选）<input name="topic" value={topic} maxLength={200} disabled={busy} onChange={event => setTopic(event.target.value)}/></label>
-      <button className="process-button" disabled={busy || configuring || !credential.configured || !selected.length} onClick={() => void generate()}>{busy ? '正在生成…' : error ? '重试生成短文' : `用 ${selected.length} 个词汇生成短文`}</button>
-      {busy && <button className="process-button" onClick={() => { if (job.current) void window.inflow!.cancel(job.current).catch(() => setError('取消失败，请重试。')); }}>取消生成</button>}
-    </div>
-    {error && <p className="notice" role="alert">{error}</p>}
-    {!!artifacts.length && <label className="artifact-selector">已保存的短文<select aria-label="已保存的短文" value={artifact?.id ?? ''} onChange={event => void open(event.target.value)}>{!artifact && <option value="">选择短文</option>}{artifacts.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>}
-    {artifact ? <article className="artifact-reader" data-artifact-id={artifact.id}>
-      <h3 lang="ko">{artifact.title}</h3><p className="processing-note">{new Date(artifact.createdAt).toLocaleDateString()}{artifact.topic && ` · 主题：${artifact.topic}`}</p>
-      <details className="artifact-targets"><summary>生成时的目标词汇 · {artifact.targets.length} 个</summary><ul>{artifact.targets.map(target => <li key={target.id}><span lang="ko">{target.lemma}</span>：{target.meaningZh}</li>)}</ul></details>
-      {artifact.sentences.map((sentence, index) => <div className="artifact-sentence" key={index}>
-        <p className="artifact-korean" id={`artifact-sentence-${index}`} lang="ko">{sentence.parts.map((part, n) => part.targetId ? <mark key={n} title={artifact.targets.find(target => target.id === part.targetId)?.meaningZh}>{part.text}</mark> : <span key={n}>{part.text}</span>)}</p>
-        {translation && <p className="artifact-translation" lang="zh">{sentence.translationZh}</p>}
-        <button className="vocabulary-source" onMouseDown={event => event.preventDefault()} onClick={() => collect(index)}>收藏这句中的选词</button>
-      </div>)}
-      <button className="process-button" aria-expanded={translation} onClick={() => setTranslation(value => !value)}>{translation ? '隐藏短文翻译' : '显示短文翻译'}</button>
-    </article> : <p className="processing-note">选择词汇后即可生成；保存的短文可离线重读。</p>}
+  async function openStory(id: string) {
+    try {
+      const next = await window.inflow!.openArtifact(id);
+      setArtifact(next);
+      onArtifactChange?.(next);
+      setActiveSentence(0);
+      setTranslations(new Set());
+      setToolbar(null);
+      setError("");
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "The saved story could not be opened.");
+    }
+  }
+
+  function jump(index: number) {
+    if (!artifact || index < 0 || index >= artifact.sentences.length) return;
+    setActiveSentence(index);
+    document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+
+  function jumpToTarget(id: string) {
+    const index = artifact?.sentences.findIndex(sentence => sentence.parts.some(part => part.targetId === id)) ?? -1;
+    if (index >= 0) jump(index);
+  }
+
+  function collect(index: number) {
+    const selection = window.getSelection();
+    const element = document.getElementById("artifact-sentence-" + index);
+    const start = selection?.anchorNode instanceof Element ? selection.anchorNode : selection?.anchorNode?.parentElement;
+    const end = selection?.focusNode instanceof Element ? selection.focusNode : selection?.focusNode?.parentElement;
+    const surface = selection?.toString().trim() ?? "";
+    const sentence = artifact?.sentences[index];
+    if (!artifact || !selection?.rangeCount || !sentence || !element || !surface || surface.length > 100 ||
+      !start || !end || !element.contains(start) || !element.contains(end)) {
+      setError("Select up to 100 characters from one Korean sentence.");
+      return;
+    }
+    const fullSentence = textOf(sentence);
+    if (!fullSentence.replace(/\s+/gu, " ").includes(surface.replace(/\s+/gu, " "))) {
+      setError("The selection must belong to the selected sentence.");
+      return;
+    }
+    onCollect({
+      key: crypto.randomUUID(),
+      lemma: surface,
+      meaningZh: "",
+      context: { surface, sentence: fullSentence, source: { type: "artifact", artifactId: artifact.id, sentenceIndex: index, name: artifact.title } },
+    });
+    setError("");
+    setToolbar(null);
+    selection.removeAllRanges();
+  }
+
+  function closeDialog() {
+    if (dialog.current?.open) dialog.current.close();
+    else onGenerationClose?.();
+  }
+
+  function cancelGeneration() {
+    if (job.current) void window.inflow!.cancel(job.current).catch(failure => {
+      setError(failure instanceof Error ? failure.message : "Generation could not be cancelled.");
+    });
+  }
+
+  const wordCount = artifact ? artifact.sentences.map(textOf).join(" ").trim().split(/\s+/u).filter(Boolean).length : 0;
+  const readMinutes = Math.max(1, Math.ceil(wordCount / 170));
+  const dateLabel = artifact && new Date(artifact.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+  return <section className="story-workspace" id="artifacts" aria-label="Story reader" hidden={!active}>
+    {artifact ? <main className="story-layout">
+      <section className="story-reader-panel">
+        <header className="story-hero">
+          <div className="story-hero-controls">
+            <details className="story-dropdown">
+              <summary aria-label={artifact.targets.length + " target words"}><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15M12 6C9 3 5 3 2 4v14c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2z"/></svg>{artifact.targets.length} target {artifact.targets.length === 1 ? "word" : "words"} ⌄</summary>
+              <div className="story-dropdown-panel">{artifact.targets.map(target => <button type="button" key={target.id} onClick={() => jumpToTarget(target.id)}><span lang="ko">{target.lemma}</span><span lang="zh">{target.meaningZh}</span></button>)}</div>
+            </details>
+            <details className="story-dropdown story-options">
+              <summary aria-label="Story options">⋮</summary>
+              <div className="story-dropdown-panel">
+                {onRequestGenerate && <button type="button" onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); onRequestGenerate(); }}>Generate a story</button>}
+                {!!artifacts.length && <label>Open saved story
+                  <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; event.currentTarget.closest("details")?.removeAttribute("open"); if (id) void openStory(id); }}>
+                    <option value="">Choose a saved story</option>{artifacts.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+                  </select>
+                </label>}
+              </div>
+            </details>
+          </div>
+          <div className="story-hero-copy">
+            <h1 lang="ko">{artifact.title}</h1>
+            <p><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 12h6M9 16h6"/></svg>Generated from {artifact.targets.length} vocabulary {artifact.targets.length === 1 ? "word" : "words"} <span>•</span> ~{readMinutes} min read <span>•</span> <time dateTime={artifact.createdAt}>{dateLabel}</time></p>
+          </div>
+        </header>
+
+        <div className="story-reading-pane" ref={reader}>
+          <article className="story-sentences" data-artifact-id={artifact.id}>
+            {artifact.sentences.map((sentence, index) => <div className="story-sentence" key={index}>
+              <p className="artifact-korean" id={"artifact-sentence-" + index} data-sentence-index={index} lang="ko" tabIndex={0} aria-current={activeSentence === index ? "location" : undefined} onFocus={() => setActiveSentence(index)} onClick={() => setActiveSentence(index)}>
+                {sentence.parts.map((part, n) => part.targetId
+                  ? <mark key={n} data-target-id={part.targetId} title={artifact.targets.find(target => target.id === part.targetId)?.meaningZh}>{part.text}</mark>
+                  : <span key={n}>{part.text}</span>)}
+              </p>
+              {translations.has(index) && <p className="story-translation" lang="zh">{sentence.translationZh}</p>}
+            </div>)}
+          </article>
+        </div>
+        {error && !generationOpen && <p className="story-notice" role="alert">{error}</p>}
+        <footer className="story-reader-footer">
+          <button type="button" aria-label="Previous sentence" disabled={activeSentence <= 0} onClick={() => jump(activeSentence - 1)}>← &nbsp;Previous</button>
+          <span>{artifact.sentences.length ? activeSentence + 1 : 0} / {artifact.sentences.length} sentences</span>
+          <button type="button" aria-label="Next sentence" disabled={activeSentence >= artifact.sentences.length - 1} onClick={() => jump(activeSentence + 1)}>Next &nbsp;→</button>
+        </footer>
+      </section>
+
+      <aside className="story-sidebar">
+        <section className="story-context-panel">
+          <header><h2>Context</h2><span>{artifact.sentences.length} sentences</span></header>
+          <div className="story-context-list">{artifact.sentences.map((sentence, index) => <button type="button" key={index} aria-current={activeSentence === index ? "location" : undefined} onClick={() => jump(index)}>
+            <span>{String(index + 1).padStart(2, "0")}</span><span lang="ko">{textOf(sentence)}</span>{activeSentence === index && <i aria-hidden="true" />}
+          </button>)}</div>
+        </section>
+        <section className="story-vocabulary-panel">
+          <header><h2>Target Vocabulary</h2><span>{artifact.targets.length} words</span></header>
+          <div className="story-vocabulary-list">{artifact.targets.map(target => <div className="story-vocabulary-row" key={target.id}>
+            <button type="button" lang="ko" onClick={() => jumpToTarget(target.id)}>{target.lemma}</button><span lang="zh">{target.meaningZh}</span>
+            <details><summary aria-label={"More actions for " + target.lemma}>…</summary><div className="story-disabled-actions">
+              <button disabled title="Available in a later update">Dictionary</button><button disabled title="Available in a later update">Pronunciation</button><button disabled title="Available in a later update">Add context</button><button disabled title="Available in a later update">Notes</button><small>Available in a later update</small>
+            </div></details>
+          </div>)}</div>
+        </section>
+      </aside>
+
+      {toolbar && active && <div className="story-selection-toolbar" role="toolbar" aria-label="Selected text actions" style={{ top: toolbar.top, left: toolbar.left }} onMouseDown={event => event.preventDefault()}>
+        <button type="button" onClick={() => collect(toolbar.index)}>＋ Collect</button>
+        <button type="button" disabled title="Available in a later update">Dictionary</button>
+        <button type="button" onClick={() => { const index = toolbar.index; setTranslations(current => { const next = new Set(current); if (next.has(index)) next.delete(index); else next.add(index); return next; }); setActiveSentence(index); window.getSelection()?.removeAllRanges(); setToolbar(null); }}>Translate</button>
+      </div>}
+    </main> : <div className="story-empty-state">
+      <h1>{loaded ? "Choose a story" : "Restoring your library…"}</h1>
+      <p>{loaded ? "Saved stories remain available for offline reading." : "Reading saved stories from this device."}</p>
+      {!!artifacts.length && <label>Saved stories
+        <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; if (id) void openStory(id); }}>
+          <option value="">Choose a saved story</option>{artifacts.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </select>
+      </label>}
+      {onRequestGenerate && <button type="button" onClick={onRequestGenerate}>Generate a story</button>}
+      {error && <p className="story-notice" role="alert">{error}</p>}
+    </div>}
+
+    <dialog className="story-generation-dialog" ref={dialog} aria-labelledby="story-generation-title" onClose={() => onGenerationClose?.()} onCancel={event => { if (busy) { event.preventDefault(); cancelGeneration(); } }}>
+      <div className="story-dialog-content">
+        <div className="story-dialog-heading"><h2 id="story-generation-title">Generate a story</h2><button type="button" aria-label="Close generation dialog" disabled={busy} onClick={closeDialog}>×</button></div>
+        <p>The story uses selected saved vocabulary and remains available for offline reading.</p>
+        <section className="story-selected-targets" aria-label="Selected vocabulary">
+          <header><h3>Selected vocabulary</h3><span>{selected.length} / 20</span></header>
+          {selected.length ? <ul>{selected.map(entry => <li key={entry.id}><strong lang="ko">{entry.lemma}</strong><span lang="zh">{entry.meaningZh}</span></li>)}</ul> : <p>No vocabulary selected.</p>}
+          {(selected.length < 1 || selected.length > 20) && <p className="story-hint">Select 1–20 existing vocabulary items to continue.</p>}
+        </section>
+        <label className="story-topic">Topic <span>Optional</span><input name="topic" value={topic} maxLength={200} disabled={busy} onChange={event => setTopic(event.currentTarget.value)} /></label>
+        <details className="story-credential" open={!credential.configured || !!credential.error}>
+          <summary>{credential.configured ? "API key configured · Change key" : "Configure API key"}</summary>
+          <form onSubmit={event => void configure(event)}><label>DeepSeek API key<input type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} required disabled={busy || configuring} onChange={event => setKey(event.currentTarget.value)} /></label><button type="submit" disabled={configuring || busy || !key}>{configuring ? "Saving…" : "Save key"}</button></form>
+          <p>The key is stored encrypted on this device.</p>{credential.error && <p role="alert">{credential.error}</p>}
+        </details>
+        {error && <p className="story-notice" role="alert">{error}</p>}
+        <footer>{busy && <button type="button" onClick={cancelGeneration}>Cancel generation</button>}{!busy && <button type="button" onClick={closeDialog}>Cancel</button>}<button type="button" disabled={busy || configuring || !credential.configured || selected.length < 1 || selected.length > 20} onClick={() => void generate()}>{busy ? "Generating…" : error ? "Retry generation" : "Generate story"}</button></footer>
+      </div>
+    </dialog>
   </section>;
 }

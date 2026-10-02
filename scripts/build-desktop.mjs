@@ -1,13 +1,16 @@
-import { mkdir, cp, writeFile } from 'node:fs/promises';
+import { mkdir, cp, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const root = process.cwd();
 const stage = path.join(root, 'build', 'renderer-source');
+if (path.dirname(path.resolve(stage)) !== path.resolve(root, 'build')) throw new Error('Invalid renderer staging path');
+await rm(stage, { recursive: true, force: true });
 await mkdir(path.join(stage, 'src', 'app'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'listening'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'generation'), { recursive: true });
 await cp(path.join(root, 'src/workspace'), path.join(stage, 'src/workspace'), { recursive: true });
+await cp(path.join(root, 'public/workspace'), path.join(stage, 'public/workspace'), { recursive: true });
 await cp(path.join(root, 'src/generation/index.ts'), path.join(stage, 'src/generation/index.ts'));
 // Only the renderer enters the static build; the browser API routes stay in the prototype.
 for (const file of ['page.tsx', 'layout.tsx', 'globals.css', 'icon.svg']) await cp(path.join(root, 'src/app', file), path.join(stage, 'src/app', file));
