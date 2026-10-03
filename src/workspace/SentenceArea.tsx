@@ -3,7 +3,6 @@
 import type { Ref } from 'react';
 import type { Segment } from '@/listening/processing';
 import type { PlaybackMode } from '@/listening/desktop';
-import CloudCredential from '@/listening/CloudCredential';
 
 export type SentenceAreaProps = {
   segment: Segment | null;
@@ -101,7 +100,6 @@ export default function SentenceArea({
         <button type="button" onClick={() => onTranslate({ refresh: true })}>{translation ? 'Translate again' : 'Retry translation'}</button>
         {translationError && <button type="button" onClick={() => onTranslate({ local: true })}>Use local reference translation</button>}
       </div>}
-      {typeof window !== 'undefined' && window.inflow && <CloudCredential/>}
     </section>}
     </div>
     <div className="workspace-player-toolbar">

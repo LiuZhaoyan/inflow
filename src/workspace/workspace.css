@@ -228,8 +228,4 @@
 .vocabulary-selection p { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .vocabulary-selection [role="alert"] { color: #ffb5b5; }
 .vocabulary-selection footer { margin-top: 14px; }
-.cloud-credential { margin-top: 12px; font-size: 12px; }
-.cloud-credential summary { cursor: pointer; }
-.cloud-credential label { display: grid; gap: 6px; margin: 10px 0; }
-.cloud-credential input { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid #484251; border-radius: 7px; background: #12121a; color: #f1eef6; }
 .workspace-translation-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
