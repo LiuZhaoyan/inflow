@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import CloudCredential from './CloudCredential';
 import type { SaveVocabularyInput, SourceLanguage } from './desktop';
 
 type Context = NonNullable<SaveVocabularyInput['context']>;
@@ -183,19 +182,17 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
   return <div ref={popup} className="vocabulary-selection" role="dialog" aria-label="Collect a word" style={position}>
     {draft ? <form onSubmit={event => { event.preventDefault(); void save(); }}>
       <header><strong lang={draft.language}>{draft.context.surface}</strong><button type="button" aria-label="Close word collection" disabled={draft.saving} onClick={beforeChange}>×</button></header>
-      <small>{draft.context.source.name}</small>
       <fieldset disabled={draft.saving}>
         <label>Dictionary form<input name="lemma" lang={draft.language} value={draft.lemma} required maxLength={100} onChange={event => { const previous = current.current!; change({ lemma: event.target.value, lemmaEdited: true, candidates: [] }); if (!previous.meaningEdited) update({ ...current.current!, meaningZh: '' }); }} onBlur={() => { if (current.current?.lemmaEdited && current.current.lemma.trim()) loadLookup(current.current, current.current.lemma.trim()); }}/></label>
         <label>Chinese meaning<input name="meaningZh" lang="zh" value={draft.meaningZh} required maxLength={300} onChange={event => change({ meaningZh: event.target.value })}/></label>
         {!!draft.candidates.length && <label>Dictionary meanings<select aria-label="Dictionary meanings" value="" onChange={event => { if (event.target.value) change({ meaningZh: event.target.value }); }}>
           <option value="">Choose a meaning</option>{draft.candidates.map(meaning => <option key={meaning} value={meaning}>{meaning}</option>)}
         </select></label>}
-        <small>KRDict · National Institute of Korean Language · CC BY-SA 2.0 KR</small>
+        <small title="National Institute of Korean Language">KRDict · CC BY-SA 2.0 KR</small>
         {!draft.loading && !draft.candidates.length && <p>No offline meaning found. Enter one or request a cloud meaning.</p>}
         <button type="button" disabled={draft.cloudLoading || !draft.lemma.trim() || (draft.loading && !draft.lemmaEdited)} onClick={() => void requestGloss()}>Get contextual meaning · LLM</button>
         {draft.cloudLoading && <p role="status">Looking up meaning… <button type="button" onClick={() => { if (cloudJob.current) void window.inflow!.cancel(cloudJob.current).catch(() => {}); cloudJob.current = null; update({ ...current.current!, cloudLoading: false }); }}>Cancel lookup</button></p>}
         {draft.suggestion && <p lang="zh">LLM suggestion: {draft.suggestion} <button type="button" onClick={() => change({ meaningZh: draft.suggestion })}>Apply suggestion</button></p>}
-        <CloudCredential/>
         {draft.loading && <p role="status">Finding dictionary form…</p>}
         {draft.lookupError && <p role="status">{draft.lookupError} You can enter it manually.</p>}
         <footer><button className="workspace-primary-button" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? 'Saving…' : '+ Save vocabulary'}</button><button type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>Discard</button></footer>
