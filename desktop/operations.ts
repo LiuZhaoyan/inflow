@@ -162,9 +162,12 @@ export class DesktopOperations {
     if (media.learning.duration && segments.at(-1)!.end > media.learning.duration + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
     this.db.exec('BEGIN');
     try {
-      // Collected source segments remain immutable; only the latest result appears in the player.
-      this.db.prepare('UPDATE segments SET active = 0 WHERE media_id = ?').run(id);
-      this.db.prepare('DELETE FROM segments WHERE media_id = ? AND id NOT IN (SELECT segment_id FROM vocabulary_sources)').run(id);
+      // Replace this material's transcript and source contexts together; vocabulary entries remain valid.
+      this.db.prepare(`DELETE FROM vocabulary_positions WHERE context_id IN (
+        SELECT o.id FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id WHERE s.media_id = ?
+      )`).run(id);
+      this.db.prepare('DELETE FROM vocabulary_sources WHERE segment_id IN (SELECT id FROM segments WHERE media_id = ?)').run(id);
+      this.db.prepare('DELETE FROM segments WHERE media_id = ?').run(id);
       const insert = this.db.prepare('INSERT INTO segments (id, media_id, ordinal, content) VALUES (?, ?, ?, ?)');
       segments.forEach((segment, index) => insert.run(randomUUID(), id, index, JSON.stringify(segment)));
       const learning = this.get(id).learning;

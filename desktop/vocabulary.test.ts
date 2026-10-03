@@ -5,9 +5,10 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { DesktopOperations } from './operations';
+import type { generatePassage } from '../src/generation';
 import type { SaveVocabularyInput } from '../src/listening/desktop';
 
-test('collection, distinct senses, correction and target selection survive reprocessing and restart without losing source context', async () => {
+test('reprocessing clears source contexts while collection, distinct senses, corrections and selection survive restart', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow vocabulary 韩语 '));
   const library = path.join(root, 'library');
   await mkdir(library);
@@ -78,14 +79,109 @@ test('collection, distinct senses, correction and target selection survive repro
     await app.transcribe(media.id, 'reprocess');
     assert.equal(app.get(media.id).segments.length, 1);
     assert.equal(app.get(media.id).segments[0].text, result[0].text);
-    assert.deepEqual(app.listVocabulary(), before);
+    const after = before.map(entry => ({ ...entry, contexts: [] }));
+    assert.deepEqual(app.listVocabulary(), after);
     await rm(app.mediaPath(media.id));
     app.close(); app = new DesktopOperations(library, processor);
-    assert.deepEqual(app.listVocabulary(), before);
+    assert.deepEqual(app.listVocabulary(), after);
     assert.equal(app.restore()!.missing, true);
     assert.equal(app.get('existing-media').segments[0].id, 'existing-segment');
     assert.equal(app.listVocabulary().filter(entry => entry.selected).length, 2);
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('transcript replacement atomically clears only its media sources and permits source-less reuse', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow vocabulary reprocess '));
+  const library = path.join(root, 'library');
+  const segments = [{ start: 0, end: 2, text: '친구와 걸어요.', groups: ['친구와', '걸어요.'] }];
+  let mode = 'success';
+  const processor = async (operation: string, signal: AbortSignal) => {
+    if (operation === 'probe') return { duration: 10 };
+    if (mode === 'failure') throw new Error('fixture ASR failure');
+    if (mode === 'invalid') return { segments: [] };
+    if (mode === 'cancel') await new Promise<void>(resolve => signal.addEventListener('abort', () => resolve(), { once: true }));
+    return { segments };
+  };
+  const generator: typeof generatePassage = async input => ({ title: '산책', requestedModel: 'deepseek-flash',
+    sentences: [{ parts: [{ text: input.targets[0].lemma, targetId: input.targets[0].id }], translationZh: input.targets[0].meaningZh }] });
+  let app = new DesktopOperations(library, processor, generator);
+  let db: DatabaseSync | undefined;
+  try {
+    const file = path.join(root, 'sample.webm'); await writeFile(file, 'fixture');
+    const media = await app.transcribe((await app.importMedia(file)).id, 'first');
+    const other = await app.transcribe((await app.importMedia(file)).id, 'other');
+    const context = (source: typeof media, surface: string, surfaceStart: number): NonNullable<SaveVocabularyInput['context']> => ({
+      surface, surfaceStart, sentence: source.segments[0].text,
+      source: { type: 'media', mediaId: source.id, segmentId: source.segments[0].id, name: source.name, start: source.segments[0].start },
+    });
+    const walk = app.saveVocabulary({ lemma: '걷다', meaningZh: '走路', context: context(media, '걸어요', 4) });
+    const friend = app.saveVocabulary({ lemma: '친구', meaningZh: '朋友', context: context(media, '친구', 0) });
+    app.saveVocabulary({ lemma: walk.lemma, meaningZh: walk.meaningZh, context: context(other, '걸어요', 4) });
+    const story = await app.generateArtifact([walk.id], '', 'story', 'fixture-key');
+    app.saveVocabulary({ lemma: walk.lemma, meaningZh: walk.meaningZh, context: { surface: '걷다', surfaceStart: 0, sentence: '걷다',
+      source: { type: 'artifact', artifactId: story.id, sentenceIndex: 0, name: story.title } } });
+    app.selectVocabulary([friend.id]);
+
+    db = new DatabaseSync(path.join(library, 'learning.sqlite'));
+    // Include a retained segment from a prior version of this material.
+    db.prepare('INSERT INTO segments VALUES (?, ?, ?, ?, ?)').run('historical', media.id, 0, JSON.stringify(segments[0]), 0);
+    db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?)').run('historical-context', walk.id, 'historical', '걸어요', segments[0].text);
+    db.prepare('INSERT INTO vocabulary_positions VALUES (?, ?)').run('historical-context', 4);
+    db.prepare('INSERT INTO translations VALUES (?, ?, ?)').run(media.segments[0].id, 'fixture', '朋友一起走路。');
+    const before = app.listVocabulary();
+    const positions = db.prepare('SELECT * FROM vocabulary_positions ORDER BY context_id, start').all();
+    for (mode of ['failure', 'invalid']) {
+      await assert.rejects(app.transcribe(media.id, mode));
+      assert.deepEqual(app.get(media.id), media);
+      assert.deepEqual(app.listVocabulary(), before);
+    }
+    mode = 'cancel';
+    const pending = app.transcribe(media.id, 'cancel');
+    app.cancel('cancel'); await assert.rejects(pending, /取消/);
+    assert.deepEqual(app.get(media.id), media);
+    assert.deepEqual(app.listVocabulary(), before);
+
+    mode = 'success';
+    db.exec("CREATE TRIGGER reject_replacement BEFORE INSERT ON segments BEGIN SELECT RAISE(ABORT, 'fixture save failure'); END");
+    await assert.rejects(app.transcribe(media.id, 'save-failure'), /fixture save failure/);
+    assert.deepEqual(app.get(media.id), media);
+    assert.deepEqual(app.listVocabulary(), before);
+    assert.deepEqual(db.prepare('SELECT * FROM vocabulary_positions ORDER BY context_id, start').all(), positions);
+    assert.ok(db.prepare('SELECT * FROM translations WHERE segment_id = ?').get(media.segments[0].id));
+    db.exec('DROP TRIGGER reject_replacement');
+
+    // Even unchanged text replaces all old contexts for this material.
+    const updated = await app.transcribe(media.id, 'replace');
+    const after = before.map(entry => ({ ...entry, contexts: entry.contexts.filter(item => item.source.type !== 'media' || item.source.mediaId !== media.id) }));
+    assert.deepEqual(app.listVocabulary(), after);
+    assert.deepEqual(app.get(other.id), other);
+    assert.deepEqual(app.openArtifact(story.id), story);
+    for (const segmentId of [media.segments[0].id, 'historical']) {
+      assert.equal(db.prepare('SELECT * FROM segments WHERE id = ?').get(segmentId), undefined);
+    }
+    for (const entry of before) for (const item of entry.contexts) {
+      if (item.source.type === 'media' && item.source.mediaId === media.id) {
+        assert.equal(db.prepare('SELECT * FROM vocabulary_positions WHERE context_id = ?').get(item.id), undefined);
+      }
+    }
+    assert.equal(db.prepare('SELECT * FROM translations WHERE segment_id = ?').get(media.segments[0].id), undefined);
+    assert.equal(db.prepare('SELECT count(*) AS count FROM vocabulary_positions').get()!.count, 2);
+    assert.throws(() => app.saveVocabulary({ lemma: friend.lemma, meaningZh: friend.meaningZh, context: context(media, '친구', 0) }), /原句已更新/);
+
+    db.close(); db = undefined;
+    app.close(); app = new DesktopOperations(library, processor, generator);
+    assert.deepEqual(app.listVocabulary(), after);
+    const edited = app.saveVocabulary({ id: friend.id, lemma: friend.lemma, meaningZh: friend.meaningZh });
+    assert.deepEqual(edited, after.find(entry => entry.id === friend.id));
+    assert.equal(edited.selected, true);
+    const generated = await app.generateArtifact([friend.id], '', 'source-less', 'fixture-key');
+    assert.deepEqual(generated.targets, [{ id: friend.id, lemma: friend.lemma, meaningZh: friend.meaningZh }]);
+    const collected = app.saveVocabulary({ lemma: friend.lemma, meaningZh: friend.meaningZh, context: context(updated, '친구', 0) });
+    assert.equal(collected.id, friend.id); assert.equal(collected.selected, true);
+    assert.equal(collected.contexts.length, 1);
+    assert.deepEqual(collected.contexts[0].source, context(updated, '친구', 0).source);
+    assert.equal(app.listVocabulary().length, before.length);
+  } finally { db?.close(); app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('existing vocabulary rows gain language identity without losing historical provenance', async () => {

@@ -84,6 +84,8 @@ A vocabulary entry should preserve:
 
 Learners can correct the dictionary form and meaning. Distinct meanings of the same Korean form remain distinguishable, while repeated encounters with the same meaning may preserve multiple source contexts.
 
+Successful retranscription removes all vocabulary source contexts from that material's old transcript, including unchanged sentences and earlier retained versions. Context removal and transcript replacement commit together; failure or cancellation preserves the previous transcript and contexts. Vocabulary entries, their meanings and target selection remain valid and unchanged. Sources from other media and generated artifacts remain intact. An entry without sources stays visible and editable, may be selected for generation, and displays an empty-source state. Collecting the same word and meaning from a new sentence reuses the existing entry and adds its new source.
+
 Vocabulary selection is an explicit learner action. Inflow does not infer mastery from play count, collection, or selection.
 
 ## 7. Generated learning artifacts
@@ -98,7 +100,7 @@ Generation failure must preserve existing learning data and offer retry. Structu
 
 Source media, sentence segments, meaning groups, translations, learning state, vocabulary entries, source occurrences, generated artifacts, and artifact target snapshots are distinct product concepts.
 
-Stored material and source occurrences should use stable identities. Vocabulary provenance should remain meaningful when media is reprocessed or notebook entries are corrected. Historical artifacts should continue to represent the vocabulary meanings that produced them.
+Stored material and source occurrences should use stable identities. Retranscription replaces sentence identities and clears their vocabulary source occurrences while preserving valid vocabulary entries. Notebook corrections preserve their remaining sources. Historical artifacts should continue to represent the vocabulary meanings that produced them.
 
 Large media/model resources may be stored separately from structured learning records.
 

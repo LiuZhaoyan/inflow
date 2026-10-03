@@ -228,14 +228,12 @@ export default function LearningWorkspace() {
     if (!allowChange()) return;
     try {
       const saved = await window.inflow!.open(source.mediaId);
-      let next = saved.segments.findIndex(item => item.id === source.segmentId);
-      const historical = next < 0;
-      if (historical) next = Math.max(0, saved.segments.findLastIndex(item => item.start <= source.start));
-      const position = saved.segments[next]?.start ?? source.start;
+      const next = saved.segments.findIndex(item => item.id === source.segmentId);
+      if (next < 0) throw new Error('原句已更新，请从当前原文重新收集。');
+      const position = saved.segments[next].start;
       if (!applySaved({ ...saved, learning: { ...saved.learning, index: next, position, mode: 'sentence' } })) return;
       setContentKind('media'); setView('video'); setLibraryOpen(false);
       if (media.current && saved.id === savedMedia?.id && !saved.missing && saved.learning.duration <= 600) { media.current.currentTime = position; setReady(true); }
-      if (historical && !saved.missing) setError('素材已重新转写，已打开相近位置；收藏时的原句仍保留。');
     } catch (failure) { setError(failure instanceof Error ? failure.message : '来源素材无法打开。'); }
   }
 
@@ -299,6 +297,7 @@ export default function LearningWorkspace() {
       setSegments(result); setIndex(Math.max(0, result.findLastIndex(item => item.start <= time))); setPosition(time); setMasks(processedMedia?.learning.masks ?? {}); resetSentence();
       if (processedMedia) {
         setSavedMedia(processedMedia);
+        setVocabularyRevision(value => value + 1);
         const items = await window.inflow!.list();
         if (!controller.signal.aborted) setLibrary(items);
       }

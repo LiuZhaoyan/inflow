@@ -136,7 +136,7 @@ export default function VocabularyNotebook({
 
   const filters: { id: Filter; label: string }[] = [
     { id: 'all', label: 'All' }, { id: 'media', label: 'Media' },
-    { id: 'stories', label: 'Stories' }, { id: 'manual', label: 'Manual' },
+    { id: 'stories', label: 'Stories' }, { id: 'manual', label: 'No source' },
   ];
 
   return <section className="vocab-workspace" id="notebook" aria-label="Vocabulary notebook">
@@ -172,10 +172,10 @@ export default function VocabularyNotebook({
             <span className="vocab-row-word" lang="ko">{entry.lemma}</span>
             <span className="vocab-row-example">
               <span className="vocab-row-meaning">{entry.meaningZh}</span>
-              <span className="vocab-row-sentence" lang="ko">{context ? <HighlightedSentence sentence={context.sentence} surface={context.surface}/> : 'Manual entry'}</span>
+              <span className="vocab-row-sentence" lang="ko">{context ? <HighlightedSentence sentence={context.sentence} surface={context.surface}/> : '暂无来源'}</span>
             </span>
             <span className="vocab-row-source">
-              {source ? <><span className="vocab-row-thumb"><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">M</span><span className="vocab-row-source-copy"><span>Manual</span></span></>}
+              {source ? <><span className="vocab-row-thumb"><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>暂无来源</span></span></>}
             </span>
           </button>;
         })}
@@ -212,7 +212,7 @@ export default function VocabularyNotebook({
               </div>
               <button className="vocab-open-source" type="button" onClick={() => onOpenSource(context.source)}>Open <span aria-hidden="true">↗</span></button>
             </article>)}
-          </div> : <p className="vocab-no-context">No saved contexts for this word.</p>}
+          </div> : <p className="vocab-no-context">暂无来源</p>}
         </section>
         <section className="vocab-detail-section vocab-source-section">
           <h3>Source</h3>
@@ -222,7 +222,7 @@ export default function VocabularyNotebook({
             <button type="button" onClick={() => onOpenSource(selectedEntry.contexts[0].source)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5h6v6M19 5l-9 9"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Open source
             </button>
-          </div> : <p className="vocab-no-context">Manual entry · no saved source</p>}
+          </div> : <p className="vocab-no-context">暂无来源</p>}
         </section>
         <section className="vocab-detail-section vocab-notes-section">
           <h3>Notes</h3>
