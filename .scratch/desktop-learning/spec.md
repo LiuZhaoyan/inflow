@@ -29,9 +29,9 @@ Save each generated passage as a learning artifact with target-vocabulary highli
 9. As the learner, I want full-media playback and seeking, so that I can first listen in context and return to a section.
 10. As the learner, I want previous/next sentence controls and current-sentence looping, so that I can repeat difficult speech.
 11. As the learner, I want adjustable playback speed, so that I can listen at a useful pace.
-12. As the learner, I want small, more and full reveals by complete meaning groups, so that I can request only the hints I need.
-13. As the learner, I want to hide the source text and have source text hidden when I change sentences, so that I can return to blind listening.
-14. As the learner, I want current-sentence Chinese translation independently of reveal level, so that I can check meaning when necessary.
+12. As the learner, I want to choose which system-defined meaning groups to mask, so that I can practise selected parts of a sentence.
+13. As the learner, I want full source text and word collection outside mask mode, with saved masks applied when I re-enter the mode, so that I can alternate reading and listening practice.
+14. As the learner, I want current-sentence Chinese translation independently of masking, so that I can check meaning when necessary.
 15. As the learner, I want to reopen processed media without repeating transcription, so that earlier processing time is not wasted.
 16. As the learner, I want my learning position and playback preferences restored, so that I can continue where I left off.
 17. As the learner, I want to collect a word from a media sentence, so that its encountered surface form, original sentence and source remain available.
@@ -60,7 +60,7 @@ Save each generated passage as a learning artifact with target-vocabulary highli
 
 - Use Electron as the Windows desktop host. Reuse the existing React learning interface and Next as a static build tool. Move the current POST transcription and translation behavior into narrow desktop operations; the packaged application does not run a Next HTTP server.
 - Keep one application operations interface between the renderer and desktop host. Its behavior covers media import/transcription, learning restoration, vocabulary saving and artifact generation/retrieval. Identifiers refer to managed records; the renderer does not receive unrestricted filesystem, SQL or shell access.
-- Preserve existing playback-segment validation, meaning-group integrity and reveal rules. Small reveals one group; more reveals the lesser of all groups and the greater of two groups or two-thirds rounded upward; full reveals all groups. Changing playback segments hides source text and translation.
+- Preserve playback-segment validation and meaning-group integrity. Source text starts visible; Set masks toggles a mode where clicking whole groups immediately hides or shows them, separate from native word selection. Persist masks per saved sentence in the existing learning JSON. Exiting mask mode or changing sentences shows the full source text and enables native word selection. Saved choices apply on re-entering mask mode; changing sentences also hides translation. Successful retranscription clears masks; failures retain them.
 - Start with the existing faster-whisper base CPU/int8 transcription and Korean meaning-group processing as the baseline. Validate speed, accuracy and sentence timings on representative Windows media before treating it as the accepted final path. Current local sentence translation remains the initial baseline. An online transcription replacement requires comparative evidence; multiple transcription backends are not part of the first build.
 - Package the Python worker for Windows, initially using PyInstaller one-folder mode, with explicit model and resource locations. First validate in an isolated Windows Python 3.12 environment. Preserve cancellable child-process lifecycle and JSON communication; installed use must not depend on repository paths, a developer virtual environment or system Python.
 - Use native media selection and managed file copies. Store large media and model files separately from learning records and installed executable resources. Serve managed media to the existing native player; codec decoding, seeking and sentence loops require packaged Windows verification.
@@ -79,7 +79,7 @@ Save each generated passage as a learning artifact with target-vocabulary highli
 ## Testing Decisions
 
 - The proposed highest testing seam is the application operations interface used by the learning UI. Tests exercise an observable action and then read the resulting material or reopened state; they do not inspect private helpers, table layouts or implementation call counts.
-- Reuse existing Node/TypeScript test conventions and the existing processing-result and reveal test surfaces. Preserve checks for ordered/nonoverlapping times, complete text/group reconstruction and monotonic reveal behavior.
+- Reuse existing Node/TypeScript test conventions and the processing-result and learning-state test surfaces. Preserve checks for ordered/nonoverlapping times, complete text/group reconstruction, valid mask indices and mask restoration.
 - At the operations seam, test import/save/reopen, source-linked vocabulary collection, distinct contextual meanings, artifact generation from selected entries, and a second vocabulary collection/generation cycle. Use a real temporary SQLite database and managed files when checking persistence, with deterministic substitutes only for external model/API results.
 - Test that incomplete processing, unknown target IDs, missing targets, malformed generation, credential/quota failures and canceled work do not replace saved material or create a complete-looking partial artifact.
 - Verify that normal inflected target occurrences can be highlighted and that selected entry IDs remain connected to saved target snapshots. Lexical/structural checks do not count as proof of semantic correctness.

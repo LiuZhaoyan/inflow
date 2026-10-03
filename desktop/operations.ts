@@ -128,7 +128,16 @@ export class DesktopOperations {
     if (!state || !Number.isFinite(state.duration) || state.duration <= 0 || !Number.isFinite(state.position) || state.position < 0 || state.position > state.duration ||
       !Number.isInteger(state.index) || state.index < 0 || state.index >= Math.max(1, media.segments.length) ||
       ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(state.rate) || typeof state.loop !== 'boolean' || (state.mode !== undefined && state.mode !== 'full' && state.mode !== 'sentence')) throw new Error('学习状态无效。');
-    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration, mode: state.mode ?? 'full' }), id);
+    const masks = state.masks === undefined ? media.learning.masks : state.masks;
+    if (masks !== undefined) {
+      if (!masks || typeof masks !== 'object' || Array.isArray(masks)) throw new Error('学习遮罩无效。');
+      const counts = new Map(media.segments.map(segment => [segment.id, segment.groups.length]));
+      for (const [segmentId, groups] of Object.entries(masks)) {
+        const count = counts.get(segmentId);
+        if (count === undefined || !Array.isArray(groups) || groups.some(group => !Number.isInteger(group) || group < 0 || group >= count) || new Set(groups).size !== groups.length) throw new Error('学习遮罩无效。');
+      }
+    }
+    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration, mode: state.mode ?? 'full', ...(masks && Object.keys(masks).length ? { masks } : {}) }), id);
   }
 
   private async runJob<T>(job: string, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
@@ -160,7 +169,7 @@ export class DesktopOperations {
       segments.forEach((segment, index) => insert.run(randomUUID(), id, index, JSON.stringify(segment)));
       const learning = this.get(id).learning;
       const index = segments.reduce((selected, segment, current) => segment.start <= learning.position ? current : selected, 0);
-      this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ ...learning, index }), id);
+      this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ ...learning, index, masks: undefined }), id);
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.get(id);

@@ -7,7 +7,7 @@ export type VocabularyLookup = { surface: string; lemma: string; language: Sourc
 export type SentenceTranslationInput = { mediaId: string; segmentId: string };
 export type TranslationOptions = { refresh?: boolean; local?: boolean };
 export type PlaybackMode = 'full' | 'sentence';
-export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number; mode: PlaybackMode };
+export type LearningState = { position: number; index: number; rate: number; loop: boolean; duration: number; mode: PlaybackMode; masks?: Record<string, number[]> };
 export type LearningStateInput = Omit<LearningState, 'mode'> & { mode?: PlaybackMode };
 export type SavedMedia = {
   id: string; name: string; language: SourceLanguage; video: boolean; missing: boolean;

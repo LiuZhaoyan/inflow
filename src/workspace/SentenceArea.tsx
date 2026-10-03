@@ -1,8 +1,6 @@
 "use client";
 
 import type { Ref } from 'react';
-import RevealMenu from '@/listening/RevealMenu';
-import { revealedGroupCount, type RevealChoice } from '@/listening/reveal';
 import type { Segment } from '@/listening/processing';
 import type { PlaybackMode } from '@/listening/desktop';
 import CloudCredential from '@/listening/CloudCredential';
@@ -18,9 +16,10 @@ export type SentenceAreaProps = {
   onPlayPause: () => void;
   onPrevious: () => void;
   onNext: () => void;
-  reveal: RevealChoice | null;
-  onReveal: (choice: RevealChoice) => void;
-  onHideText: () => void;
+  maskedGroups: readonly number[];
+  maskEditing: boolean;
+  onToggleMaskEditing: () => void;
+  onToggleGroup: (index: number) => void;
   transcriptRef: Ref<HTMLParagraphElement>;
   rate: number;
   onRateChange: (rate: number) => void;
@@ -46,9 +45,10 @@ export default function SentenceArea({
   onPlayPause,
   onPrevious,
   onNext,
-  reveal,
-  onReveal,
-  onHideText,
+  maskedGroups,
+  maskEditing,
+  onToggleMaskEditing,
+  onToggleGroup,
   transcriptRef,
   rate,
   onRateChange,
@@ -62,7 +62,6 @@ export default function SentenceArea({
   onTranslate,
   onCancelTranslation,
 }: SentenceAreaProps) {
-  const revealCount = segment && reveal ? revealedGroupCount(segment.groups, reveal) : 0;
   const currentNumber = String(index + 1).padStart(2, '0');
   const totalNumber = String(total).padStart(2, '0');
   const groupStarts: number[] = [];
@@ -72,16 +71,27 @@ export default function SentenceArea({
     groupStarts.push(start); groupStart = start + group.length;
   }
 
-  return <section className="workspace-sentence-area" aria-label="Sentence practice">
+  return <section className={`workspace-sentence-area${maskEditing ? ' is-masking' : ''}`} aria-label="Sentence practice">
     <div className="workspace-sentence-meta">
-      <span>{segment ? formatTime(segment.start) + ' – ' + formatTime(segment.end) : 'No sentence selected'}</span>
+      <div className="workspace-sentence-heading"><h2>Current sentence</h2><span>{segment ? formatTime(segment.start) + ' – ' + formatTime(segment.end) : 'No sentence selected'}</span></div>
       {segment && <span className="workspace-sentence-count">{currentNumber} / {totalNumber}</span>}
-      <div className="workspace-reveal-control"><RevealMenu disabled={!segment} onSelect={onReveal}/></div>
-      {reveal && <button type="button" className="workspace-text-hide" onClick={onHideText}>Hide text</button>}
+      <button type="button" className="workspace-mask-toggle" disabled={!segment} aria-pressed={maskEditing} aria-describedby="sentence-mask-hint" onClick={onToggleMaskEditing}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M8 12h8"/></svg>
+        Set masks
+      </button>
     </div>
+    <p className="workspace-mask-hint" id="sentence-mask-hint" role="status">{segment && (maskEditing
+      ? `Mask mode · Click a group to hide or show it. ${maskedGroups.length} of ${segment.groups.length} masked.`
+      : 'Select words to collect them, or set masks to practise listening.')}</p>
     <div className="workspace-sentence-copy">
-    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => <span key={groupIndex} data-source-start={groupStarts[groupIndex]}
-      className={groupIndex < revealCount ? 'meaning-group' : 'hidden-group'}>{groupIndex < revealCount ? group : <span aria-label="Unrevealed meaning group">•••</span>}{' '}</span>)}</span></p>
+    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => {
+      const masked = maskedGroups.includes(groupIndex);
+      const hidden = maskEditing && masked;
+      return <span key={groupIndex} data-source-start={groupStarts[groupIndex]} className={hidden ? 'hidden-group' : 'meaning-group'}>
+        {maskEditing ? <button type="button" className={`workspace-mask-group${masked ? ' is-masked' : ''}`} aria-pressed={masked} aria-label={`${masked ? 'Show' : 'Hide'} meaning group ${groupIndex + 1}${masked ? '' : ': ' + group}`} onClick={() => onToggleGroup(groupIndex)}>{hidden ? <span aria-hidden="true">•••</span> : group}</button>
+          : <span className="workspace-group-text">{group}</span>}{' '}
+      </span>;
+    })}</span></p>
       : <p className="workspace-sentence-empty">Process a media file to see its sentences.</p>}
     {translationOpen && <section className="workspace-translation" aria-label="Current sentence translation" aria-live="polite">
       {translation && <p lang="zh">{translation}</p>}

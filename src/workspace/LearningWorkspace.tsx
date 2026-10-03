@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { validateSegments, type Segment } from '@/listening/processing';
 import { managedMediaUrl, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type LearningArtifact, type VocabularyContext, type VocabularyEntry, type PlaybackMode } from '@/listening/desktop';
-import { type RevealChoice } from '@/listening/reveal';
 import VocabularyNotebook from '@/listening/VocabularyNotebook';
 import VocabularySelection, { type VocabularySelectionHandle } from '@/listening/VocabularySelection';
 import ArtifactLibrary from '@/listening/ArtifactLibrary';
@@ -48,7 +47,8 @@ export default function LearningWorkspace() {
   const [mode, setMode] = useState<PlaybackMode>('full');
   const [rate, setRate] = useState(1);
   const [loop, setLoop] = useState(false);
-  const [reveal, setReveal] = useState<RevealChoice | null>(null);
+  const [masks, setMasks] = useState<Record<string, number[]>>({});
+  const [maskEditing, setMaskEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const vocabularySelection = useRef<VocabularySelectionHandle>(null);
@@ -61,10 +61,9 @@ export default function LearningWorkspace() {
   const segment = segments[index] ?? null;
   const video = !!file && (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name));
   const canPlay = !!src && ready && duration > 0 && duration <= 600;
-  const selectReveal = useCallback((choice: RevealChoice) => { if (vocabularySelection.current?.beforeChange() !== false) setReveal(choice); }, []);
-  const hideText = useCallback(() => {
+  const resetSentence = useCallback(() => {
     if (vocabularySelection.current?.beforeChange() === false) return;
-    setReveal(null); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
+    setMaskEditing(false); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
     translating.current?.abort();
   }, []);
 
@@ -74,11 +73,11 @@ export default function LearningWorkspace() {
     setSavedMedia(next); setFile({ name: next.name, type: next.video ? 'video/' : 'audio/' });
     setSrc(next.missing || next.learning.duration > 600 ? '' : managedMediaUrl(next.id));
     setReady(false); setDuration(next.learning.duration); setPosition(next.learning.position); setIndex(next.learning.index);
-    setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments);
-    setPlaying(false); setBusy(false); setShowContext(false); hideText();
+    setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments); setMasks(next.learning.masks ?? {});
+    setPlaying(false); setBusy(false); setShowContext(false); resetSentence();
     setError(next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '');
     return true;
-  }, [hideText]);
+  }, [resetSentence]);
 
   useEffect(() => () => { if (src.startsWith('blob:')) URL.revokeObjectURL(src); }, [src]);
   useEffect(() => () => { processing.current?.abort(); translating.current?.abort(); }, []);
@@ -94,10 +93,10 @@ export default function LearningWorkspace() {
     return () => { active = false; };
   }, [applySaved]);
   useEffect(() => {
-    if (!savedMedia || !ready || !duration || duration > 600) return;
-    void window.inflow?.saveLearning(savedMedia.id, { position, index, rate, loop, duration, mode })
+    if (!savedMedia || !duration) return;
+    void window.inflow?.saveLearning(savedMedia.id, { position, index, rate, loop, duration, mode, masks })
       .catch(failure => setError(failure instanceof Error ? failure.message : '学习记录保存失败。'));
-  }, [savedMedia, ready, duration, position, index, rate, loop, mode]);
+  }, [savedMedia, duration, position, index, rate, loop, mode, masks]);
 
   const syncPlayback = useCallback((updateTime = true) => {
     const el = media.current;
@@ -113,11 +112,11 @@ export default function LearningWorkspace() {
       const next = Math.max(0, segments.findLastIndex(item => item.start <= el.currentTime));
       if (next !== index) {
         if (vocabularySelection.current?.beforeChange() === false) { el.pause(); return; }
-        setIndex(next); hideText();
+        setIndex(next); resetSentence();
       }
     }
     if (updateTime) setPosition(el.currentTime);
-  }, [mode, segment, loop, segments, index, hideText]);
+  }, [mode, segment, loop, segments, index, resetSentence]);
   useEffect(() => {
     if (!playing) return;
     let frame = 0;
@@ -127,6 +126,24 @@ export default function LearningWorkspace() {
   }, [playing, syncPlayback]);
 
   const allowChange = useCallback(() => vocabularySelection.current?.beforeChange() !== false, []);
+  const sentenceKey = savedMedia?.segments[index]?.id ?? String(index);
+  const maskedGroups = masks[sentenceKey] ?? [];
+  function toggleMaskEditing() {
+    if (!allowChange()) return;
+    media.current?.pause(); window.getSelection()?.removeAllRanges();
+    setMaskEditing(value => !value);
+  }
+  function toggleGroup(group: number) {
+    if (!segment || !maskEditing || !allowChange()) return;
+    setMasks(previous => {
+      const next = { ...previous };
+      const groups = previous[sentenceKey] ?? [];
+      const selected = groups.includes(group) ? groups.filter(value => value !== group) : [...groups, group].sort((a, b) => a - b);
+      if (selected.length) next[sentenceKey] = selected;
+      else delete next[sentenceKey];
+      return next;
+    });
+  }
   function showVocab() { if (allowChange()) { media.current?.pause(); setView('vocab'); } }
 
   async function importMedia() {
@@ -180,7 +197,7 @@ export default function LearningWorkspace() {
       if (choice !== fileChoice.current) { URL.revokeObjectURL(url); return; }
       processing.current?.abort(); translating.current?.abort(); media.current?.pause();
       setSavedMedia(null); setFile(next); setSrc(url); setReady(false); setDuration(length); setPosition(0); setPlaying(false);
-      setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setBusy(false); setError(''); setShowContext(false); hideText();
+      setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setMasks({}); setBusy(false); setError(''); setShowContext(false); resetSentence();
       autoProcess.current = url; setContentKind('media'); setView('video'); setLibraryOpen(false);
     } catch (failure) {
       URL.revokeObjectURL(url);
@@ -190,7 +207,7 @@ export default function LearningWorkspace() {
 
   function select(next: number) {
     if (!segments[next] || !allowChange()) return;
-    media.current?.pause(); setMode('sentence'); setIndex(next); hideText();
+    media.current?.pause(); setMode('sentence'); setIndex(next); resetSentence();
     if (media.current) media.current.currentTime = segments[next].start;
     setPosition(segments[next].start);
   }
@@ -200,7 +217,7 @@ export default function LearningWorkspace() {
     if (segments.length) {
       let next = mode === 'full' ? Math.max(0, segments.findLastIndex(item => item.start <= time)) : segments.findIndex(item => time < item.end);
       if (next < 0) next = segments.length - 1;
-      if (next !== index) { if (!allowChange()) return; setIndex(next); hideText(); }
+      if (next !== index) { if (!allowChange()) return; setIndex(next); resetSentence(); }
       if (mode === 'sentence') time = Math.max(segments[next].start, Math.min(time, segments[next].end - 0.02));
     }
     if (media.current) media.current.currentTime = time;
@@ -279,7 +296,7 @@ export default function LearningWorkspace() {
       if (result.at(-1)!.end > length + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
       if (controller.signal.aborted) return;
       const time = media.current?.currentTime ?? position;
-      setSegments(result); setIndex(Math.max(0, result.findLastIndex(item => item.start <= time))); setPosition(time); hideText();
+      setSegments(result); setIndex(Math.max(0, result.findLastIndex(item => item.start <= time))); setPosition(time); setMasks(processedMedia?.learning.masks ?? {}); resetSentence();
       if (processedMedia) {
         setSavedMedia(processedMedia);
         const items = await window.inflow!.list();
@@ -346,7 +363,7 @@ export default function LearningWorkspace() {
     if (view !== 'video' || busy || editing) return null;
     if (contentKind === 'media') {
       const source = savedMedia?.segments[index];
-      if (!source || !reveal || element !== transcript.current) return null;
+      if (!source || maskEditing || element !== transcript.current) return null;
       return { language: savedMedia!.language, context: { surface: '', sentence: source.text,
         source: { type: 'media' as const, mediaId: savedMedia!.id, segmentId: source.id, name: savedMedia!.name, start: source.start } } };
     }
@@ -355,7 +372,7 @@ export default function LearningWorkspace() {
     if (!activeArtifact || !sentence || !element.matches('.artifact-korean')) return null;
     return { language: activeArtifact.language, context: { surface: '', sentence: sentence.parts.map(part => part.text).join(''),
       source: { type: 'artifact' as const, artifactId: activeArtifact.id, sentenceIndex, name: activeArtifact.title } } };
-  }, [view, busy, editing, contentKind, savedMedia, index, reveal, activeArtifact]);
+  }, [view, busy, editing, contentKind, savedMedia, index, maskEditing, activeArtifact]);
 
   const status = <div className="workspace-status">
     <span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>
@@ -371,7 +388,7 @@ export default function LearningWorkspace() {
       <div className="workspace-main-column">
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>导入媒体</button>}
-        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} reveal={reveal} onReveal={selectReveal} onHideText={() => { if (allowChange()) setReveal(null); }} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
+        <SentenceArea segment={segment} index={index} total={segments.length} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} maskedGroups={maskedGroups} maskEditing={maskEditing} onToggleMaskEditing={toggleMaskEditing} onToggleGroup={toggleGroup} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
       </div>
       <ContextPanel segments={segments} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>
@@ -382,7 +399,7 @@ export default function LearningWorkspace() {
       {desktop ? <VocabularyNotebook refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} active={view === 'vocab'} onEntriesChange={setVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">词汇本在 Inflow 桌面应用中可用。</p>}
     </section>
     <LibraryDrawer open={libraryOpen} items={library} currentId={contentKind === 'media' ? savedMedia?.id : null} artifacts={artifacts} currentArtifactId={contentKind === 'story' ? activeArtifact?.id : null} onOpenArtifact={artifact => openStory({ type: 'artifact', artifactId: artifact.id, sentenceIndex: 0, name: artifact.title })} onClose={() => setLibraryOpen(false)} onImport={() => void importMedia()} onOpen={id => void openSaved(id)} onRelink={id => void openSaved(id, true)}/>
-    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)}/>
+    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)}/>
     {targetSelectionOpen && <StoryTargetsDialog entries={vocabularyEntries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
   </div>;
 }

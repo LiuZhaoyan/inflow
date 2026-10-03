@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -20,7 +20,7 @@ The target learning loop is:
 Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 ```
 
-Full-length playback supports first listening and review. Sentence playback, looping, progressive reveal, and translation support intensive listening. Vocabulary connects source media with generated reading material.
+Full-length playback supports first listening and review. Sentence playback, looping, learner-selected meaning-group masks, and translation support intensive listening. Vocabulary connects source media with generated reading material.
 
 Generated passages are text-first learning artifacts. They preserve the target vocabulary and meanings used at generation time so later notebook edits do not rewrite historical learning context.
 
@@ -37,7 +37,7 @@ Generated passages are text-first learning artifacts. They preserve the target v
 
 Users choose audio or video from their device. Imported media is retained as a managed local copy so moving the original file does not silently break saved learning material.
 
-A subtitle file is not required. Processing should produce source text, playable sentence ranges, and meaning groups for progressive reveal. Automatically generated transcription, segmentation, and translation must not be presented as guaranteed-correct answer keys.
+A subtitle file is not required. Processing should produce source text, playable sentence ranges, and meaning groups for masking. Automatically generated transcription, segmentation, and translation must not be presented as guaranteed-correct answer keys.
 
 Processing failures should preserve the original media and provide a retry path. Reopening already processed material should reuse saved results rather than requiring duplicate processing.
 
@@ -49,16 +49,16 @@ The learner can:
 - seek and change playback speed;
 - move to the previous or next sentence;
 - loop the current sentence;
-- reveal a small hint, more source text, or the full sentence;
-- hide the source text and return to blind listening;
+- choose which complete meaning groups to mask in the current sentence;
+- exit mask mode to view the complete source text and collect words;
 - reveal or hide the Chinese translation independently;
 - reopen material with learning position and playback preferences restored.
 
-Playback segments and meaning groups are separate concepts. Previous/next navigation operates on sentences; reveal levels operate on meaning groups inside the current sentence.
+Playback segments and meaning groups are separate concepts. Previous/next navigation operates on sentences; masks operate on system-defined meaning groups inside the current sentence.
 
-The retained reveal rule uses consecutive groups from the beginning of the sentence: small reveals one group, more reveals `min(n, max(2, ceil(2n/3)))` groups, and full reveals all groups.
+New sentences initially show their source text. Set masks directly toggles mask mode. In this mode, clicking a visible group immediately hides it, and clicking its masked placeholder immediately shows it again; there is no separate selection or confirmation step. Word collection is disabled in mask mode. Clicking Set masks again exits the mode, shows every meaning group and enables native word selection for vocabulary collection. Mask choices remain saved and apply only while mask mode is active.
 
-Changing the active sentence hides source text and translation by default. Translation is never generated merely because playback advances.
+Mask choices are saved locally per media and sentence and survive application restart. Changing or reopening a sentence exits mask mode, shows the complete source text and hides translation. Re-entering mask mode applies its saved mask choices. Successful retranscription clears masks because the sentence/group identities have changed; failure or cancellation preserves them. Translation is never generated merely because playback advances.
 
 Listen requests a Chinese translation from the cloud only on explicit action, using neighboring sentences as context while translating the current sentence alone. Keep one latest successful result locally and reuse it on ordinary revisits and restart. Actual source text or context changes invalidate reuse. Explicit refresh replaces the result only on success; failure or cancellation preserves the previous translation. A cloud failure offers retry or an explicitly chosen local reference translation. Story uses its saved sentence translations without regeneration controls.
 

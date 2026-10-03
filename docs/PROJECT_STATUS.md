@@ -14,7 +14,7 @@ Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 
 The desktop host owns persistence, managed media, local processing, and generation credentials. The renderer communicates with those capabilities through the preload/DesktopBridge contract rather than owning desktop business logic directly.
 
-The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, progressive source-text reveal, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen and Story expose shared single-word collection through a local lookup and save popover; the vocabulary notebook manages the saved entries and passage generation targets.
+The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, persistent learner-selected meaning-group masks applied in mask mode, with full source text and word collection available outside the mode, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen separates live mask mode from native word selection; Listen and Story expose shared single-word collection through a local lookup and save popover. The vocabulary notebook manages the saved entries and passage generation targets.
 
 ## 2. Runtime architecture
 

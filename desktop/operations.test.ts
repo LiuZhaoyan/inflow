@@ -32,7 +32,7 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
   const source = path.join(root, '视频 sample.webm');
   const library = path.join(root, 'library');
   const bytes = Buffer.from('deterministic media fixture');
-  const segments = [{ start: 0.1, end: 1.5, text: '안녕하세요.', groups: ['안녕하세요.'] }, { start: 2, end: 4, text: '반갑습니다.', groups: ['반갑습니다.'] }];
+  const segments = [{ start: 0.1, end: 1.5, text: '오늘 날씨가 정말 좋아요.', groups: ['오늘 날씨가', '정말', '좋아요.'] }, { start: 2, end: 4, text: '반갑습니다.', groups: ['반갑습니다.'] }];
   let mode = 'success';
   let processingStarted: (() => void) | undefined;
   const processor = async (_mode: string, signal: AbortSignal) => {
@@ -47,7 +47,8 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     await rm(source);
     assert.deepEqual(await readFile(app.mediaPath(imported.id)), bytes);
     const processed = await app.transcribe(imported.id, 'first');
-    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true, mode: 'sentence' as const };
+    const masks = { [processed.segments[0].id]: [0, 2], [processed.segments[1].id]: [0] };
+    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true, mode: 'sentence' as const, masks };
     app.saveLearning(imported.id, learning);
     app.close(); app = new DesktopOperations(library, processor);
     const restored = app.restore()!;
@@ -56,6 +57,9 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     assert.deepEqual(restored.learning, learning);
     app.saveLearning(imported.id, { position: learning.position, index: learning.index, rate: learning.rate, loop: learning.loop, duration: learning.duration });
     assert.equal(app.get(imported.id).learning.mode, 'full');
+    assert.deepEqual(app.get(imported.id).learning.masks, masks);
+    app.saveLearning(imported.id, { ...learning, masks: {} });
+    assert.equal(app.get(imported.id).learning.masks, undefined);
     app.saveLearning(imported.id, learning);
     mode = 'invalid';
     await assert.rejects(app.transcribe(imported.id, 'invalid'));
@@ -69,6 +73,8 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     await rm(app.mediaPath(imported.id));
     assert.equal(app.get(imported.id).missing, true);
     assert.deepEqual(app.get(imported.id).segments, processed.segments);
+    app.saveLearning(imported.id, learning);
+    assert.deepEqual(app.get(imported.id).learning.masks, masks);
     await writeFile(source, 'wrong recording');
     await assert.rejects(app.relink(imported.id, source), /同一媒体/);
     await writeFile(source, bytes);
@@ -76,6 +82,17 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     assert.deepEqual(app.get(imported.id).segments, processed.segments);
     assert.throws(() => app.saveLearning(imported.id, { ...learning, index: 99 }), /状态无效/);
     assert.throws(() => app.saveLearning(imported.id, { ...learning, mode: 'invalid' as 'full' }), /状态无效/);
+    for (const groups of [[-1], [3], [0.5], [0, 0]]) {
+      assert.throws(() => app.saveLearning(imported.id, { ...learning, masks: { [processed.segments[0].id]: groups } }), /遮罩无效/);
+    }
+    assert.throws(() => app.saveLearning(imported.id, { ...learning, masks: { 'another-sentence': [0] } }), /遮罩无效/);
+    assert.throws(() => app.saveLearning(imported.id, { ...learning, masks: null as unknown as Record<string, number[]> }), /遮罩无效/);
+    assert.deepEqual(app.get(imported.id).learning, learning);
+    mode = 'success';
+    const reprocessed = await app.transcribe(imported.id, 'reprocess');
+    assert.equal(reprocessed.learning.masks, undefined);
+    assert.notEqual(reprocessed.segments[0].id, processed.segments[0].id);
+    assert.throws(() => app.saveLearning(imported.id, learning), /遮罩无效/);
     assert.throws(() => app.mediaPath('../../secrets'), /不存在/);
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
