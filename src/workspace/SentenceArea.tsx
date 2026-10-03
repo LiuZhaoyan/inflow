@@ -74,20 +74,18 @@ export default function SentenceArea({
     <div className="workspace-sentence-meta">
       <div className="workspace-sentence-heading"><h2>Current sentence</h2><span>{segment ? formatTime(segment.start) + ' – ' + formatTime(segment.end) : 'No sentence selected'}</span></div>
       {segment && <span className="workspace-sentence-count">{currentNumber} / {totalNumber}</span>}
-      <button type="button" className="workspace-mask-toggle" disabled={!segment} aria-pressed={maskEditing} aria-describedby="sentence-mask-hint" onClick={onToggleMaskEditing}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M8 12h8"/></svg>
+      <button type="button" className="workspace-mask-toggle" disabled={!segment} aria-pressed={maskEditing} aria-describedby={maskEditing ? 'sentence-mask-summary' : undefined} onClick={onToggleMaskEditing}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M7 12h10"/></svg>
         Set masks
       </button>
     </div>
-    <p className="workspace-mask-hint" id="sentence-mask-hint" role="status">{segment && (maskEditing
-      ? `Mask mode · Click a group to hide or show it. ${maskedGroups.length} of ${segment.groups.length} masked.`
-      : 'Select words to collect them, or set masks to practise listening.')}</p>
+    <p className="workspace-mask-summary" id="sentence-mask-summary" role="status">{segment && maskEditing ? `${maskedGroups.length} / ${segment.groups.length} masked` : ''}</p>
     <div className="workspace-sentence-copy">
     {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => {
       const masked = maskedGroups.includes(groupIndex);
       const hidden = maskEditing && masked;
       return <span key={groupIndex} data-source-start={groupStarts[groupIndex]} className={hidden ? 'hidden-group' : 'meaning-group'}>
-        {maskEditing ? <button type="button" className={`workspace-mask-group${masked ? ' is-masked' : ''}`} aria-pressed={masked} aria-label={`${masked ? 'Show' : 'Hide'} meaning group ${groupIndex + 1}${masked ? '' : ': ' + group}`} onClick={() => onToggleGroup(groupIndex)}>{hidden ? <span aria-hidden="true">•••</span> : group}</button>
+        {maskEditing ? <button type="button" className={`workspace-mask-group${masked ? ' is-masked' : ''}`} aria-pressed={masked} aria-label={`${masked ? 'Show' : 'Hide'} meaning group ${groupIndex + 1}${masked ? '' : ': ' + group}`} onClick={() => onToggleGroup(groupIndex)}><span className="workspace-mask-text" aria-hidden={hidden || undefined}>{group}</span></button>
           : <span className="workspace-group-text">{group}</span>}{' '}
       </span>;
     })}</span></p>
