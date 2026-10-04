@@ -2,7 +2,19 @@ export type Segment = { start: number; end: number; text: string; groups: string
 
 export function isCompleteEnglishWord(sentence: string, surface: string, start?: number): boolean {
   const words = sentence.matchAll(/[\p{L}\p{M}\p{N}]+(?:['’\-‐‑][\p{L}\p{M}\p{N}]+)*/gu);
-  return [...words].some(word => (start === undefined || word.index === start) && word[0] === surface);
+  let previousEnd = 0, quoted = false;
+  for (const word of words) {
+    for (const character of sentence.slice(previousEnd, word.index)) {
+      if (character === '‘') quoted = true;
+      else if (character === "'" || character === '’') quoted = !quoted;
+    }
+    let complete = word[0];
+    const following = sentence[word.index + complete.length];
+    if (!quoted && /s$/iu.test(complete) && (following === "'" || following === '’')) complete += following;
+    if ((start === undefined || word.index === start) && complete === surface) return true;
+    previousEnd = word.index + complete.length;
+  }
+  return false;
 }
 
 export function validateSegments(value: unknown): Segment[] {

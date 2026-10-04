@@ -41,9 +41,9 @@ async function run() {
   seed.close();
 
   const confirmations = [], requests = [], errors = [];
-  let cancelImport = false;
-  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [sample] });
-  dialog.showMessageBox = async (_window, options) => { confirmations.push(options); return { response: cancelImport ? 2 : 1 }; };
+  let cancelImport = false, chosenFile = sample, confirmedLanguage = 1;
+  dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [chosenFile] });
+  dialog.showMessageBox = async (_window, options) => { confirmations.push(options); return { response: cancelImport ? 2 : confirmedLanguage }; };
   app.on('browser-window-created', (_event, window) => {
     window.hide(); window.webContents.setBackgroundThrottling(false);
     window.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
@@ -55,7 +55,7 @@ async function run() {
     requests.push({ input, field });
     const result = field === 'translation' ? { translation: '放学后，孩子们见到了朋友。' } : {
       title: 'English friends ' + requests.length,
-      sentences: [{ parts: input.targets.flatMap(target => [{ text: target.lemma, targetId: target.id }, { text: ' met a well-known friend. ', targetId: null }]), translationZh: '见到了一位知名的朋友。' }],
+      sentences: [{ parts: input.targets.flatMap(target => [{ text: target.lemma, targetId: target.id }, { text: " met a well-known friend, and the teachers' books are here. ", targetId: null }]), translationZh: '见到了一位知名的朋友，老师们的书在这里。' }],
     };
     return Response.json({ id: 'english-native-fixture', status: 'completed', model: 'fixture', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: JSON.stringify(result) }] }] });
   };
@@ -131,6 +131,13 @@ async function run() {
   await fs.writeFile(path.join(output, 'transcript.json'), JSON.stringify(media.segments, null, 2));
   cancelImport = true;
   assert.equal(await evaluate('window.inflow.importMedia()'), null); assert.equal(confirmations[1].defaultId, 1);
+  cancelImport = false; chosenFile = path.join(output, 'empty.wav'); confirmedLanguage = 0;
+  await fs.writeFile(chosenFile, '');
+  await assert.rejects(evaluate('window.inflow.importMedia()'));
+  confirmedLanguage = 1;
+  await assert.rejects(evaluate('window.inflow.importMedia()'));
+  assert.equal(confirmations[3].defaultId, 0);
+  chosenFile = sample;
   assert.equal(await evaluate('window.inflow.list().then(items => items.length)'), 2);
   await wait('!document.querySelector(".workspace-library-dialog").open');
   await textButton('.workspace-mode-switch button', 'Sentence');
@@ -191,6 +198,9 @@ async function run() {
   await wait('!document.querySelector(".vocabulary-selection")');
   const known = await evaluate('window.inflow.listVocabulary().then(items => items.find(item => item.lemma === "well-known"))');
   assert.equal(known.contexts[0].source.artifactId, first.id);
+  await select('.artifact-korean', "teachers'");
+  await wait('document.querySelector(".vocabulary-selection input[name=lemma]")?.value === "teacher"');
+  await textButton('.vocabulary-selection button', 'Discard');
   await evaluate(`window.inflow.selectVocabulary([${JSON.stringify(known.id)}])`);
   await textButton('.story-options button', 'Generate a story');
   await wait('!!document.querySelector(".workspace-target-dialog[open]")');

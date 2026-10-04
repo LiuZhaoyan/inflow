@@ -102,7 +102,7 @@ test('English Story supports two collection cycles and mixed targets fail before
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
-test('the last successful import language is restored and invalid imports do not change it', async () => {
+test('the last confirmed import language survives import failure and restart', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow import language '));
   const file = path.join(root, 'sample.wav');
   let duration = 5;
@@ -113,23 +113,25 @@ test('the last successful import language is restored and invalid imports do not
     assert.equal(app.getImportLanguage(), 'ko');
     await app.importMedia(file, 'en');
     assert.equal(app.getImportLanguage(), 'en');
+    await assert.rejects(app.importMedia(file, 'ja' as SourceLanguage), /韩语或英语/);
+    assert.equal(app.getImportLanguage(), 'en');
     duration = 601;
     await assert.rejects(app.importMedia(file, 'ko'), /10 分钟/);
-    assert.equal(app.getImportLanguage(), 'en');
-    app.close(); app = new DesktopOperations(path.join(root, 'library'), processor);
-    assert.equal(app.getImportLanguage(), 'en');
-    duration = 5;
-    await app.importMedia(file, 'ko');
     assert.equal(app.getImportLanguage(), 'ko');
+    app.close(); app = new DesktopOperations(path.join(root, 'library'), processor);
+    assert.equal(app.getImportLanguage(), 'ko');
+    duration = 5;
+    await app.importMedia(file, 'en');
+    assert.equal(app.getImportLanguage(), 'en');
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test('English collection preserves complete surfaces, normalizes apostrophes, and keeps language identity', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow English words '));
-  const sentence = "😀 The teacher’s children don't like well-known stories.";
+  const sentence = "😀 The teacher’s children don't like well-known stories in the teachers' books. They call them 'the teachers'. Jose\u0301 is here.";
   const processor = async (mode: string, _signal: AbortSignal, _file?: string, input?: unknown) => {
     if (mode === 'probe') return { duration: 5 };
-    if (mode === 'lookup') return { ...(input as object), lemma: 'child' };
+    if (mode === 'lookup') return { ...(input as object), lemma: (input as { surface: string }).surface === 'Jose\u0301' ? 'Jose\u0301' : 'child' };
     return { segments: [{ start: 0, end: 3, text: sentence, groups: [sentence] }] };
   };
   const app = new DesktopOperations(path.join(root, 'library'), processor);
@@ -147,17 +149,23 @@ test('English collection preserves complete surfaces, normalizes apostrophes, an
     assert.equal(app.saveVocabulary({ language: 'en', lemma: 'child', meaningZh: '孩子', context }).id, child.id);
     assert.notEqual(app.saveVocabulary({ language: 'en', lemma: 'child', meaningZh: '子代' }).id, child.id);
     assert.notEqual(app.saveVocabulary({ language: 'ko', lemma: 'child', meaningZh: '孩子' }).id, child.id);
-    for (const surface of ["teacher’s", "don't", 'well-known']) {
+    for (const surface of ["teacher’s", "don't", 'well-known', "teachers'"]) {
       const start = sentence.indexOf(surface);
       const entry = app.saveVocabulary({ language: 'en', lemma: surface, meaningZh: '测试释义', context: { ...context, surface, surfaceStart: start } });
       assert.equal(entry.lemma, surface.replaceAll('’', "'"));
       assert.equal(entry.contexts[0].surface, surface);
     }
-    for (const surface of ['child', 'don', 'known', 'children don\'t']) {
+    for (const surface of ['child', 'don', 'known', 'children don\'t', 'teachers']) {
       const start = sentence.indexOf(surface);
       await assert.rejects(app.lookupVocabulary({ ...input, surface, start, lemma: 'corrected' }, 'partial'), /单词/);
       assert.throws(() => app.saveVocabulary({ language: 'en', lemma: 'corrected', meaningZh: '错误', context: { ...context, surface, surfaceStart: start } }), /单词/);
     }
+    assert.equal((await app.lookupVocabulary({ ...input, surface: 'teachers', start: sentence.lastIndexOf('teachers'), lemma: 'teacher' }, 'quoted')).lemma, 'teacher');
+    const accented = 'Jose\u0301';
+    const name = app.saveVocabulary({ language: 'en', lemma: 'José', meaningZh: '人名', context: { ...context, surface: accented, surfaceStart: sentence.indexOf(accented) } });
+    assert.equal(name.contexts[0].surface, accented);
+    const reused = await app.lookupVocabulary({ ...input, surface: accented, start: sentence.indexOf(accented) }, 'accented');
+    assert.equal(reused.lemma, 'José'); assert.equal(reused.meaningZh, '人名');
     assert.throws(() => app.saveVocabulary({ id: child.id, language: 'ko', lemma: 'child', meaningZh: '孩子' }), /语种/);
     assert.throws(() => app.saveVocabulary({ language: 'ko', lemma: 'child', meaningZh: '孩子', context }), /语种/);
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }

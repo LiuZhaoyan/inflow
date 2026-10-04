@@ -87,7 +87,17 @@ def _analyze_english(surface, sentence, start, end):
     if not tokens:
         raise ProcessingError('无法确定词典形，请手动填写。')
     normalized = surface.replace('’', "'")
-    is_possessive = any(token.tag_ == 'POS' or token.dep_ == 'case' for token in tokens)
+    possessives = [token for token in tokens if (token.tag_ == 'POS' or token.dep_ == 'case') and token.head.dep_ == 'poss']
+    is_possessive = bool(possessives)
+    if is_possessive and normalized.lower().endswith("'s"):
+        head = possessives[0].head.head
+        if head.dep_ == 'ROOT':
+            # Check an ambiguous nominal parse against the copula reading: "mom's home" / "teacher's book".
+            expanded = english_parser()(sentence[:end - 2] + ' is' + sentence[end:])
+            predicate = next((token for token in expanded if token.idx == head.idx + 1), None)
+            # The small pipeline can label locative "home" as a noun even after the copula.
+            if predicate is not None and (predicate.pos_ in {'ADJ', 'ADV', 'VERB'} or predicate.lower_ in {'home', 'here', 'there'}):
+                is_possessive = False
     if is_possessive:
         if normalized.endswith("'"):
             base = normalized[:-1]
@@ -127,9 +137,13 @@ def _is_english_word_character(character):
 
 
 def _english_word_spans(text):
-    spans, index = [], 0
+    spans, index, quoted = [], 0, False
     while index < len(text):
         if not _is_english_word_character(text[index]):
+            if text[index] == '‘':
+                quoted = True
+            elif text[index] in {"'", '’'}:
+                quoted = not quoted
             index += 1
             continue
         start = index
@@ -141,6 +155,8 @@ def _english_word_spans(text):
                 index += 1
             else:
                 break
+        if not quoted and text[index - 1].lower() == 's' and index < len(text) and text[index] in {"'", '’'}:
+            index += 1
         spans.append((start, index))
     return spans
 

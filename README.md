@@ -12,7 +12,7 @@ Import Korean or English audio or video, practice it sentence by sentence, mask 
 
 The project currently targets personal use on Windows. The desktop implementation is runnable from the repository; packaging it as a self-contained installed application is still future work.
 
-Each import confirms its source language and remembers the last successful choice. Media, vocabulary and saved stories have independent All/Korean/English filters; filtering preserves selected targets. Generation requires all targets to use one language.
+Each import confirms its source language and remembers the last confirmed choice, even if the file cannot be imported. Media, vocabulary and saved stories have independent All/Korean/English filters; filtering preserves selected targets. Generation requires all targets to use one language.
 
 ## What can I do with it?
 

@@ -19,14 +19,20 @@ ENGLISH_PIPELINE_SHA256 = '1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf892
 
 
 def install_english_parser(models_dir):
+    import spacy
     root = Path(models_dir)
     wheel = root/'downloads'/'en_core_web_sm-3.8.0-py3-none-any.whl'
     destination = root/'english-parser'
     model = destination/'en_core_web_sm'/'en_core_web_sm-3.8.0'
     metadata = model/'meta.json'
-    if (model/'config.cfg').is_file() and metadata.is_file() and json.loads(metadata.read_text(encoding='utf-8')).get('version') == '3.8.0':
-        print('English parser already installed', flush=True)
-        return
+    if (model/'config.cfg').is_file() and metadata.is_file():
+        try:
+            if json.loads(metadata.read_text(encoding='utf-8')).get('version') == '3.8.0':
+                spacy.load(str(model))
+                print('English parser already installed', flush=True)
+                return
+        except (OSError, ValueError):
+            pass  # An interrupted extraction must be repairable by rerunning preparation.
     wheel.parent.mkdir(parents=True, exist_ok=True)
     if not wheel.is_file() or hashlib.sha256(wheel.read_bytes()).hexdigest() != ENGLISH_PIPELINE_SHA256:
         print('Downloading pinned spaCy English parser en_core_web_sm 3.8.0', flush=True)
@@ -41,6 +47,7 @@ def install_english_parser(models_dir):
         archive.extractall(destination)
     if not (model/'config.cfg').is_file() or json.loads(metadata.read_text(encoding='utf-8')).get('version') != '3.8.0':
         raise ValueError('English parser archive is incomplete or has an unexpected version')
+    spacy.load(str(model))
     print('English parser ready for offline processing.', flush=True)
 
 

@@ -99,6 +99,7 @@ export class DesktopOperations {
 
   async importMedia(filename: string, language: SourceLanguage = 'ko'): Promise<SavedMedia> {
     if (language !== 'ko' && language !== 'en') throw new Error('请选择韩语或英语素材。');
+    this.db.prepare("INSERT INTO settings VALUES ('importLanguage', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(language);
     const hash = await this.inspect(filename);
     const probe = await this.processor('probe', new AbortController().signal, filename) as { duration?: unknown };
     if (typeof probe?.duration !== 'number' || !Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('无法读取媒体时长，请重试。');
@@ -109,12 +110,7 @@ export class DesktopOperations {
     try {
       await copyFile(filename, destination);
       if (await this.inspect(destination) !== hash) throw new Error('媒体在导入时发生变化，请重试。');
-      this.db.exec('BEGIN');
-      try {
-        this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
-        this.db.prepare("INSERT INTO settings VALUES ('importLanguage', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(language);
-        this.db.exec('COMMIT');
-      } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+      this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
     } catch (error) { await rm(destination, { force: true }); throw error; }
     return this.open(id);
   }
@@ -247,10 +243,11 @@ export class DesktopOperations {
 
   async lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup> {
     this.validateLookup(input);
-    const result = input.lemma ? { ...input, lemma: input.language === 'en' ? input.lemma.normalize('NFC').replaceAll('’', "'") : input.lemma.normalize('NFC') }
+    const result = input.lemma ? { ...input, lemma: input.lemma }
       : await this.runJob(job, signal => this.processor('lookup', signal, undefined, input)) as VocabularyLookup;
     if (result?.surface !== input.surface || result?.language !== input.language || typeof result?.lemma !== 'string' || !result.lemma.trim() || result.lemma.length > 100 || /\s|\0/u.test(result.lemma)) throw new Error('无法确定词典形，请手动填写。');
-    return { surface: input.surface, lemma: result.lemma, language: input.language, ...this.vocabularySuggestions(input, result.lemma) };
+    const lemma = input.language === 'en' ? result.lemma.normalize('NFC').replaceAll('’', "'") : result.lemma.normalize('NFC');
+    return { surface: input.surface, lemma, language: input.language, ...this.vocabularySuggestions(input, lemma) };
   }
 
   async glossVocabulary(input: LookupVocabularyInput & { lemma: string }, job: string, apiKey: string): Promise<string> {
@@ -325,8 +322,9 @@ export class DesktopOperations {
       if (!input.context || typeof input.context !== 'object' || !input.context.source || typeof input.context.source !== 'object') throw new Error('原句来源无效。');
       const source = input.context.source;
       const sentence = this.sourceSentence(source, language);
-      const surface = text(input.context.surface, 100);
-      if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(surface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
+      const normalizedSurface = text(input.context.surface, 100);
+      const surface = language === 'en' ? input.context.surface.trim() : normalizedSurface;
+      if (!sentence.normalize('NFC').replace(/\s+/gu, ' ').includes(normalizedSurface.replace(/\s+/gu, ' '))) throw new Error('选中文字不属于该原句，请重新选择。');
       if (/\s/u.test(surface)) throw new Error('请只选择一个单词。');
       // Snapshot the host-owned sentence; source display metadata is rebuilt on read.
       const surfaceStart = input.context.surfaceStart;
