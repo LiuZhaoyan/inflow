@@ -2,6 +2,8 @@
 
 Last verified: 2026-10-02
 
+Documentation reviewed against source: 2026-10-03. This review corrects the snapshot; it does not add runtime verification evidence.
+
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
 ## 1. Current product state
@@ -13,6 +15,8 @@ Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 ```
 
 The desktop host owns persistence, managed media, local processing, and generation credentials. The renderer communicates with those capabilities through the preload/DesktopBridge contract rather than owning desktop business logic directly.
+
+Runtime import, transcription, local dictionary-form lookup, translation and passage generation support Korean only. [English Learning Support](../.scratch/english-learning/spec.md) is now specified as ready-for-agent; it has no implementation or runtime acceptance evidence yet. Intended bilingual product behavior does not imply current English availability.
 
 The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, persistent learner-selected meaning-group masks applied in mask mode, with full source text and word collection available outside the mode, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen separates live mask mode from native word selection; Listen and Story expose shared single-word collection through a local lookup and save popover. The vocabulary notebook manages the saved entries and passage generation targets.
 
@@ -28,7 +32,9 @@ DesktopOperations
 SQLite        Python worker        DeepSeek API
 ```
 
-Electron loads a static Next.js export. Managed media is served through the custom `inflow://` protocol with byte-range support for seeking and sentence playback. No local HTTP server is required by the desktop runtime.## 3. Implemented learning domains
+Electron loads a static Next.js export. Managed media is served through the custom `inflow://` protocol with byte-range support for seeking and sentence playback. No local HTTP server is required by the desktop runtime.
+
+## 3. Implemented learning domains
 
 ### Media and listening
 
@@ -51,13 +57,15 @@ Whisper word timestamps are intermediate processing data. Sentence start/end tim
 
 Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Korean is the currently supported source language. Kiwi provides read-only contextual dictionary-form lookup using the selected span. A bundled KRDict Chinese text snapshot provides 42,908 headwords and offline sense candidates, with attribution and its separate CC BY-SA 2.0 KR license. Learners select or edit a meaning and can explicitly request a cloud contextual gloss. Only collected meanings persist; saved meanings are automatically reused only for the same source sentence and selected occurrence. Both Listen and Story collect in place and retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
 
-Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Re-transcription preserves old segments that are still referenced by vocabulary provenance. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
+Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Successful retranscription atomically replaces all segments for that material and removes their vocabulary source occurrences, including occurrences on older retained segments. Vocabulary entries, meanings, target selection and sources from other media or artifacts remain intact. Failure or cancellation preserves the previous transcript and sources. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
 ### Generated artifacts
 
 Up to 20 selected vocabulary entries can be sent to DeepSeek to generate one short Korean learning passage. Generation receives the selected lemma, contextual Chinese meaning, and available source sentence. Returned target IDs are structurally validated before the artifact is saved.
 
-Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.## 4. Processing and service boundaries
+Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.
+
+## 4. Processing and service boundaries
 
 Transcription and sentence segmentation run locally. Listen translation uses the cloud on explicit request, with an explicitly selected local reference fallback. The current processing path is:
 
@@ -82,7 +90,7 @@ Passage generation is not local. It uses the DeepSeek Responses API and therefor
 The Electron host stores learning records in SQLite. The current persisted domains are:
 
 - media and learning state;
-- active and provenance-retained segments, plus latest successful sentence translations and their input context;
+- current sentence segments, plus latest successful sentence translations and their input context;
 - vocabulary entries and media-source occurrences;
 - generated artifacts and artifact-source vocabulary occurrences;
 - small application settings such as the current media or artifact.
@@ -95,14 +103,15 @@ The desktop implementation has automated coverage around listening processing/re
 
 The current frontend workspace has been implemented and locally verified. Native Electron acceptance covers shared Listen/Story selection, real Kiwi and bundled dictionary lookup, explicit cloud actions, translation cache reuse, failed refresh preservation, manual fallback, stale-result protection, suggestion application, discarded glosses, saving retry, source provenance, and notebook refresh. Cloud HTTP and local reference translation use deterministic fixtures in this acceptance; live provider translation quality is not assessed. Visual/product acceptance of the broader redesigned workspace is still evolving.
 
-Task-specific verification records live under `.scratch/`; this document records only the resulting current state.
+Task-specific verification records are indexed in [the task index](../.scratch/README.md). Superseded and completed delivery records live under `.scratch/archive/`; this document records only the resulting current state.
 
 ## 7. Current gaps
 
 The main known gaps are:
 
-- the frontend is being redesigned around the existing desktop/domain capabilities;
-- English processing and automatic contextual dictionary disambiguation are deferred;
+- owner visual/product acceptance of the implemented frontend remains pending;
+- the confirmed English learning extension is specified but not implemented;
+- automatic contextual dictionary disambiguation remains deferred;
 - individual ASR word timestamps are not part of the persisted domain model;
 - local Chinese translation depends on an English pivot and can be literal or lossy;
 - new cloud translations, contextual glosses and generated passages depend on the remote DeepSeek service; saved results and offline dictionary lookup remain local;
@@ -119,4 +128,4 @@ Use these documents according to their role:
 - **PROJECT_STATUS.md**: what Inflow is now — implemented architecture, capabilities, verification state, and known gaps.
 - [ROADMAP.md](ROADMAP.md): what comes next — remaining work, ordering, and dependencies.
 - `docs/agents/`: how repository agents should work with domain documentation and the local issue workflow.
-- `.scratch/<effort>/`: task execution history — specs, research, tickets, decisions, and acceptance evidence. These records are not expected to remain current after an effort finishes.
+- [`.scratch/README.md`](../.scratch/README.md): active task entry points and historical evidence. Active specs and tickets live under `.scratch/<effort>/`; archived records under `.scratch/archive/` are not expected to describe current behavior.

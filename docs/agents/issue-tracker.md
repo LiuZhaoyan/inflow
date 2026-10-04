@@ -2,6 +2,8 @@
 
 Issues and specs for this repo live as markdown files in `.scratch/`.
 
+Start with [the task index](../../.scratch/README.md) to find active work. Superseded specifications and completed delivery records live under `.scratch/archive/`; their dated status fields are historical and must not be treated as current triage. Preserve verification utilities and generated evidence at their original paths when archiving Markdown records.
+
 ## Conventions
 
 - One feature per directory: `.scratch/<feature-slug>/`

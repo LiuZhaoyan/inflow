@@ -1,9 +1,11 @@
 # 06: Run the packaged Windows worker without system Python
 
 Status: ready-for-agent
-Blocked by: [03: Restore a processed video in the desktop application](03-persistent-desktop-listening.md).
+Blocked by: None.
+Completed prerequisite: [03: Restore a processed video in the desktop application](../../archive/desktop-learning/issues/03-persistent-desktop-listening.md).
 Approved: 2026-09-30
-Specification: [Windows Korean Learning Desktop MVP](../spec.md).
+Specification: [Windows Korean Learning Desktop MVP](../../archive/desktop-learning/spec.md).
+Current product requirements: [Product Specification](../../../docs/PRODUCT_SPEC.md). The linked MVP spec is historical context; ticket 03 is completed and this ticket is unblocked.
 
 ## What to build
 
@@ -11,7 +13,7 @@ A Windows application package can import, transcribe and replay media using its 
 
 ## Context and boundaries
 
-This is a Windows-first Korean learning application for the owner's personal use. Reuse the existing listening prototype and the confirmed [technical baseline](../technical-recommendation.md). Keep changes limited to this slice; preserve existing learning material. Generated artifacts are text-only. Accounts, synchronization, additional platform installers, provider registries and public-release infrastructure are outside this MVP.
+This is a Windows-first Korean learning application for the owner's personal use. Reuse the existing listening prototype and the confirmed [technical baseline](../../archive/desktop-learning/technical-recommendation.md). Keep changes limited to this slice; preserve existing learning material. Generated artifacts are text-only. Accounts, synchronization, additional platform installers, provider registries and public-release infrastructure are outside this MVP.
 
 ## Acceptance criteria
 

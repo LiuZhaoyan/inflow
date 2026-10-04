@@ -1,9 +1,11 @@
 # 07: Accept the installed Windows learning cycle
 
 Status: ready-for-agent
-Blocked by: [05: Generate text artifacts and collect the next vocabulary](05-text-artifact-learning-cycle.md), [06: Run the packaged Windows worker without system Python](06-packaged-windows-worker.md).
+Blocked by: [06: Run the packaged Windows worker without system Python](06-packaged-windows-worker.md).
+Completed prerequisite: [05: Generate text artifacts and collect the next vocabulary](../../archive/desktop-learning/issues/05-text-artifact-learning-cycle.md).
 Approved: 2026-09-30
-Specification: [Windows Korean Learning Desktop MVP](../spec.md).
+Specification: [Windows Korean Learning Desktop MVP](../../archive/desktop-learning/spec.md).
+Current product requirements: [Product Specification](../../../docs/PRODUCT_SPEC.md). Ticket 05 is completed; ticket 06 remains the open blocker.
 
 ## What to build
 
@@ -11,7 +13,7 @@ The personal-use Windows installer completes the full video → vocabulary → t
 
 ## Context and boundaries
 
-This is a Windows-first Korean learning application for the owner's personal use. Reuse the existing listening prototype and the confirmed [technical baseline](../technical-recommendation.md). Keep changes limited to this slice; preserve existing learning material. Generated artifacts are text-only. Accounts, synchronization, additional platform installers, provider registries and public-release infrastructure are outside this MVP.
+This is a Windows-first Korean learning application for the owner's personal use. Reuse the existing listening prototype and the confirmed [technical baseline](../../archive/desktop-learning/technical-recommendation.md). Keep changes limited to this slice; preserve existing learning material. Generated artifacts are text-only. Accounts, synchronization, additional platform installers, provider registries and public-release infrastructure are outside this MVP.
 
 ## Acceptance criteria
 
@@ -19,7 +21,7 @@ This is a Windows-first Korean learning application for the owner's personal use
 - [ ] Use real subtitle-free Korean video to collect entries, generate/read an artifact, collect another entry and generate a second artifact.
 - [ ] Close and reopen the installed application, confirming managed media, cached processing, learning position/preferences, vocabulary, artifacts, target snapshots and source references.
 - [ ] Exercise missing managed media, processing cancellation and generation failure without losing earlier material or presenting an incomplete result as saved success.
-- [ ] Keep default-hidden source/translation behavior, genuine target coverage/meaning and text-only artifact generation consistent with the specification.
+- [ ] Keep source text visible outside mask mode, saved masks active only in mask mode, and translation hidden on sentence changes; preserve genuine target coverage/meaning and text-only artifact generation.
 - [ ] Update setup/usage instructions to describe observed Windows behavior and known processing/media limits.
 - [ ] Record automated, live-model and installed-Windows evidence separately. Resolve delivery failures within the agreed scope before closing the ticket.
 

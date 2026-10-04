@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-Inflow is a Korean learning application using Next.js 16, TypeScript and React 19, moving toward the confirmed Windows desktop MVP. Page entry, layout, styles and the retained Logo live in `src/app/`. The active listening UI, processing logic, API adapters and tests live in `src/listening/` and `src/app/api/`. Audio and provenance belong in `public/materials/`. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; implementation tickets live under `.scratch/desktop-learning/`.
+Inflow is a Korean learning application using Next.js 16, TypeScript and React 19 with an Electron desktop host for Windows. Page entry, layout, styles and the retained Logo live in `src/app/`. The active workspace UI lives in `src/workspace/`; listening rules, bridge types and API adapters live in `src/listening/` and `src/app/api/`; passage generation lives in `src/generation/`. Host operations and persistence live in `desktop/`, and local processing lives in `scripts/`. Audio and provenance belong in `public/materials/`. Preserved legacy `data/` and `public/uploads/` are not source and must not be deleted as part of code cleanup. Current product scope is defined in `docs/PRODUCT_SPEC.md`; read `.scratch/README.md` when locating active specs or tickets. Records under `.scratch/archive/` are historical evidence.
 
 ## Documentation Language
 

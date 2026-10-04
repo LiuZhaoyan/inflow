@@ -6,7 +6,9 @@ This document defines what Inflow should be: its product behavior, scope, and bo
 
 ## 1. Product positioning
 
-Inflow is an open-source Korean learning desktop application, initially for personal use on Windows. Users provide audio or video for intensive listening, collect unfamiliar words, and generate short Korean reading passages from their vocabulary notebook.
+Inflow is an open-source Korean and English learning desktop application, initially for personal use on Windows. Users provide audio or video for intensive listening, collect unfamiliar words, and generate short reading passages in the selected vocabulary's source language.
+
+English is a confirmed product extension specified in [English Learning Support](../.scratch/english-learning/spec.md). Current runtime availability is recorded separately in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 The system automatically transcribes and segments source media so users do not need to prepare subtitles or a course first. Generated passages reuse selected vocabulary in its recorded contextual meaning and can themselves become sources for further vocabulary collection.
 
@@ -37,11 +39,17 @@ Generated passages are text-first learning artifacts. They preserve the target v
 
 Users choose audio or video from their device. Imported media is retained as a managed local copy so moving the original file does not silently break saved learning material.
 
+The learner confirms Korean or English for each import, with the last confirmed choice offered as the next default. Each material has one source language. A mistaken choice is corrected by reimporting; automatic detection and editing an existing material's language are outside this extension. English material should be predominantly English; reliable handling of frequent multilingual switching is not promised.
+
 A subtitle file is not required. Processing should produce source text, playable sentence ranges, and meaning groups for masking. Automatically generated transcription, segmentation, and translation must not be presented as guaranteed-correct answer keys.
+
+English meaning groups use local grammatical analysis to preserve phrases or clauses, complete contractions and hyphenated words. Ambiguous boundaries may produce larger groups; fixed word-count chunks are not the learning rule. Analysis resources are prepared through the existing setup workflow, and ordinary local processing does not download resources at runtime.
 
 Processing failures should preserve the original media and provide a retry path. Reopening already processed material should reuse saved results rather than requiring duplicate processing.
 
-The first release does not require a professional subtitle editor or a separate subtitle-import workflow. Lightweight transcript/timing correction may be added later.## 5. Intensive listening
+The first release does not require a professional subtitle editor or a separate subtitle-import workflow. Lightweight transcript/timing correction may be added later.
+
+## 5. Intensive listening
 
 The learner can:
 
@@ -66,13 +74,15 @@ Listen requests a Chinese translation from the cloud only on explicit action, us
 
 Vocabulary may be collected from source-media sentences or generated artifacts, and may also be added manually. The current scope is individual words; phrase and grammatical-construction entries are deferred.
 
-Selecting one continuous word with no internal whitespace in revealed source text opens a lightweight popover in Listen or Story. Lookup suggests a Korean dictionary form locally without saving an entry. A bundled Korean-Chinese dictionary supplies offline sense candidates. A single available sense may fill automatically; multiple senses require learner selection. The learner can choose or edit a contextual Chinese meaning and explicitly confirm collection without leaving the learning view. An explicit cloud lookup can suggest a concise contextual meaning without changing the dictionary form. Failed lookup still permits manual entry. Selections across sentences, hidden text, or multiple words are rejected with guidance to select one revealed word.
+Selecting one complete word with no internal whitespace in revealed source text opens a lightweight popover in Listen or Story. Lookup suggests a dictionary form in the source language locally without saving an entry. Bundled Korean–Chinese and English–Chinese dictionaries supply offline sense candidates. A single available sense may fill automatically; multiple senses require learner selection. The learner can choose or edit a contextual Chinese meaning and explicitly confirm collection without leaving the learning view. An explicit cloud lookup can suggest a concise contextual meaning without changing the dictionary form. Failed lookup still permits manual entry. Selections across sentences, hidden text, partial English words, or multiple words are rejected with guidance to select one revealed word.
+
+English collection includes whole contractions and hyphenated forms but excludes whitespace-containing phrases. Contextual lookup suggests ordinary dictionary forms in lowercase and proper names with appropriate spelling, while retaining the encountered text. Contractions such as `don't`, `can't` and `I'm` remain complete forms; possessives such as `teacher's` may suggest `teacher`; hyphenated forms remain intact. Dictionary forms normalize curly/straight apostrophes. All suggestions remain editable before collection.
 
 Word selection never triggers a cloud request. Uncollected lookup results are not persisted. A saved meaning may be reused for the same source sentence and selected occurrence; meanings from other contexts are candidates only. An explicit cloud lookup may replace the meaning already present when requested. Pending results cannot overwrite edits made during that request or newer selections; intervening edits expose the returned meaning as an explicit Apply suggestion action.
 
 The popover retains the selected surface and source when its inputs receive focus. Changing sentence or selection closes an unedited draft; an edited draft requires saving or explicitly discarding. Failed saving retains the draft for retry.
 
-The learner confirms the source language when importing media. Korean is supported initially and English is planned; contextual meanings remain Chinese. Source language is part of vocabulary identity.
+Source language is part of vocabulary identity and is confirmed for manual additions as well as inherited from collected material. Contextual meanings and sentence translations remain Chinese for both learning languages.
 
 A vocabulary entry should preserve:
 
@@ -82,21 +92,27 @@ A vocabulary entry should preserve:
 - original sentence when available;
 - source identity.
 
-Learners can correct the dictionary form and meaning. Distinct meanings of the same Korean form remain distinguishable, while repeated encounters with the same meaning may preserve multiple source contexts.
+Learners can correct the dictionary form and meaning. Distinct meanings of the same source-language form remain distinguishable, while repeated encounters with the same meaning may preserve multiple source contexts. Entries in different source languages remain distinct even when their spelling matches.
 
 Successful retranscription removes all vocabulary source contexts from that material's old transcript, including unchanged sentences and earlier retained versions. Context removal and transcript replacement commit together; failure or cancellation preserves the previous transcript and contexts. Vocabulary entries, their meanings and target selection remain valid and unchanged. Sources from other media and generated artifacts remain intact. An entry without sources stays visible and editable, may be selected for generation, and displays an empty-source state. Collecting the same word and meaning from a new sentence reuses the existing entry and adds its new source.
 
 Vocabulary selection is an explicit learner action. Inflow does not infer mastery from play count, collection, or selection.
 
+Media, vocabulary and saved reading lists identify source language and offer independent All/Korean/English filters, initially set to All. Filtering changes visible results without changing stored material or selected target vocabulary.
+
 ## 7. Generated learning artifacts
 
-Selecting target vocabulary is sufficient to generate one short Korean passage; a topic may be optional. The first release does not require difficulty-level or passage-length controls.
+Selecting target vocabulary is sufficient to generate one short passage in the selected entries' shared source language; a topic may be optional. The first release does not require difficulty-level or passage-length controls.
 
-Every selected target should appear naturally in its recorded contextual meaning. Natural Korean inflection counts as use; exact dictionary-form spelling is not required. Supporting vocabulary should remain common and suitable for learning.
+Each generation uses exactly one source language, determined from the full selected target set rather than the currently visible filtered list. Mixed Korean/English selections require learner correction before a provider request and preserve all existing selections.
 
-A saved artifact preserves its text, target occurrences, Chinese sentence translations, and a snapshot of the target meanings used to generate it. Learners can collect further unfamiliar vocabulary from artifact sentences and use those entries in later generation.
+Every selected target should appear naturally in its recorded contextual meaning. Natural Korean or English inflection counts as use; exact dictionary-form spelling is not required. Supporting vocabulary should remain common and suitable for learning.
 
-Generation failure must preserve existing learning data and offer retry. Structural validation alone does not establish Korean naturalness or semantic quality.## 8. Data and provenance principles
+A saved artifact preserves its source language, text, target occurrences, Chinese sentence translations, and a snapshot of the target meanings used to generate it. Learners can collect further unfamiliar vocabulary from artifact sentences and use those entries in later generation.
+
+Generation failure must preserve existing learning data and offer retry. Structural validation alone does not establish linguistic naturalness or semantic quality.
+
+## 8. Data and provenance principles
 
 Source media, sentence segments, meaning groups, translations, learning state, vocabulary entries, source occurrences, generated artifacts, and artifact target snapshots are distinct product concepts.
 
@@ -124,7 +140,7 @@ A personal-use Windows installer and durable local learning storage are in scope
 
 ## 10. Product acceptance goals
 
-The complete product should allow a learner to start from media without subtitles, perform sentence-based intensive listening, collect source-linked vocabulary, generate a Korean reading artifact from selected vocabulary, collect further vocabulary from that artifact, and restore the complete cycle after restarting the application.
+The complete product should allow a learner to start from Korean or English media without subtitles, perform sentence-based intensive listening, collect source-linked vocabulary, generate a reading artifact in the target vocabulary's language, collect further vocabulary from that artifact, and restore the complete cycle after restarting the application.
 
 The learner must remain in control of reveal, translation, vocabulary selection, and generation. Automatic model output should be treated as assistance rather than a score or authoritative answer.
 

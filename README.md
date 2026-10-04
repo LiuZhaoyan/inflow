@@ -12,6 +12,8 @@ Import Korean audio or video, practice it sentence by sentence, reveal only as m
 
 The project currently targets personal use on Windows. The desktop implementation is runnable from the repository; packaging it as a self-contained installed application is still future work.
 
+English learning support is [specified](.scratch/english-learning/spec.md) for the same listening, vocabulary and reading cycle. The current runtime supports Korean; English implementation and acceptance remain future work.
+
 ## What can I do with it?
 
 Inflow helps you turn Korean audio and video into an active learning workflow:

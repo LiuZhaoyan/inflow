@@ -4,7 +4,7 @@ Inflow currently targets personal Windows use, but the repository is structured 
 
 ## Development checks
 
-Run the normal checks before considering an implementation complete:
+Choose checks appropriate to the implementation being verified:
 
 ```bash
 npm test
@@ -12,6 +12,8 @@ npm run lint
 npm run typecheck
 npm run build
 ```
+
+Use `npm run desktop:build` when verifying the Electron host and static renderer. Commit-only requests and documentation changes do not require the application test suite; documentation changes should be checked for links, consistency and whitespace.
 
 The repository still contains browser/API development paths and verification utilities from earlier implementation work. They remain useful for development and regression testing, but the Electron desktop path documented in the README represents the current product direction.
 
@@ -23,7 +25,7 @@ The repository documentation has three primary entry points:
 - [Project Status](docs/PROJECT_STATUS.md) — **What is Inflow now?** Current architecture, implemented capabilities, persistence, processing, verification state, and known gaps.
 - [Roadmap](docs/ROADMAP.md) — **What comes next?** Remaining work, priorities, and dependencies.
 
-For active implementation work, task-local specs, research, tickets, decisions, and acceptance evidence live under `.scratch/<effort>/`. Completed scratch records are historical task memory and are not expected to describe the current system.
+For active implementation work, task-local specs, research, tickets, decisions, and acceptance evidence live under `.scratch/<effort>/`. Start with the [task index](.scratch/README.md). Superseded plans and completed delivery records live under `.scratch/archive/`; their status fields and verification results describe the recorded stage, not the current system. Verification utilities and generated evidence retain their original paths.
 
 Repository-agent workflow rules live under [docs/agents](docs/agents/).
 
