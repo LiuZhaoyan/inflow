@@ -2,12 +2,13 @@
 
 import type { Ref } from 'react';
 import type { Segment } from '@/listening/processing';
-import type { PlaybackMode } from '@/listening/desktop';
+import type { PlaybackMode, SourceLanguage } from '@/listening/desktop';
 
 export type SentenceAreaProps = {
   segment: Segment | null;
   index: number;
   total: number;
+  language: SourceLanguage;
   mode: PlaybackMode;
   onModeChange: (mode: PlaybackMode) => void;
   canPlay: boolean;
@@ -37,6 +38,7 @@ export default function SentenceArea({
   segment,
   index,
   total,
+  language,
   mode,
   onModeChange,
   canPlay,
@@ -81,7 +83,7 @@ export default function SentenceArea({
     </div>
     <p className="workspace-mask-summary" id="sentence-mask-summary" role="status">{segment && maskEditing ? `${maskedGroups.length} / ${segment.groups.length} masked` : ''}</p>
     <div className="workspace-sentence-copy">
-    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang="ko" aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => {
+    {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang={language} aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => {
       const masked = maskedGroups.includes(groupIndex);
       const hidden = maskEditing && masked;
       return <span key={groupIndex} data-source-start={groupStarts[groupIndex]} className={hidden ? 'hidden-group' : 'meaning-group'}>

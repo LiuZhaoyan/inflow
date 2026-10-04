@@ -36,11 +36,13 @@
 .story-hero-copy h1 { margin: 0 0 10px; color: #f4f0fa; font-family: Georgia, "Noto Serif KR", "AppleMyungjo", Batang, serif; font-size: clamp(36px, 3.2vw, 48px); font-weight: 500; line-height: 1.12; overflow-wrap: anywhere; text-shadow: 0 2px 24px #090a0ddd; }
 .story-hero-copy p { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; color: #b9b5c3; font-size: 14px; }
 .story-hero-copy p:first-letter { color: #d4b5ff; }
+.story-language-badge { display:inline-flex; align-items:center; padding:2px 6px; border:1px solid #5a4d6a; border-radius:4px; background:#241f2b; color:#d4c2ec; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:10px; font-weight:550; line-height:1.2; white-space:nowrap; }
 .story-inline-icon { width: 16px; height: 16px; flex: none; fill: none; stroke: #cfafff; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
 .story-reading-pane { flex: 1; min-height: 0; overflow: auto; padding: 24px 32px 32px; scrollbar-color: #3d3b46 transparent; scrollbar-width: thin; }
 .story-sentences { width: min(100%, 740px); margin: 0 auto; }
 .story-sentence { margin: 0 0 28px; }
 .story-workspace .artifact-korean { margin: 0; color: var(--workspace-text); font-family: "Noto Serif KR", "AppleMyungjo", Batang, Georgia, serif; font-size: clamp(20px, 1.7vw, 24px); font-weight: 400; line-height: 1.9; word-break: keep-all; overflow-wrap: anywhere; }
+.story-workspace .artifact-korean:lang(en) { font-family: Georgia, "Times New Roman", serif; word-break: normal; }
 .story-workspace .artifact-korean mark { border-radius: 4px; padding: 0 2px; background: var(--workspace-accent-soft); color: #d6c2ff; }
 .story-translation { margin: 9px 0 0; color: #aaa6b3; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
 .story-reader-footer { min-height: 63px; display: grid; grid-template-columns: 1fr auto auto 1fr; align-items: center; gap: 10px; margin: 0 20px; border-top: 1px solid #292a31; }
@@ -67,6 +69,7 @@
 .story-vocabulary-list { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 12px; scrollbar-color: #3d3b46 transparent; scrollbar-width: thin; }
 .story-vocabulary-row { position: relative; min-height: 40px; display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) 28px; align-items: center; gap: 8px; margin-bottom: 4px; padding: 0 7px 0 11px; border: 1px solid #191a20; border-radius: 7px; background: #17181d; }
 .story-vocabulary-row > button { min-width: 0; padding: 4px 0; border: 0; background: transparent; color: #d3adff; cursor: pointer; font-family: "Noto Serif KR", "AppleMyungjo", Batang, serif; font-size: 15px; text-align: left; overflow-wrap: anywhere; }
+.story-vocabulary-row > button:lang(en) { font-family: Georgia, "Times New Roman", serif; }
 .story-vocabulary-row > span { min-width: 0; overflow: hidden; color: #b6b2bf; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .story-vocabulary-row details { position: relative; justify-self: end; }
 .story-vocabulary-row summary { width: 25px; height: 30px; display: grid; place-items: center; color: #aaa5b6; cursor: pointer; font-size: 16px; list-style: none; }
@@ -99,6 +102,7 @@
 .story-selected-targets ul { max-height: 170px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 14px; overflow: auto; margin: 10px 0 0; padding: 0; list-style: none; }
 .story-selected-targets li { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 5px 0; }
 .story-selected-targets li strong { color: #d3adff; font-size: 13px; font-weight: 550; }
+.story-selected-targets li strong .story-language-badge { margin-left:6px; vertical-align:middle; }
 .story-selected-targets li span { overflow: hidden; color: #a7a3af; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .story-selected-targets > p { margin: 10px 0 0; color: #9f9ba8; font-size: 12px; }
 .story-selected-targets .story-hint { color: #dbb8c0; }

@@ -58,6 +58,51 @@ test('generation sends selected word context and returns a completed text passag
   assert.doesNotMatch(JSON.stringify(result), /fixture-secret/);
 });
 
+test('generation uses English for English targets while preserving Chinese meaning and translations', async () => {
+  let requestBody: Record<string, unknown> | undefined;
+  const result = await generatePassage({
+    language: 'en',
+    targets: [{ id: 'walk-1', lemma: 'walk', meaningZh: '散步', sourceSentence: 'We walk in the park.' }],
+    topic: 'A weekend walk',
+  }, {
+    apiKey: 'fixture-secret',
+    fetcher: async (_input, init) => {
+      requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return Response.json({
+        id: 'resp-en-1',
+        status: 'completed',
+        output: [{
+          type: 'message',
+          role: 'assistant',
+          status: 'completed',
+          content: [{
+            type: 'output_text',
+            text: JSON.stringify({
+              title: 'A Walk in the Park',
+              sentences: [{
+                parts: [{ text: 'We ', targetId: null }, { text: 'walked through the park.', targetId: 'walk-1' }],
+                translationZh: '我们在公园里散步。',
+              }],
+            }),
+          }],
+        }],
+      });
+    },
+  });
+
+  assert.equal(((requestBody?.text as { format: { name: string } }).format).name, 'english_learning_passage');
+  assert.match(String(requestBody?.instructions), /English/i);
+  assert.match(String(requestBody?.instructions), /Chinese/i);
+  assert.deepEqual(JSON.parse(String(requestBody?.input)), {
+    targets: [{ id: 'walk-1', lemma: 'walk', meaningZh: '散步', sourceSentence: 'We walk in the park.' }],
+    topic: 'A weekend walk',
+  });
+  assert.deepEqual(result.sentences[0], {
+    parts: [{ text: 'We ', targetId: null }, { text: 'walked through the park.', targetId: 'walk-1' }],
+    translationZh: '我们在公园里散步。',
+  });
+});
+
 test('generation rejects unknown or omitted targets, malformed text, and non-text fields', async () => {
   const input = { targets: [{ id: 'walk-1', lemma: '걷다', meaningZh: '走路' }] };
   const invalidPassages = [
@@ -93,6 +138,15 @@ test('generation rejects incomplete responses and bounds selected vocabulary bef
   const tooManyTargets = { targets: Array.from({ length: 21 }, (_, index) => ({ id: String(index), lemma: '단어', meaningZh: '词' })) };
   await assert.rejects(generatePassage(tooManyTargets, { apiKey: 'fixture-secret', fetcher: incompleteFetch }), (error: unknown) =>
     error instanceof GenerationError && error.code === 'invalid_input');
+
+  for (const invalidInput of [
+    { language: 'fr', targets: [{ id: 'word-1', lemma: 'walk', meaningZh: '走路' }] } as never,
+    { targets: [] },
+    { targets: [{ id: 'word-1', lemma: '', meaningZh: '走路' }] },
+  ]) {
+    await assert.rejects(generatePassage(invalidInput, { apiKey: 'fixture-secret', fetcher: incompleteFetch }), (error: unknown) =>
+      error instanceof GenerationError && error.code === 'invalid_input');
+  }
   assert.equal(requestCount, 1);
 });
 

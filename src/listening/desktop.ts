@@ -1,7 +1,7 @@
 import type { Segment } from './processing';
 import type { GeneratedPassage, GenerationTarget } from '../generation';
 
-export type SourceLanguage = 'ko';
+export type SourceLanguage = 'ko' | 'en';
 export type LookupVocabularyInput = { surface: string; sentence: string; start: number; language: SourceLanguage; lemma?: string; source?: VocabularyContext['source'] };
 export type VocabularyLookup = { surface: string; lemma: string; language: SourceLanguage; candidates: string[]; meaningZh?: string };
 export type SentenceTranslationInput = { mediaId: string; segmentId: string };

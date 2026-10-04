@@ -127,14 +127,21 @@
 .workspace-icon-button svg,.workspace-chevron { width:16px; height:16px; fill:none; stroke:var(--workspace-muted); stroke-linecap:round; stroke-linejoin:round; stroke-width:1.6; }
 .workspace-library-search { display:flex; padding:0 20px; }
 .workspace-library-search input { width:100%; min-height:42px; padding:0 12px; border:1px solid var(--workspace-control-line); border-radius:9px; background:#12151a; color:var(--workspace-text); font-size:14px; }
-.workspace-library-count { padding:20px 22px 8px; color:var(--workspace-muted); font-size:12px; }
+.workspace-library-filters { display:flex; gap:7px; padding:12px 20px 0; }
+.workspace-library-filters button { min-height:32px; display:flex; align-items:center; gap:6px; padding:0 9px; border:1px solid #34333e; border-radius:7px; background:#15161b; color:#c5c2cf; cursor:pointer; font-size:12px; }
+.workspace-library-filters button span { color:#9995a3; font-size:11px; }
+.workspace-library-filters button[aria-pressed="true"] { border-color:var(--workspace-accent); background:var(--workspace-accent-soft); color:var(--workspace-accent); }
+.workspace-library-filters button[aria-pressed="true"] span { color:var(--workspace-accent); }
+.workspace-library-count { padding:12px 22px 8px; color:var(--workspace-muted); font-size:12px; }
 .workspace-library-list { flex:1; min-height:0; overflow:auto; margin:0; padding:0 12px 16px; list-style:none; }
 .workspace-library-entry { margin:1px 0; }
 .workspace-library-item { width:100%; min-height:72px; display:grid; grid-template-columns:44px minmax(0,1fr) 16px; align-items:center; gap:12px; padding:12px; border:1px solid transparent; border-radius:10px; color:var(--workspace-text); text-align:left; }
 .workspace-library-item[aria-current="true"] { border-color:#685780; background:var(--workspace-accent-soft); }
 .workspace-library-kind { width:44px; min-height:36px; display:grid; place-items:center; border:1px solid #685780; border-radius:8px; background:var(--workspace-accent-soft); color:var(--workspace-accent); font-size:9px; font-weight:650; letter-spacing:.04em; }
 .workspace-library-info { display:flex; min-width:0; flex-direction:column; gap:4px; }
-.workspace-library-info strong { overflow:hidden; color:var(--workspace-text); font-size:13px; font-weight:550; text-overflow:ellipsis; white-space:nowrap; }
+.workspace-library-title-row { min-width:0; display:flex; align-items:center; gap:7px; }
+.workspace-library-info strong { min-width:0; overflow:hidden; color:var(--workspace-text); font-size:13px; font-weight:550; text-overflow:ellipsis; white-space:nowrap; }
+.workspace-language-badge { flex:none; padding:2px 6px; border:1px solid #3e374b; border-radius:4px; background:#211d28; color:#c8b4e8; font-size:9px; font-weight:550; line-height:1.2; }
 .workspace-library-info>span { color:var(--workspace-muted); font-size:11px; }
 .workspace-library-item .workspace-chevron { color:#72707b; }
 .workspace-library-missing { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 12px 8px 68px; color:#e0b1a6; font-size:12px; }
@@ -170,7 +177,10 @@
 .workspace-target-list label:has(input:checked) { border-color:var(--workspace-accent); background:var(--workspace-accent-soft); }
 .workspace-target-list input { width:17px; height:17px; accent-color:var(--workspace-accent); }
 .workspace-target-list strong { font-size:17px; }
+.workspace-target-word { min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
 .workspace-target-list span { color:#aaa5b8; font-size:14px; }
+.workspace-target-list .workspace-language-badge { color:#c8b4e8; font-size:9px; }
+.workspace-target-language-warning { margin:12px 0 0; color:#e7c2c9; font-size:13px; }
 .workspace-target-dialog footer { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:22px; }
 .workspace-target-dialog footer>span { color:var(--workspace-muted); font-size:14px; }
 .workspace-generate-button { min-height:44px; padding:10px 20px; border:1px solid var(--workspace-accent); border-radius:10px; background:var(--workspace-accent); color:var(--workspace-accent-ink); font-weight:600; }

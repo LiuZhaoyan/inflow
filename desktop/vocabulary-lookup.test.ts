@@ -21,7 +21,7 @@ test('lookup suggests a dictionary form without saving, validates selection, and
     assert.deepEqual(app.listVocabulary(), []);
     for (const invalid of [
       { ...input, surface: '학교에 갔어요', start: 0 }, { ...input, start: 0 },
-      { ...input, start: -1 }, { ...input, sentence: '' }, { ...input, language: 'en' },
+      { ...input, start: -1 }, { ...input, sentence: '' }, { ...input, language: 'ja' },
     ]) await assert.rejects(app.lookupVocabulary(invalid as LookupVocabularyInput, 'invalid'));
     failed = true;
     await assert.rejects(app.lookupVocabulary(input, 'failed'), /parser unavailable/);

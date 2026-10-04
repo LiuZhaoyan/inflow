@@ -3,13 +3,13 @@ import { randomUUID, createHash } from 'node:crypto';
 import { mkdirSync, existsSync } from 'node:fs';
 import { copyFile, readFile, stat, rm, rename } from 'node:fs/promises';
 import path from 'node:path';
-import { validateSegments } from '../src/listening/processing';
+import { validateSegments, isCompleteEnglishWord } from '../src/listening/processing';
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
 import { translateSentence, glossVocabulary } from '../src/listening/translation';
 import { dictionaryMeanings } from './dictionary';
 import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource, LookupVocabularyInput, VocabularyLookup, SourceLanguage, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
-type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput) => Promise<unknown>;
+type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput, language?: SourceLanguage) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string; language: SourceLanguage };
 const initialLearning: LearningState = { position: 0, index: 0, rate: 1, loop: false, duration: 0, mode: 'full' };
 
@@ -78,6 +78,11 @@ export class DesktopOperations {
     return active ? this.get(active.value) : null;
   }
 
+  getImportLanguage(): SourceLanguage {
+    const saved = this.db.prepare("SELECT value FROM settings WHERE key = 'importLanguage'").get();
+    return saved?.value === 'en' ? 'en' : 'ko';
+  }
+
   open(id: string): SavedMedia {
     const media = this.get(id);
     this.db.prepare("INSERT INTO settings VALUES ('active', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
@@ -93,7 +98,7 @@ export class DesktopOperations {
   }
 
   async importMedia(filename: string, language: SourceLanguage = 'ko'): Promise<SavedMedia> {
-    if (language !== 'ko') throw new Error('当前仅支持韩语素材。');
+    if (language !== 'ko' && language !== 'en') throw new Error('请选择韩语或英语素材。');
     const hash = await this.inspect(filename);
     const probe = await this.processor('probe', new AbortController().signal, filename) as { duration?: unknown };
     if (typeof probe?.duration !== 'number' || !Number.isFinite(probe.duration) || probe.duration <= 0) throw new Error('无法读取媒体时长，请重试。');
@@ -104,7 +109,12 @@ export class DesktopOperations {
     try {
       await copyFile(filename, destination);
       if (await this.inspect(destination) !== hash) throw new Error('媒体在导入时发生变化，请重试。');
-      this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
+      this.db.exec('BEGIN');
+      try {
+        this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
+        this.db.prepare("INSERT INTO settings VALUES ('importLanguage', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(language);
+        this.db.exec('COMMIT');
+      } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     } catch (error) { await rm(destination, { force: true }); throw error; }
     return this.open(id);
   }
@@ -157,7 +167,7 @@ export class DesktopOperations {
   async transcribe(id: string, job: string): Promise<SavedMedia> {
     const media = this.get(id);
     if (media.missing) throw new Error('媒体文件丢失，请重新关联。已有原文和学习记录仍然保留。');
-    const result = await this.runJob(job, signal => this.processor('transcribe', signal, this.mediaPath(id))) as { segments?: unknown };
+    const result = await this.runJob(job, signal => this.processor('transcribe', signal, this.mediaPath(id), undefined, media.language)) as { segments?: unknown };
     const segments = validateSegments(result?.segments);
     if (media.learning.duration && segments.at(-1)!.end > media.learning.duration + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
     this.db.exec('BEGIN');
@@ -193,7 +203,7 @@ export class DesktopOperations {
     if (!options.refresh && !options.local && saved?.input === snapshot) return saved.translation;
     const translated = await this.runJob(job, async signal => {
       if (!options.local) return this.translator(context, { apiKey, signal });
-      const result = await this.processor('translate', signal, undefined, text) as { translation?: unknown };
+      const result = await this.processor('translate', signal, undefined, text, media.language) as { translation?: unknown };
       return result?.translation;
     });
     if (typeof translated !== 'string' || !translated.trim() || translated.length > 10000 || translated.includes('\0')) throw new Error('翻译失败，请重试。');
@@ -206,17 +216,18 @@ export class DesktopOperations {
   }
 
   private validateLookup(input: LookupVocabularyInput): void {
-    if (!input || input.language !== 'ko') throw new Error('当前仅支持韩语词形解析。');
+    if (!input || (input.language !== 'ko' && input.language !== 'en')) throw new Error('请选择韩语或英语词汇。');
     const { surface, sentence, start } = input;
     if (typeof surface !== 'string' || !surface || surface.length > 100 || /\s|\0/u.test(surface)) throw new Error('请只选择一个单词（100 字以内）。');
     if (typeof sentence !== 'string' || !sentence || sentence.length > 10000 || sentence.includes('\0') || !Number.isInteger(start) || start < 0 || sentence.slice(start, start + surface.length) !== surface) throw new Error('选中文字不属于该位置的原句。');
+    if (input.language === 'en' && !isCompleteEnglishWord(sentence, surface, start)) throw new Error('请选择一个完整单词，包含内部的撇号或连字符。');
     if (input.source && this.sourceSentence(input.source, input.language) !== sentence) throw new Error('选中文字不属于该来源原句。');
     if (input.lemma !== undefined && (typeof input.lemma !== 'string' || !input.lemma.trim() || input.lemma.length > 100 || /\s|\0/u.test(input.lemma))) throw new Error('请填写一个有效的词典形。');
   }
 
   private vocabularySuggestions(input: LookupVocabularyInput, lemma: string): Pick<VocabularyLookup, 'candidates' | 'meaningZh'> {
     const entries = (this.db.prepare('SELECT id FROM vocabulary WHERE language = ? AND lemma = ? ORDER BY rowid DESC').all(input.language, lemma) as { id: string }[]).map(row => this.vocabulary(row.id));
-    const dictionary = dictionaryMeanings(lemma);
+    const dictionary = dictionaryMeanings(lemma, input.language);
     const candidates = [...new Set([...dictionary, ...entries.map(entry => entry.meaningZh)])];
     const matching = entries.filter(entry => entry.contexts.some(context => {
       if (!input.source || context.sentence !== input.sentence || context.surface !== input.surface) return false;
@@ -236,7 +247,7 @@ export class DesktopOperations {
 
   async lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup> {
     this.validateLookup(input);
-    const result = input.lemma ? { ...input, lemma: input.lemma.normalize('NFC') }
+    const result = input.lemma ? { ...input, lemma: input.language === 'en' ? input.lemma.normalize('NFC').replaceAll('’', "'") : input.lemma.normalize('NFC') }
       : await this.runJob(job, signal => this.processor('lookup', signal, undefined, input)) as VocabularyLookup;
     if (result?.surface !== input.surface || result?.language !== input.language || typeof result?.lemma !== 'string' || !result.lemma.trim() || result.lemma.length > 100 || /\s|\0/u.test(result.lemma)) throw new Error('无法确定词典形，请手动填写。');
     return { surface: input.surface, lemma: result.lemma, language: input.language, ...this.vocabularySuggestions(input, result.lemma) };
@@ -299,13 +310,14 @@ export class DesktopOperations {
       return value.trim().normalize('NFC');
     };
     if (!input || typeof input !== 'object') throw new Error('词汇内容无效。');
-    const lemma = text(input.lemma, 100), meaning = text(input.meaningZh, 300);
-    if (/\s/u.test(lemma)) throw new Error('请只收藏一个单词。');
     const language = input.language ?? (input.id ? this.vocabulary(input.id).language : 'ko');
-    if (language !== 'ko') throw new Error('当前仅支持韩语词汇。');
+    if (language !== 'ko' && language !== 'en') throw new Error('请选择韩语或英语词汇。');
+    const rawLemma = text(input.lemma, 100), meaning = text(input.meaningZh, 300);
+    const lemma = language === 'en' ? rawLemma.replaceAll('’', "'") : rawLemma;
+    if (/\s/u.test(lemma)) throw new Error('请只收藏一个单词。');
     const matching = this.db.prepare('SELECT id FROM vocabulary WHERE language = ? AND lemma = ? AND meaning = ?').get(language, lemma, meaning) as { id: string } | undefined;
     if (input.id !== undefined) {
-      this.vocabulary(input.id);
+      if (this.vocabulary(input.id).language !== language) throw new Error('不能改变已有词条的语种，请新建词条。');
       if (matching && matching.id !== input.id) throw new Error('已有同词同义的词条。请保留不同词义，或从原文收集到已有词条。');
     }
     let context: SaveVocabularyInput['context'];
@@ -319,6 +331,7 @@ export class DesktopOperations {
       // Snapshot the host-owned sentence; source display metadata is rebuilt on read.
       const surfaceStart = input.context.surfaceStart;
       if (surfaceStart !== undefined && (!Number.isInteger(surfaceStart) || surfaceStart < 0 || sentence.slice(surfaceStart, surfaceStart + surface.length) !== surface)) throw new Error('选中文字的位置无效，请重新选择。');
+      if (language === 'en' && !isCompleteEnglishWord(sentence, surface, surfaceStart)) throw new Error('请选择一个完整单词，包含内部的撇号或连字符。');
       context = { source, surface, sentence, ...(surfaceStart !== undefined ? { surfaceStart } : {}) };
     }
     const id = input.id ?? matching?.id ?? randomUUID();
@@ -377,15 +390,17 @@ export class DesktopOperations {
   async generateArtifact(ids: string[], topic: string, job: string, apiKey: string): Promise<LearningArtifact> {
     if (!Array.isArray(ids) || !ids.length || ids.length > 20 || new Set(ids).size !== ids.length) throw new Error('请选择 1–20 个不同的目标词汇。');
     if (typeof topic !== 'string' || topic.length > 200 || topic.includes('\0')) throw new Error('主题请控制在 200 字以内。');
-    const targets: GenerationTarget[] = ids.map(id => {
-      const entry = this.vocabulary(id);
+    const entries = ids.map(id => this.vocabulary(id));
+    const language = entries[0].language;
+    if (entries.some(entry => entry.language !== language)) throw new Error('目标词汇包含不同语种，请选择同一语言的词汇后再生成。');
+    const targets: GenerationTarget[] = entries.map(entry => {
       const sentence = entry.contexts[0]?.sentence;
       return { id: entry.id, lemma: entry.lemma, meaningZh: entry.meaningZh, ...(sentence ? { sourceSentence: sentence.slice(0, 1000) } : {}) };
     });
     const started = Date.now();
-    const result = await this.runJob(job, signal => this.generator({ targets, ...(topic.trim() ? { topic: topic.trim() } : {}) }, { apiKey, signal }));
+    const result = await this.runJob(job, signal => this.generator({ language, targets, ...(topic.trim() ? { topic: topic.trim() } : {}) }, { apiKey, signal }));
     const content = {
-      language: 'ko',
+      language,
       ...validatePassage({ title: result.title, sentences: result.sentences }, targets), targets,
       createdAt: new Date().toISOString(), elapsedMs: Date.now() - started, requestedModel: result.requestedModel,
       ...(result.model ? { model: result.model } : {}), ...(result.responseId ? { responseId: result.responseId } : {}),

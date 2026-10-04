@@ -2,6 +2,7 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { SaveVocabularyInput, SourceLanguage } from './desktop';
+import { isCompleteEnglishWord } from './processing';
 
 type Context = NonNullable<SaveVocabularyInput['context']>;
 type Draft = {
@@ -83,6 +84,10 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
       const start = Number(origin.dataset.sourceStart ?? 0) + prefix.toString().length + text.length - text.trimStart().length;
       if (source.context.sentence.slice(start, start + surface.length) !== surface) {
         if (beforeChange()) { place(range); setNotice('Select a word inside one revealed sentence.'); }
+        return;
+      }
+      if (source.language === 'en' && !isCompleteEnglishWord(source.context.sentence, surface, start)) {
+        if (beforeChange()) { place(range); setNotice('Select one complete English word, including its apostrophe or hyphenated parts.'); }
         return;
       }
       if (current.current?.start === start && current.current.context.sentence === source.context.sentence &&
@@ -188,7 +193,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
         {!!draft.candidates.length && <label>Dictionary meanings<select aria-label="Dictionary meanings" value="" onChange={event => { if (event.target.value) change({ meaningZh: event.target.value }); }}>
           <option value="">Choose a meaning</option>{draft.candidates.map(meaning => <option key={meaning} value={meaning}>{meaning}</option>)}
         </select></label>}
-        <small title="National Institute of Korean Language">KRDict · CC BY-SA 2.0 KR</small>
+        {draft.language === 'ko' && <small title="National Institute of Korean Language">KRDict · CC BY-SA 2.0 KR</small>}
         {!draft.loading && !draft.candidates.length && <p>No offline meaning found. Enter one or request a cloud meaning.</p>}
         <button type="button" disabled={draft.cloudLoading || !draft.lemma.trim() || (draft.loading && !draft.lemmaEdited)} onClick={() => void requestGloss()}>Get contextual meaning · LLM</button>
         {draft.cloudLoading && <p role="status">Looking up meaning… <button type="button" onClick={() => { if (cloudJob.current) void window.inflow!.cancel(cloudJob.current).catch(() => {}); cloudJob.current = null; update({ ...current.current!, cloudLoading: false }); }}>Cancel lookup</button></p>}

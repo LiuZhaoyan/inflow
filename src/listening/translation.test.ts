@@ -19,3 +19,26 @@ test('cloud translation sends context but returns only the requested Chinese fie
   await assert.rejects(translateSentence({ language: 'ko', text: '안녕' }, { apiKey: '' }), /key/i);
   await assert.rejects(glossVocabulary({ language: 'ko', surface: '만났어요', sentence: '어제 친구를 만났어요.', start: 0, lemma: '만나다', candidates: [] }, options));
 });
+
+test('English translation and gloss requests use English prompts and return Chinese results', async () => {
+  const requests: Record<string, unknown>[] = [];
+  const fetcher: typeof fetch = async (_url, options) => {
+    const request = JSON.parse(String(options?.body)) as Record<string, unknown>;
+    requests.push(request);
+    const result = requests.length === 1 ? { translation: '孩子们正在玩。' } : { meaningZh: '孩子' };
+    return Response.json({ id: 'fixture-en', status: 'completed', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: JSON.stringify(result) }] }] });
+  };
+  const options = { apiKey: 'test-only', fetcher };
+
+  assert.equal(await translateSentence({ language: 'en', text: 'The children are playing.', previous: 'It is sunny.', next: 'They are laughing.' }, options), '孩子们正在玩。');
+  assert.equal(await glossVocabulary({ language: 'en', surface: 'children', sentence: 'The children are playing.', start: 4, lemma: 'child', candidates: ['孩子', '儿童'] }, options), '孩子');
+
+  assert.match(String(requests[0].instructions), /English into natural Simplified Chinese/i);
+  assert.match(String(requests[1].instructions), /selected English word/i);
+  assert.deepEqual(JSON.parse(String(requests[0].input)), {
+    language: 'en', text: 'The children are playing.', previous: 'It is sunny.', next: 'They are laughing.',
+  });
+  assert.equal(JSON.parse(String(requests[1].input)).language, 'en');
+  assert.equal(requests[0].max_output_tokens, 2048);
+  assert.equal(requests[1].max_output_tokens, 256);
+});

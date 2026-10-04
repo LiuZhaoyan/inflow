@@ -1,18 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import type { SourceLanguage } from '@/listening/desktop';
 import type { Segment } from '@/listening/processing';
 
 const formatTime = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
 export default function ContextPanel({
   segments,
+  language,
   index,
   onSelect,
   showText,
   onToggleText,
 }: {
   segments: readonly Segment[];
+  language: SourceLanguage;
   index: number;
   onSelect: (index: number) => void;
   showText: boolean;
@@ -36,7 +39,7 @@ export default function ContextPanel({
         ref={itemIndex === index ? activeRow : undefined} className="workspace-context-row"
         aria-current={itemIndex === index ? 'true' : undefined} aria-label={showText ? `${formatTime(segment.start)} ${segment.text}` : `Sentence at ${formatTime(segment.start)}`}
         onClick={() => onSelect(itemIndex)}>
-        <time>{formatTime(segment.start)}</time><span lang={showText ? 'ko' : undefined}>{showText ? segment.text : '••••••'}</span>
+        <time>{formatTime(segment.start)}</time><span lang={showText ? language : undefined}>{showText ? segment.text : '••••••'}</span>
       </button>) : <p className="workspace-context-empty">Your sentences will appear here after processing a media file.</p>}
     </div>
   </aside>;

@@ -1,5 +1,10 @@
 export type Segment = { start: number; end: number; text: string; groups: string[] };
 
+export function isCompleteEnglishWord(sentence: string, surface: string, start?: number): boolean {
+  const words = sentence.matchAll(/[\p{L}\p{M}\p{N}]+(?:['’\-‐‑][\p{L}\p{M}\p{N}]+)*/gu);
+  return [...words].some(word => (start === undefined || word.index === start) && word[0] === surface);
+}
+
 export function validateSegments(value: unknown): Segment[] {
   if (!Array.isArray(value) || !value.length || value.length > 2000) throw new Error('没有识别到可用句子，请换一段有清晰语音的媒体重试。');
   let previousEnd = 0;

@@ -16,7 +16,7 @@ let operations: DesktopOperations;
 const trustedUrl = (value: string) => { const url = new URL(value); return url.protocol === 'inflow:' && url.host === 'app' && url.pathname === '/'; };
 
 async function start() {
-  operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text) => runProcessor(mode, signal, file, text, root));
+  operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text, language) => runProcessor(mode, signal, file, text, root, language));
   const credential = new GenerationCredential(app.getPath('userData'));
   await credential.initialize(root);
   const renderer = path.join(root, 'build', 'renderer');
@@ -55,8 +55,8 @@ async function start() {
     importMedia: async () => {
       const file = await choose();
       if (!file) return null;
-      const { response } = await dialog.showMessageBox(window, { type: 'question', message: '选择素材语言', detail: '当前支持韩语；中文用于词汇释义。', buttons: ['韩语', '取消'], defaultId: 0, cancelId: 1 });
-      return response === 0 ? operations.importMedia(file, 'ko') : null;
+      const { response } = await dialog.showMessageBox(window, { type: 'question', message: '选择素材语言', detail: '请选择原文语言；释义和翻译使用中文。', buttons: ['韩语', '英语', '取消'], defaultId: operations.getImportLanguage() === 'en' ? 1 : 0, cancelId: 2 });
+      return response < 2 ? operations.importMedia(file, response === 1 ? 'en' : 'ko') : null;
     },
     relink: async (id: string) => { operations.get(id); const file = await choose(); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import type { SaveVocabularyInput, VocabularyContext, VocabularyEntry } from './desktop';
+import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
 import SourceThumbnail from '@/workspace/SourceThumbnail';
 import '@/workspace/vocab.css';
 
@@ -14,17 +14,19 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
 }) {
   const [lemma, setLemma] = useState(draft.lemma);
   const [meaning, setMeaning] = useState(draft.meaningZh);
+  const [language, setLanguage] = useState<SourceLanguage>(draft.language ?? 'ko');
   const [error, setError] = useState('');
   return <form className="vocab-editor" aria-label="Edit vocabulary" onSubmit={event => {
     event.preventDefault(); setError('');
-    void onSave({ id: draft.id, language: draft.language, lemma, meaningZh: meaning })
+    void onSave({ id: draft.id, language, lemma, meaningZh: meaning })
       .catch(failure => setError(failure instanceof Error ? failure.message : 'Save failed. Please try again.'));
   }}>
     <h2>{draft.id ? 'Edit vocabulary' : 'Add vocabulary'}</h2>
     <fieldset disabled={busy}>
-      <label>Korean lemma<input autoFocus={active} name="lemma" value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
-      <label>Chinese meaning<input name="meaningZh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
-      <p className="vocab-editor-note">Confirm the dictionary form and its meaning in this context.</p>
+      {draft.id ? <p className="vocab-editor-language">Source language <span className="vocab-language-badge">{language === 'en' ? 'English' : 'Korean'}</span></p> : <label>Confirm source language<select name="language" value={language} onChange={event => setLanguage(event.target.value as SourceLanguage)}><option value="ko">Korean</option><option value="en">English</option></select></label>}
+      <label>Dictionary form<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
+      <label>Chinese meaning<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
+      <p className="vocab-editor-note">Confirm the source language, dictionary form and meaning in this context.</p>
       <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? 'Saving…' : 'Save vocabulary'}</button><button type="button" onClick={onCancel}>Cancel</button></div>
     </fieldset>
     {error && <p className="vocab-error" role="alert">{error}</p>}
@@ -32,6 +34,7 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
 }
 
 type Filter = 'all' | 'media' | 'stories' | 'manual';
+type LanguageFilter = 'all' | SourceLanguage;
 
 function formatTime(value: number) {
   return Math.floor(value / 60) + ':' + String(Math.floor(value % 60)).padStart(2, '0');
@@ -85,6 +88,7 @@ export default function VocabularyNotebook({
   const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
+  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>('all');
   const draft = editing;
   const hasPendingEdit = Boolean(draft) || busy;
 
@@ -105,7 +109,8 @@ export default function VocabularyNotebook({
   }, [active, draft]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const visibleEntries = entries.filter(entry => matchesFilter(entry, filter) && (
+  const visibleEntries = entries.filter(entry => matchesFilter(entry, filter) &&
+    (languageFilter === 'all' || entry.language === languageFilter) && (
     !normalizedQuery || [entry.lemma, entry.meaningZh, ...entry.contexts.flatMap(context => [
       context.surface, context.sentence, context.source.name,
     ])].some(value => value.toLocaleLowerCase().includes(normalizedQuery))
@@ -117,13 +122,18 @@ export default function VocabularyNotebook({
     stories: entries.filter(isStory).length,
     manual: entries.filter(entry => entry.contexts.length === 0).length,
   };
+  const languageCounts = {
+    all: entries.length,
+    ko: entries.filter(entry => entry.language === 'ko').length,
+    en: entries.filter(entry => entry.language === 'en').length,
+  };
 
   function dismiss() { setEditing(null); }
   function editEntry(entry: VocabularyEntry) {
     setEditing({ key: crypto.randomUUID(), id: entry.id, language: entry.language, lemma: entry.lemma, meaningZh: entry.meaningZh });
   }
   function addEntry() {
-    setEditing({ key: crypto.randomUUID(), lemma: '', meaningZh: '' });
+    setEditing({ key: crypto.randomUUID(), language: languageFilter === 'all' ? selectedEntry?.language ?? 'ko' : languageFilter, lemma: '', meaningZh: '' });
   }
   async function save(input: SaveVocabularyInput) {
     setBusy(true); setError('');
@@ -162,6 +172,11 @@ export default function VocabularyNotebook({
             {item.label}<span>{counts[item.id]}</span>
           </button>)}
         </div>
+        <div className="vocab-language-filters" role="group" aria-label="Filter vocabulary by source language">
+          {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={() => setLanguageFilter(item.id as LanguageFilter)}>
+            {item.label}<span>{languageCounts[item.id as LanguageFilter]}</span>
+          </button>)}
+        </div>
       </div>
       {error && <p className="vocab-error" role="alert">{error}</p>}
       <div className="vocab-rows" aria-live="polite">
@@ -169,13 +184,13 @@ export default function VocabularyNotebook({
           const context = entry.contexts[0];
           const source = context?.source;
           return <button className="vocab-row" type="button" key={entry.id} aria-pressed={selectedEntry?.id === entry.id} onClick={() => setSelectedId(entry.id)}>
-            <span className="vocab-row-word" lang="ko">{entry.lemma}</span>
+            <span className="vocab-row-word"><span lang={entry.language}>{entry.lemma}</span><small className="vocab-language-badge">{entry.language === 'en' ? 'English' : 'Korean'}</small></span>
             <span className="vocab-row-example">
-              <span className="vocab-row-meaning">{entry.meaningZh}</span>
-              <span className="vocab-row-sentence" lang="ko">{context ? <HighlightedSentence sentence={context.sentence} surface={context.surface}/> : '暂无来源'}</span>
+              <span className="vocab-row-meaning" lang="zh">{entry.meaningZh}</span>
+              <span className="vocab-row-sentence" lang={entry.language}>{context ? <HighlightedSentence sentence={context.sentence} surface={context.surface}/> : 'No source'}</span>
             </span>
             <span className="vocab-row-source">
-              {source ? <><span className="vocab-row-thumb"><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>暂无来源</span></span></>}
+              {source ? <><span className="vocab-row-thumb"><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>No source</span></span></>}
             </span>
           </button>;
         })}
@@ -186,7 +201,8 @@ export default function VocabularyNotebook({
       {draft ? <VocabularyEditor key={draft.key} draft={draft} busy={busy} active={active} onSave={save} onCancel={dismiss}/> : selectedEntry ? <>
         <header className="vocab-detail-heading">
           <div className="vocab-detail-title">
-            <h2 lang="ko">{selectedEntry.lemma}</h2>
+            <h2 lang={selectedEntry.language}>{selectedEntry.lemma}</h2>
+            <span className="vocab-language-badge">{selectedEntry.language === 'en' ? 'English' : 'Korean'}</span>
             <button className="vocab-pronunciation" type="button" disabled title="Pronunciation is not available yet" aria-label="Pronunciation unavailable">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M17.5 6.5a9 9 0 0 1 0 11"/></svg>
             </button>
@@ -197,7 +213,7 @@ export default function VocabularyNotebook({
         </header>
         <section className="vocab-detail-section">
           <h3>Meaning</h3>
-          <div className="vocab-meaning-card">{selectedEntry.meaningZh}</div>
+          <div className="vocab-meaning-card" lang="zh">{selectedEntry.meaningZh}</div>
         </section>
         <section className="vocab-detail-section vocab-contexts-section">
           <header className="vocab-section-heading"><div><h3>Contexts</h3><span>{selectedEntry.contexts.length}</span></div>
@@ -207,12 +223,12 @@ export default function VocabularyNotebook({
             {selectedEntry.contexts.map(context => <article className="vocab-context-card" key={context.id}>
               <div className="vocab-context-thumbnail"><SourceThumbnail key={thumbnailKey(context.source)} source={context.source}/></div>
               <div className="vocab-context-copy">
-                <p lang="ko"><HighlightedSentence sentence={context.sentence} surface={context.surface}/></p>
+                <p lang={selectedEntry.language}><HighlightedSentence sentence={context.sentence} surface={context.surface}/></p>
                 <span className="vocab-context-source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={context.source.type === 'artifact' ? 'M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5' : 'M3 6h13v12H3zM16 10l5-3v10l-5-3z'}/></svg>{context.source.name} · {context.source.type === 'artifact' ? 'Story · ' + location(context.source) : location(context.source)}</span>
               </div>
               <button className="vocab-open-source" type="button" onClick={() => onOpenSource(context.source)}>Open <span aria-hidden="true">↗</span></button>
             </article>)}
-          </div> : <p className="vocab-no-context">暂无来源</p>}
+          </div> : <p className="vocab-no-context">No source</p>}
         </section>
         <section className="vocab-detail-section vocab-source-section">
           <h3>Source</h3>
@@ -222,7 +238,7 @@ export default function VocabularyNotebook({
             <button type="button" onClick={() => onOpenSource(selectedEntry.contexts[0].source)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5h6v6M19 5l-9 9"/><path d="M18 13v5a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>Open source
             </button>
-          </div> : <p className="vocab-no-context">暂无来源</p>}
+          </div> : <p className="vocab-no-context">No source</p>}
         </section>
         <section className="vocab-detail-section vocab-notes-section">
           <h3>Notes</h3>

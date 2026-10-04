@@ -1,8 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-02
-
-Documentation reviewed against source: 2026-10-03. This review corrects the snapshot; it does not add runtime verification evidence.
+Last verified: 2026-10-04
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -16,7 +14,7 @@ Media → Listening → Vocabulary → Generated Artifact → Vocabulary
 
 The desktop host owns persistence, managed media, local processing, and generation credentials. The renderer communicates with those capabilities through the preload/DesktopBridge contract rather than owning desktop business logic directly.
 
-Runtime import, transcription, local dictionary-form lookup, translation and passage generation support Korean only. [English Learning Support](../.scratch/english-learning/spec.md) is now specified as ready-for-agent; it has no implementation or runtime acceptance evidence yet. Intended bilingual product behavior does not imply current English availability.
+Runtime import, transcription, local dictionary-form lookup, translation and passage generation support Korean and English. The source-checkout desktop application completes both learning loops; [English acceptance](../.scratch/english-learning/acceptance.md) separates operations tests, real local processing, native UI checks and live generation quality. Native import confirms one language and remembers the last successful choice. Independent language filters preserve selected targets, and mixed-language generation fails before provider access.
 
 The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, persistent learner-selected meaning-group masks applied in mask mode, with full source text and word collection available outside the mode, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen separates live mask mode from native word selection; Listen and Story expose shared single-word collection through a local lookup and save popover. The vocabulary notebook manages the saved entries and passage generation targets.
 
@@ -40,7 +38,7 @@ Electron loads a static Next.js export. Managed media is served through the cust
 
 Imported audio or video is copied into application-managed storage and identified by SHA-256. Processing results are stored and restored with the learning position and playback preferences. Missing managed media can be re-associated only when the selected file matches the original hash.
 
-Local transcription uses faster-whisper with Korean word timestamps enabled. Kiwi uses the recognized text to determine sentence boundaries and grammatical phrase groups. The persisted listening model is sentence-level:
+Local transcription uses faster-whisper with the confirmed source language and word timestamps enabled. Kiwi determines Korean sentence boundaries and grammatical phrase groups. English uses a prepared spaCy pipeline for sentence boundaries, contextual lemmas and phrase/clause groups, preserving whole contractions and hyphenated words. The persisted listening model is sentence-level:
 
 ```ts
 type Segment = {
@@ -55,13 +53,13 @@ Whisper word timestamps are intermediate processing data. Sentence start/end tim
 
 ### Vocabulary
 
-Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Korean is the currently supported source language. Kiwi provides read-only contextual dictionary-form lookup using the selected span. A bundled KRDict Chinese text snapshot provides 42,908 headwords and offline sense candidates, with attribution and its separate CC BY-SA 2.0 KR license. Learners select or edit a meaning and can explicitly request a cloud contextual gloss. Only collected meanings persist; saved meanings are automatically reused only for the same source sentence and selected occurrence. Both Listen and Story collect in place and retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
+Vocabulary entries store source language, a dictionary form, contextual Chinese meaning, selection state, and one or more source occurrences. Kiwi provides read-only Korean lookup; spaCy suggests contextual English lemmas while preserving contractions, removing possessives and normalizing lemma apostrophes. The host validates complete English selections and original UTF-16 offsets. Bundled dictionaries contain 42,908 Korean and 19,745 English headwords with offline Chinese sense candidates; [resource notices](../resources/dictionaries/NOTICE.md) record provenance and separate data licenses. Learners select or edit a meaning and can explicitly request a cloud contextual gloss. Only collected meanings persist; saved meanings are automatically reused only for the same source sentence and selected occurrence. Both Listen and Story retain edited drafts on lookup or saving failure. Sources can point either to a media segment or to a sentence in a generated artifact.
 
 Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Successful retranscription atomically replaces all segments for that material and removes their vocabulary source occurrences, including occurrences on older retained segments. Vocabulary entries, meanings, target selection and sources from other media or artifacts remain intact. Failure or cancellation preserves the previous transcript and sources. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
 ### Generated artifacts
 
-Up to 20 selected vocabulary entries can be sent to DeepSeek to generate one short Korean learning passage. Generation receives the selected lemma, contextual Chinese meaning, and available source sentence. Returned target IDs are structurally validated before the artifact is saved.
+Up to 20 selected vocabulary entries in one language can be sent to DeepSeek to generate one short passage in that language. Generation receives the selected lemma, contextual Chinese meaning, and available source sentence. Returned target IDs are structurally validated before the artifact and its language are saved. Filtering never omits selected targets from this check.
 
 Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.
 
@@ -74,14 +72,14 @@ media
   ↓
 faster-whisper
   ↓
-word-aligned Korean recognition
+word-aligned Korean or English recognition
   ↓
-Kiwi sentence splitting + phrase grouping
+Kiwi (Korean) / spaCy (English) sentence splitting + phrase grouping
   ↓
 Segment[]
 ```
 
-Listen sends the current sentence and neighboring context to DeepSeek and keeps one latest successful translation in SQLite for offline revisits and restart. Refresh failure or cancellation preserves that result. The local Korean → English → Chinese CTranslate2 path remains available as an explicit reference fallback after cloud failure. Story keeps its generation-time translations. Sentence translation, word gloss and passage generation share the host-owned credential, with independent task settings in code.
+Listen sends the confirmed language, current sentence and neighboring context to DeepSeek and keeps one latest successful translation in SQLite for offline revisits and restart. Refresh failure or cancellation preserves that result. Explicit local reference translation uses Korean → English → Chinese or English → Chinese through prepared CTranslate2 resources. Story keeps its generation-time translations. Sentence translation, word gloss and passage generation share the host-owned credential, with independent task settings in code. Preparation installs pinned English dependencies and the local pipeline; runtime processing does not download resources.
 
 Passage generation is not local. It uses the DeepSeek Responses API and therefore requires network access and an owner-configured credential. Saved media, learning state, vocabulary, provenance, and generated artifacts remain local.
 
@@ -105,15 +103,17 @@ The current frontend workspace has been implemented and locally verified. Native
 
 Task-specific verification records are indexed in [the task index](../.scratch/README.md). Superseded and completed delivery records live under `.scratch/archive/`; this document records only the resulting current state.
 
+English native acceptance runs in an isolated profile and a second Electron process. It covers real Whisper transcription on offline synthetic speech, real spaCy and dictionary lookup, language confirmation/default, playback, masks, protected drafts, independent filters, two Story cycles and offline restoration. Provider requests in that UI run are deterministic fixtures. Separate live English generations verified supplied contextual senses, contractions, hyphens and regular inflection; plural/irregular generation quality remains unverified, and one malformed response was rejected. See [the quality report](../.scratch/english-learning/quality-report.md).
+
 ## 7. Current gaps
 
 The main known gaps are:
 
 - owner visual/product acceptance of the implemented frontend remains pending;
-- the confirmed English learning extension is specified but not implemented;
 - automatic contextual dictionary disambiguation remains deferred;
 - individual ASR word timestamps are not part of the persisted domain model;
-- local Chinese translation depends on an English pivot and can be literal or lossy;
+- local Chinese translation can be literal or lossy; Korean uses an English pivot;
+- English dictionary coverage and irregular generated inflections need broader quality review; real-speaker English ASR beyond the synthetic acceptance sample remains unverified;
 - new cloud translations, contextual glosses and generated passages depend on the remote DeepSeek service; saved results and offline dictionary lookup remain local;
 - packaged processing resources and installed-application acceptance are not yet complete;
 - subtitle masking is deferred work.

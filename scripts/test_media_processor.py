@@ -53,4 +53,26 @@ class ProcessingTests(unittest.TestCase):
             with self.assertRaisesRegex(ProcessingError, '翻译模型尚未安装'):
                 translate('안녕하세요.')
 
+    def test_english_groups_cover_sentences_and_keep_words_together(self):
+        text = "The well-known teacher's book, which she loves, is on the table."
+        groups = meaning_groups(text, 'en')
+        self.assertEqual(''.join(groups).replace(' ', ''), text.replace(' ', ''))
+        self.assertGreater(len(groups), 1)
+        self.assertTrue(any("teacher's" in group for group in groups))
+        self.assertTrue(any('well-known' in group for group in groups))
+
+        text = "They don't want to run home."
+        groups = meaning_groups(text, 'en')
+        self.assertEqual(groups, ['They', "don't want", 'to run home.'])
+        self.assertEqual(''.join(groups).replace(' ', ''), text.replace(' ', ''))
+
+    def test_english_sentence_boundaries_follow_the_local_pipeline(self):
+        words = [SimpleNamespace(word=word, start=start, end=end) for word, start, end in [
+            (' She', 0.0, 0.2), (' arrived', 0.2, 0.5), (' early.', 0.5, 0.9),
+            (' We', 1.0, 1.2), (' started', 1.2, 1.5), (' again.', 1.5, 2.0),
+        ]]
+        result = sentences(words, 'en')
+        self.assertEqual([segment['text'] for segment in result], ['She arrived early.', 'We started again.'])
+        self.assertEqual([(segment['start'], segment['end']) for segment in result], [(0.0, 0.9), (1.0, 2.0)])
+
 if __name__ == '__main__': unittest.main()

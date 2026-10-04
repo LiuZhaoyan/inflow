@@ -8,7 +8,7 @@ Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Pro
 
 | Effort | Current boundary | Entry point |
 | --- | --- | --- |
-| English learning | Full English learning loop specified; implementation and runtime acceptance have not begun. | [Ready-for-agent spec](english-learning/spec.md) |
+| English learning | Implemented source-checkout learning loop; broader linguistic quality and packaged Windows delivery remain separate. | [Spec](english-learning/spec.md), [acceptance](english-learning/acceptance.md), [live quality review](english-learning/quality-report.md) |
 | Windows runtime | Worker packaging is unstarted and unblocked; installed-cycle acceptance depends on packaging. | [Remaining desktop tickets](desktop-learning/README.md) |
 | Frontend workspace | The implemented Listen, Story and Vocabulary interface still needs owner visual acceptance. | [Visual acceptance](frontend-workspace/spec.md) |
 | Subtitle-region mask | Confirm interaction and persistence before implementation; separate from sentence meaning-group masks. | [Ticket 08](desktop-learning/issues/08-subtitle-mask.md) |

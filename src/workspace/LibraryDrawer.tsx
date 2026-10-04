@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import type { LearningArtifact, SavedMedia } from '@/listening/desktop';
+import type { LearningArtifact, SavedMedia, SourceLanguage } from '@/listening/desktop';
 
 const formatTime = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
@@ -31,6 +31,7 @@ export default function LibraryDrawer({
   const dialog = useRef<HTMLDialogElement>(null);
   const filterInput = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState('');
+  const [languageFilter, setLanguageFilter] = useState<'all' | SourceLanguage>('all');
 
   useEffect(() => {
     const element = dialog.current;
@@ -44,8 +45,14 @@ export default function LibraryDrawer({
   }, [open]);
 
   const query = filter.trim().toLocaleLowerCase();
-  const visibleItems = items.filter(item => item.name.toLocaleLowerCase().includes(query));
-  const visibleArtifacts = artifacts.filter(item => item.title.toLocaleLowerCase().includes(query));
+  const visibleItems = items.filter(item => (languageFilter === 'all' || item.language === languageFilter) && item.name.toLocaleLowerCase().includes(query));
+  const visibleArtifacts = artifacts.filter(item => (languageFilter === 'all' || item.language === languageFilter) && item.title.toLocaleLowerCase().includes(query));
+  const languageCounts = {
+    all: items.length + artifacts.length,
+    ko: items.filter(item => item.language === 'ko').length + artifacts.filter(item => item.language === 'ko').length,
+    en: items.filter(item => item.language === 'en').length + artifacts.filter(item => item.language === 'en').length,
+  };
+  const languageName = (language: SourceLanguage) => language === 'en' ? 'English' : 'Korean';
 
   return <dialog ref={dialog} className="workspace-library-dialog" aria-labelledby="workspace-library-title"
     onClose={onClose} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
@@ -56,19 +63,24 @@ export default function LibraryDrawer({
       </button>
     </div>
     <label className="workspace-library-search"><span className="workspace-sr-only">Search library by name</span><input ref={filterInput} type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Search library"/></label>
+    <div className="workspace-library-filters" role="group" aria-label="Filter library by source language">
+      {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={() => setLanguageFilter(item.id as 'all' | SourceLanguage)}>
+        {item.label}<span>{languageCounts[item.id as 'all' | SourceLanguage]}</span>
+      </button>)}
+    </div>
     <div className="workspace-library-count">{items.length + artifacts.length} saved items</div>
     <ul className="workspace-library-list">
       {visibleItems.map(item => <li key={item.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={item.id === currentId ? 'true' : undefined} onClick={() => onOpen(item.id)}>
           <span className="workspace-library-kind" aria-hidden="true">{item.video ? 'VIDEO' : 'AUDIO'}</span>
-          <span className="workspace-library-info"><strong title={item.name}>{item.name}</strong><span>{item.learning.duration > 600 ? 'Playback disabled · over 10 min' : formatTime(item.learning.duration) + ' · ' + item.segments.length + ' sentences'}</span></span>
+          <span className="workspace-library-info"><span className="workspace-library-title-row"><strong title={item.name}>{item.name}</strong><span className="workspace-language-badge">{languageName(item.language)}</span></span><span>{item.learning.duration > 600 ? 'Playback disabled · over 10 min' : formatTime(item.learning.duration) + ' · ' + item.segments.length + ' sentences'}</span></span>
           <svg className="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
         {item.missing && <div className="workspace-library-missing"><span>Media file missing</span><button type="button" onClick={() => onRelink(item.id)}>Relink</button></div>}
       </li>)}
       {visibleArtifacts.map(artifact => <li key={artifact.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={artifact.id === currentArtifactId ? 'true' : undefined} onClick={() => onOpenArtifact?.(artifact)}>
-          <span className="workspace-library-kind" aria-hidden="true">STORY</span><span className="workspace-library-info"><strong title={artifact.title}>{artifact.title}</strong><span>{artifact.targets.length} words · {artifact.sentences.length} sentences</span></span>
+          <span className="workspace-library-kind" aria-hidden="true">STORY</span><span className="workspace-library-info"><span className="workspace-library-title-row"><strong title={artifact.title}>{artifact.title}</strong><span className="workspace-language-badge">{languageName(artifact.language)}</span></span><span>{artifact.targets.length} words · {artifact.sentences.length} sentences</span></span>
           <svg className="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
       </li>)}

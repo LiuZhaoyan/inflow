@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -8,7 +8,7 @@ This document describes what comes next for Inflow: remaining work, ordering, an
 
 The persistent desktop foundation already supports listening, vocabulary, generated artifacts, and their provenance. The next work should build on those capabilities rather than redesigning the backend around the current UI.
 
-The immediate product direction is to extend the implemented learning loop to English and finish owner visual acceptance of the existing workspace:
+The implemented learning loop now supports Korean and English. The immediate direction is owner visual acceptance and broader language-quality evaluation:
 
 ```text
 Media → Listening → Vocabulary → Generated Artifact → Vocabulary
@@ -29,20 +29,16 @@ Priorities:
 
 The remaining frontend review is tracked in [the visual acceptance record](../.scratch/frontend-workspace/spec.md). The original implementation phase and its evidence are archived and linked from that record.
 
-## 2. Implement the confirmed English learning loop
+## 2. Broaden English quality evaluation
 
-The [English Learning Support spec](../.scratch/english-learning/spec.md) is ready-for-agent. It extends import, local transcription and analysis, Chinese translation, offline dictionary lookup, vocabulary identity and passage generation to English while retaining the Korean learning loop and saved data.
+The [English Learning Support spec](../.scratch/english-learning/spec.md) has been implemented for the source-checkout desktop application. [Acceptance](../.scratch/english-learning/acceptance.md) covers the full loop and retained Korean data. Broader quality work should:
 
-Implementation should:
+- evaluate real-speaker English audio, accents and phrase grouping beyond the synthetic acceptance sample;
+- review more irregular/plural generated forms and topic adherence, preserving failures as evidence;
+- sample the fixed English–Chinese dictionary's coverage and candidate quality while retaining manual entry;
+- keep deterministic provider fixtures separate from live linguistic quality evidence.
 
-- carry the confirmed source language through the existing renderer/host/worker contracts;
-- reuse Whisper, keep Korean analysis on Kiwi, and prepare a compatible local spaCy English pipeline;
-- evaluate and bundle an English–Chinese dictionary with fixed provenance and resource notices;
-- preserve complete-word lookup, contextual meanings, explicit cloud actions, translation cache behavior and artifact snapshots;
-- add independent source-language filters without changing target selections, and reject mixed-language generation before contacting the provider;
-- complete application-operations tests, real-worker checks and isolated native Electron acceptance, reporting English semantic quality separately from deterministic fixtures.
-
-English resources use the existing preparation workflow. This work targets the source-checkout desktop application; owner visual review and packaged Windows delivery are separate efforts, not prerequisites for implementing English. Runtime English support must remain marked unimplemented until its evidence is recorded.
+English resources use the existing preparation workflow. Owner visual review and packaged Windows delivery remain separate efforts.
 
 ## 3. Revisit listening data only where the new UX requires it
 
@@ -56,7 +52,7 @@ If such a requirement is confirmed, define the migration and provenance behavior
 
 Listen now supports explicit cloud sentence translation with a latest-result cache and an explicit local reference fallback. Word collection uses bundled offline dictionary candidates and optional user-requested contextual glosses.
 
-Evaluate live cloud output and dictionary coverage against representative Korean learning sentences. The local Korean → English → Chinese fallback can still be literal or lossy. Keep provider and model details outside the learning domain; saved results remain reusable independently of the current provider.
+Evaluate live cloud output and dictionary coverage against representative Korean and English learning sentences. Local reference translations can still be literal or lossy. Keep provider and model details outside the learning domain; saved results remain reusable independently of the current provider.
 
 ## 5. Package the Windows runtime
 

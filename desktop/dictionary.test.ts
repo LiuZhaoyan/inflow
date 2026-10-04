@@ -11,3 +11,11 @@ test('the bundled KRDict snapshot provides actual Chinese senses and safe missin
   assert.deepEqual(dictionaryMeanings('constructor'), []);
   assert.deepEqual(dictionaryMeanings('not-in-the-dictionary'), []);
 });
+
+test('the bundled FreeDict English-Chinese snapshot provides distinct Chinese candidates', () => {
+  assert.deepEqual(dictionaryMeanings('apple', 'en'), ['苹果', '蘋果']);
+  assert.deepEqual(dictionaryMeanings('bank', 'en'), ['銀行', '银行']);
+  assert.deepEqual(dictionaryMeanings('child', 'en'), ['孩子', '小孩']);
+  assert.deepEqual(dictionaryMeanings('学生', 'en'), []);
+  assert.deepEqual(dictionaryMeanings('not-in-the-dictionary', 'en'), []);
+});
