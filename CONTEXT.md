@@ -13,6 +13,31 @@ The one learner-confirmed language of the material being studied, distinct from 
 **Playback segment**:
 A timestamped portion of media that can be studied and replayed individually, normally corresponding to a sentence.
 
+**Learning transcript**:
+The source-language text studied alongside source media, organized into playback segments and meaning groups.
+
+**Embedded subtitle track**:
+Timed subtitles stored separately from the picture within source media. A track may contain text or subtitle images.
+_Avoid_: Burned-in subtitles
+
+**Burned-in subtitles**:
+Subtitle lettering that is already part of the video picture rather than a separately selectable subtitle track.
+_Avoid_: Embedded subtitle track
+
+**Subtitle cue**:
+One timed subtitle display item, which may contain part of a sentence or several sentences. A cue is not necessarily a playback segment.
+
+**Audio-text alignment**:
+The assignment of positions in source audio to supplied text. A resulting timing does not establish that the supplied text faithfully or completely represents the speech.
+
+**Subtitle-region mask**:
+A learner-controlled covering over a chosen region of the video picture that conceals burned-in subtitles during listening.
+_Avoid_: Meaning-group mask
+
+**Meaning-group mask**:
+The learner's choice to hide a complete meaning group in the source text of a playback segment.
+_Avoid_: Subtitle-region mask
+
 **Vocabulary notebook**:
 The learner's collection of unfamiliar words, collected from source media or learning artifacts, or added manually.
 _Avoid_: Dictionary

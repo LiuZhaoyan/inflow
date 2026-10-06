@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-03
+Last updated: 2026-10-05
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -60,13 +60,16 @@ The learner can:
 - choose which complete meaning groups to mask in the current sentence;
 - exit mask mode to view the complete source text and collect words;
 - reveal or hide the Chinese translation independently;
-- reopen material with learning position and playback preferences restored.
+- reopen material with learning position and playback preferences restored;
+- optionally cover video subtitles with a manually adjustable black rectangle.
 
 Playback segments and meaning groups are separate concepts. Previous/next navigation operates on sentences; masks operate on system-defined meaning groups inside the current sentence.
 
 New sentences initially show their source text. Set masks directly toggles mask mode. In this mode, clicking a visible group immediately hides it, and clicking its masked placeholder immediately shows it again; there is no separate selection or confirmation step. Word collection is disabled in mask mode. Clicking Set masks again exits the mode, shows every meaning group and enables native word selection for vocabulary collection. Mask choices remain saved and apply only while mask mode is active.
 
 Mask choices are saved locally per media and sentence and survive application restart. Changing or reopening a sentence exits mask mode, shows the complete source text and hides translation. Re-entering mask mode applies its saved mask choices. Successful retranscription clears masks because the sentence/group identities have changed; failure or cancellation preserves them. Translation is never generated merely because playback advances.
+
+Video subtitle covering has its own switch, independent of source-text meaning-group masks. A new video shows its original picture with no covering. First activation offers one bottom rectangle and enters adjustment, pausing once without seeking. The learner can move the rectangle and resize its edges or corners using pointer or keyboard controls, manually resume playback and adjust live. Dragging does not toggle or repeatedly pause playback; finishing adjustment retains the current playback state and hides handles. The rectangle follows the actual video picture during window resizing, including letterboxing. Save its region and switch state per video across reopening/restart and preserve it through retranscription. Automatic subtitle-location detection, subtitle-track extraction and bitmap subtitle OCR are deferred.
 
 Listen requests a Chinese translation from the cloud only on explicit action, using neighboring sentences as context while translating the current sentence alone. Keep one latest successful result locally and reuse it on ordinary revisits and restart. Actual source text or context changes invalidate reuse. Explicit refresh replaces the result only on success; failure or cancellation preserves the previous translation. A cloud failure offers retry or an explicitly chosen local reference translation. Story uses its saved sentence translations without regeneration controls.
 

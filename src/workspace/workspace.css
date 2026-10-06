@@ -38,6 +38,24 @@
 .workspace-video-stage-wrap { min-width:0; }
 .workspace-video-stage { position:relative; width:100%; max-height:clamp(180px,calc(100dvh - 560px),480px); overflow:hidden; aspect-ratio:16/9; border-radius:0; background:#0c0e12; }
 .workspace-video-stage>video { display:block; width:100%; height:100%; background:#090a0d; object-fit:contain; }
+.workspace-video-picture { position:absolute; pointer-events:none; }
+.workspace-video-mask { position:absolute; background:#000; }
+.workspace-video-mask.is-adjusting { pointer-events:auto; cursor:move; touch-action:none; user-select:none; outline:1px solid var(--workspace-accent); }
+.workspace-video-mask.is-adjusting:focus-visible { outline:2px solid var(--workspace-accent); }
+.workspace-video-mask-handle { position:absolute; width:12px; height:12px; min-width:0; min-height:0; padding:0; border:1px solid var(--workspace-accent); border-radius:0; background:var(--workspace-panel); touch-action:none; }
+.workspace-video-mask-handle:focus-visible { outline:2px solid #fff; }
+.workspace-video-mask-handle.handle-n { top:-6px; left:calc(50% - 6px); cursor:ns-resize; }
+.workspace-video-mask-handle.handle-ne { top:-6px; right:-6px; cursor:nesw-resize; }
+.workspace-video-mask-handle.handle-e { top:calc(50% - 6px); right:-6px; cursor:ew-resize; }
+.workspace-video-mask-handle.handle-se { bottom:-6px; right:-6px; cursor:nwse-resize; }
+.workspace-video-mask-handle.handle-s { bottom:-6px; left:calc(50% - 6px); cursor:ns-resize; }
+.workspace-video-mask-handle.handle-sw { bottom:-6px; left:-6px; cursor:nesw-resize; }
+.workspace-video-mask-handle.handle-w { top:calc(50% - 6px); left:-6px; cursor:ew-resize; }
+.workspace-video-mask-handle.handle-nw { top:-6px; left:-6px; cursor:nwse-resize; }
+.workspace-video-mask-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding:8px 24px 0; }
+.workspace-video-mask-controls button { min-height:36px; padding:0; border:0; border-bottom:1px solid transparent; border-radius:0; background:transparent; color:var(--workspace-muted); font-size:12px; }
+.workspace-video-mask-controls button[aria-pressed="true"] { border-bottom-color:var(--workspace-accent); color:var(--workspace-accent); }
+.workspace-video-mask-controls span { color:var(--workspace-muted); font-size:12px; line-height:1.6; }
 .workspace-audio-card,.workspace-stage-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:28px; background:radial-gradient(ellipse at 50% 40%,#262333 0,#17191f 55%,#121419 100%); text-align:center; }
 .workspace-audio-card>span { max-width:min(85%,520px); overflow:hidden; color:var(--workspace-text); font-size:16px; text-overflow:ellipsis; white-space:nowrap; }
 .workspace-audio-orbit { width:80px; height:80px; display:grid; place-items:center; border:1px solid #534965; border-radius:24px; background:var(--workspace-accent-soft); }

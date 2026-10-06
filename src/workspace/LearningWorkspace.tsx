@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { validateSegments, type Segment } from '@/listening/processing';
+import { initialVideoMask, type VideoMask } from '@/listening/video-mask';
 import { managedMediaUrl, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type LearningArtifact, type VocabularyContext, type VocabularyEntry, type PlaybackMode } from '@/listening/desktop';
 import VocabularyNotebook from '@/listening/VocabularyNotebook';
 import VocabularySelection, { type VocabularySelectionHandle } from '@/listening/VocabularySelection';
@@ -49,6 +50,8 @@ export default function LearningWorkspace() {
   const [loop, setLoop] = useState(false);
   const [masks, setMasks] = useState<Record<string, number[]>>({});
   const [maskEditing, setMaskEditing] = useState(false);
+  const [videoMask, setVideoMask] = useState<VideoMask>();
+  const [videoMaskEditing, setVideoMaskEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const vocabularySelection = useRef<VocabularySelectionHandle>(null);
@@ -74,6 +77,7 @@ export default function LearningWorkspace() {
     setSrc(next.missing || next.learning.duration > 600 ? '' : managedMediaUrl(next.id));
     setReady(false); setDuration(next.learning.duration); setPosition(next.learning.position); setIndex(next.learning.index);
     setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments); setMasks(next.learning.masks ?? {});
+    setVideoMask(next.learning.videoMask); setVideoMaskEditing(false);
     setPlaying(false); setBusy(false); setShowContext(false); resetSentence();
     setError(next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '');
     return true;
@@ -94,9 +98,9 @@ export default function LearningWorkspace() {
   }, [applySaved]);
   useEffect(() => {
     if (!savedMedia || !duration) return;
-    void window.inflow?.saveLearning(savedMedia.id, { position, index, rate, loop, duration, mode, masks })
+    void window.inflow?.saveLearning(savedMedia.id, { position, index, rate, loop, duration, mode, masks, videoMask })
       .catch(failure => setError(failure instanceof Error ? failure.message : '学习记录保存失败。'));
-  }, [savedMedia, duration, position, index, rate, loop, mode, masks]);
+  }, [savedMedia, duration, position, index, rate, loop, mode, masks, videoMask]);
 
   const syncPlayback = useCallback((updateTime = true) => {
     const el = media.current;
@@ -143,6 +147,17 @@ export default function LearningWorkspace() {
       else delete next[sentenceKey];
       return next;
     });
+  }
+  function toggleVideoMask() {
+    if (!allowChange()) return;
+    if (videoMask?.enabled) { setVideoMask({ ...videoMask, enabled: false }); setVideoMaskEditing(false); return; }
+    setVideoMask({ ...(videoMask ?? initialVideoMask), enabled: true });
+    if (!videoMask) { media.current?.pause(); setVideoMaskEditing(true); }
+  }
+  function toggleVideoMaskEditing() {
+    if (!allowChange() || !videoMask?.enabled) return;
+    if (!videoMaskEditing) media.current?.pause();
+    setVideoMaskEditing(value => !value);
   }
   function showVocab() { if (allowChange()) { media.current?.pause(); setView('vocab'); } }
 
@@ -197,7 +212,7 @@ export default function LearningWorkspace() {
       if (choice !== fileChoice.current) { URL.revokeObjectURL(url); return; }
       processing.current?.abort(); translating.current?.abort(); media.current?.pause();
       setSavedMedia(null); setFile(next); setSrc(url); setReady(false); setDuration(length); setPosition(0); setPlaying(false);
-      setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setMasks({}); setBusy(false); setError(''); setShowContext(false); resetSentence();
+      setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setMasks({}); setVideoMask(undefined); setVideoMaskEditing(false); setBusy(false); setError(''); setShowContext(false); resetSentence();
       autoProcess.current = url; setContentKind('media'); setView('video'); setLibraryOpen(false);
     } catch (failure) {
       URL.revokeObjectURL(url);
@@ -385,7 +400,7 @@ export default function LearningWorkspace() {
     {error && <p className="notice workspace-notice" role="alert">{error}</p>}
     <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column">
-        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status}/>
+        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status} videoMask={videoMask} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>导入媒体</button>}
         <SentenceArea segment={segment} index={index} total={segments.length} language={savedMedia?.language ?? 'ko'} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} maskedGroups={maskedGroups} maskEditing={maskEditing} onToggleMaskEditing={toggleMaskEditing} onToggleGroup={toggleGroup} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
       </div>
