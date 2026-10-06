@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: [06: Run the packaged Windows worker without system Python](06-packaged-windows-worker.md).
-Completed prerequisite: [05: Generate text artifacts and collect the next vocabulary](../../archive/desktop-learning/issues/05-text-artifact-learning-cycle.md).
+Completed prerequisite: [05: Generate text artifacts and collect the next vocabulary](../../archive/desktop-learning/text-artifact-acceptance.md).
 Approved: 2026-09-30
 Specification: [Windows Korean Learning Desktop MVP](../../archive/desktop-learning/spec.md).
 Current product requirements: [Product Specification](../../../docs/PRODUCT_SPEC.md). Ticket 05 is completed; ticket 06 remains the open blocker.

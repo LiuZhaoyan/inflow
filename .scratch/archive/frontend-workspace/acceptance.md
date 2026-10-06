@@ -36,4 +36,4 @@ The final independent spec review reported no findings. Earlier checks led to pr
 
 ## Verification limits
 
-The browser harness substitutes DesktopBridge and model results; it does not establish real Korean transcription/translation quality or installed Electron acceptance. Existing worker algorithms, artifact storage and generation remain preserved. Installer/resource packaging is a later desktop delivery task. Subtitle Mask is deferred to [issue 08](../../desktop-learning/issues/08-subtitle-mask.md).
+The browser harness substitutes DesktopBridge and model results; it does not establish real Korean transcription/translation quality or installed Electron acceptance. Existing worker algorithms, artifact storage and generation remain preserved. Installer/resource packaging is a later desktop delivery task. Subtitle Mask is deferred to [issue 08](../video-subtitles/spec.md).

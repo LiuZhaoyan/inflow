@@ -2,7 +2,7 @@
 
 > Historical record archived on 2026-10-03. Statements and status fields below describe the original delivery stage. Use [Product Specification](../../../docs/PRODUCT_SPEC.md) and [Project Status](../../../docs/PROJECT_STATUS.md) for current behavior; see [active tasks](../../README.md) for remaining work.
 
-Date: 2026-10-01. Ticket: [05](issues/05-text-artifact-learning-cycle.md).
+Date: 2026-10-01. Completed ticket: 05 (consolidated into this acceptance report).
 
 ## Delivered behavior
 

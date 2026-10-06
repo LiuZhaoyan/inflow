@@ -1,5 +1,7 @@
 # Manual Video Subtitle Mask Acceptance
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 Verified: 2026-10-05; native screenshot preview: 2026-10-06
 Worktree: `D:/DeskBox/project/inflow-video-subtitles`
 Branch: `codex/video-subtitles`
@@ -27,10 +29,10 @@ Browser cases verified first activation pauses in place, keyboard and pointer ad
 
 ## Evidence and limits
 
-Synthetic 4:3/portrait MP4 and audio-only fixtures, a mocked desktop bridge, the browser runner and [the final screenshot](../desktop-learning/generated-samples/video-mask/final.png) are retained under the ignored `../desktop-learning/generated-samples/video-mask/` directory. The controlled video frames use two white bottom bars as a subtitle-layout fixture; they are not real-speaker or detector/OCR evidence. Browser reload uses isolated test storage; real SQLite restart and compatibility are covered separately by host tests.
+Synthetic 4:3/portrait MP4 and audio-only fixtures, a mocked desktop bridge, the browser runner and [the final screenshot](../../desktop-learning/generated-samples/video-mask/final.png) are retained under the ignored `../../desktop-learning/generated-samples/video-mask/` directory. The controlled video frames use two white bottom bars as a subtitle-layout fixture; they are not real-speaker or detector/OCR evidence. Browser reload uses isolated test storage; real SQLite restart and compatibility are covered separately by host tests.
 
 React review checked cleanup of the resize observer, event-driven geometry updates, keyboard-accessible adjustment controls, optional state compatibility and separation of video masks from meaning-group masks. Runtime dependencies were reused through a worktree node_modules junction; no packages or models were added.
 
-Native Electron screenshots of the [uncovered video](../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-off.png), [adjustment controls](../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-adjusting.png) and [finished covering](../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-on.png) were captured on 2026-10-06 and shown to the owner. The isolated profile was seeded through real host operations with synthetic transcript data; native media serving, decoding, renderer and learning-state IPC were real.
+Native Electron screenshots of the [uncovered video](../../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-off.png), [adjustment controls](../../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-adjusting.png) and [finished covering](../../desktop-learning/generated-samples/video-mask/native-preview-jK8nSw/mask-on.png) were captured on 2026-10-06 and shown to the owner. The isolated profile was seeded through real host operations with synthetic transcript data; native media serving, decoding, renderer and learning-state IPC were real.
 
 Maximized native-window and installed-package verification remain unrun. Browser viewport resizing, native screenshot preview and the desktop production build do not constitute installer or clean-machine acceptance. No subtitle extraction or alignment implementation is included.

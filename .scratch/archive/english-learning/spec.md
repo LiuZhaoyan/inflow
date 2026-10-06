@@ -1,5 +1,7 @@
 # English Learning Support
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 Status: complete
 Updated: 2026-10-03
 Requirement basis: the owner confirmed English as an additional learning language and the decisions below during the design interview. The application-operations, real-worker and native Electron verification boundary was explicitly confirmed on 2026-10-03.
@@ -133,8 +135,8 @@ The learner confirms each imported material's language. Media, vocabulary and sa
 
 ## Further Notes
 
-- Implementation and acceptance are tracked in [the acceptance record](acceptance.md). [Project Status](../../docs/PROJECT_STATUS.md) records current availability; [Product Specification](../../docs/PRODUCT_SPEC.md) records intended behavior; [Roadmap](../../docs/ROADMAP.md) records future work; [the glossary](../../CONTEXT.md) defines the domain vocabulary.
-- [The task index](../README.md) separates active work from archived delivery records. Historical frontend restrictions and early Korean model/provider proposals do not override the confirmed behavior above.
+- Implementation and acceptance are tracked in [the acceptance record](acceptance.md). [Project Status](../../../docs/PROJECT_STATUS.md) records current availability; [Product Specification](../../../docs/PRODUCT_SPEC.md) records intended behavior; [Roadmap](../../../docs/ROADMAP.md) records future work; [the glossary](../../../CONTEXT.md) defines the domain vocabulary.
+- [The task index](../../README.md) separates active work from archived delivery records. Historical frontend restrictions and early Korean model/provider proposals do not override the confirmed behavior above.
 - Primary-source research confirms the available [spaCy linguistic features](https://spacy.io/usage/linguistic-features/) and [local pipeline installation/loading](https://spacy.io/usage/models/). Its internal contraction/hyphen tokenization requires the whole-selection mapping described above; application grouping quality still needs evaluation.
 - [WikDict](https://www.wikdict.com/page/about) publishes dictionary data under CC BY-SA terms separately from its MIT code. [FreeDict release metadata](https://freedict.org/freedict-database.json) provides a possible pinned English–Chinese artifact. A specific artifact, its notices, Chinese coverage and processing compatibility are implementation validation items, not already established delivery claims.
 - The original specification publication changed documentation only. Subsequent implementation and verification are recorded in [acceptance](acceptance.md).

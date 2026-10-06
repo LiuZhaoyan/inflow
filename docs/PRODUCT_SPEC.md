@@ -8,7 +8,7 @@ This document defines what Inflow should be: its product behavior, scope, and bo
 
 Inflow is an open-source Korean and English learning desktop application, initially for personal use on Windows. Users provide audio or video for intensive listening, collect unfamiliar words, and generate short reading passages in the selected vocabulary's source language.
 
-English is a confirmed product extension specified in [English Learning Support](../.scratch/english-learning/spec.md). Current runtime availability is recorded separately in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+English is a confirmed product extension specified in [English Learning Support](../.scratch/archive/english-learning/spec.md). Current runtime availability is recorded separately in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 The system automatically transcribes and segments source media so users do not need to prepare subtitles or a course first. Generated passages reuse selected vocabulary in its recorded contextual meaning and can themselves become sources for further vocabulary collection.
 

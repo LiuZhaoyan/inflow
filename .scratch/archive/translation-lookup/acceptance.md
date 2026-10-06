@@ -25,7 +25,7 @@ Final native run: `.scratch/desktop-learning/generated-samples/translation-accep
 
 ## Review
 
-Parallel Standards and Spec reviews compared the implementation against `f001640aae0defcffec8cd24013b84af64023664`. See [review.md](review.md). No unresolved findings remain. The implementation check caught and corrected the unrelated-context single-candidate autofill boundary, with host and native regressions.
+Parallel Standards and Spec reviews compared implementation `59e893e` and its focused correction against `f001640aae0defcffec8cd24013b84af64023664`. No unresolved findings remain. The implementation check caught and corrected the unrelated-context single-candidate autofill boundary, with host and native regressions. An explicit cloud request may replace a meaning edited before that request; edits made while the request is pending remain protected.
 
 ## Limits
 

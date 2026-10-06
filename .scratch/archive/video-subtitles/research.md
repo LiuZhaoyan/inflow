@@ -1,5 +1,7 @@
 # Video Subtitle Feasibility
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 Investigated: 2026-10-04 to 2026-10-05
 Scope: repository inspection, primary-source documentation, and small experiments with the existing local runtime. This is not feature acceptance. On 2026-10-05 the owner deferred subtitle extraction from the current manual-mask iteration; extraction and alignment findings below are retained for possible future work.
 
@@ -17,14 +19,14 @@ FFmpeg distinguishes text and image subtitle streams, and its SRT output accepts
 
 ## What Inflow actually needs
 
-The current contract is `Segment = { start, end, text, groups }` in [processing.ts](../../src/listening/processing.ts). Individual word timestamps are not persisted. The validator requires positive, ordered, non-overlapping ranges and complete meaning groups whose joined text matches the segment text after whitespace removal. The host also checks the final endpoint against media duration.
+The current contract is `Segment = { start, end, text, groups }` in [processing.ts](../../../src/listening/processing.ts). Individual word timestamps are not persisted. The validator requires positive, ordered, non-overlapping ranges and complete meaning groups whose joined text matches the segment text after whitespace removal. The host also checks the final endpoint against media duration.
 
 | Learning data | Available from a text subtitle track? | Remaining work |
 | --- | --- | --- |
 | Source-language text | Usually, if the selected track contains the spoken source language. | Decode markup and preserve the spoken text; Chinese-only subtitles cannot replace Korean or English source text. |
 | Playback start/end | Cue display times are available. | Normalize the media timeline and resolve overlaps; display boundaries are not guaranteed speech boundaries. |
 | Sentence boundaries | Not guaranteed. | A sentence may span cues, or one cue may contain multiple sentences. Q7 confirms complete-sentence playback; investigate and validate additional audio alignment rather than treating cues as sentences. |
-| Meaning groups | Not provided as Inflow meaning groups. | Reuse local `meaning_groups(text, language)` in [the worker](../../scripts/media_processor.py). |
+| Meaning groups | Not provided as Inflow meaning groups. | Reuse local `meaning_groups(text, language)` in [the worker](../../../scripts/media_processor.py). |
 | Chinese translation | Only if separate or bilingual translation data exists. | Matching a translation to newly constructed segments is separate work; translation is not part of the required Segment contract. |
 | Track language and identity | Container metadata may help. | Preserve metadata separately and allow ambiguous/multiple tracks to be resolved. Do not assume an extracted SRT retains that information. |
 
@@ -38,7 +40,7 @@ A text detector can locate lettering without recognizing its content; PaddleOCR 
 
 Inference: sampled video frames and recurring text positions could produce a candidate region for stable subtitles. Generic detection also finds scene signs, titles and logos, so it cannot by itself guarantee subtitle classification. Sparse sampling can miss short-lived or moving subtitles. This is a candidate approach, not a measured accuracy or performance claim. The detector, sampling policy, confidence threshold, and CPU/Windows packaging remain unevaluated.
 
-The current [VideoStage](../../src/workspace/VideoStage.tsx) renders the original media directly, with no explicit subtitle-track controls or picture mask. The video uses `object-fit: contain`; region coordinates must follow the displayed picture, including letterboxing. Q4 confirms normal-window and maximized-window support; a new player fullscreen flow is outside this version.
+The current [VideoStage](../../../src/workspace/VideoStage.tsx) renders the original media directly, with no explicit subtitle-track controls or picture mask. The video uses `object-fit: contain`; region coordinates must follow the displayed picture, including letterboxing. Q4 confirms normal-window and maximized-window support; a new player fullscreen flow is outside this version.
 
 ## Existing runtime evidence
 
@@ -87,12 +89,12 @@ Do not treat token probabilities as a calibrated correctness score. Missing, par
 
 - Current import accepts MP4, WebM and MOV video, at most 50 MB and 10 minutes. MKV is not currently accepted, even though it is common in FFmpeg subtitle examples. Supporting MKV would also require evaluating Electron playback, rather than changing only the file picker.
 - Processing currently always calls Whisper. Using subtitles requires a new preparation path; the raw subtitle result cannot be passed to the existing word-based `sentences()` function unchanged.
-- Successful retranscription replaces segment identities, removes this media's vocabulary source occurrences and cached translations, and clears meaning-group masks. Vocabulary entries and generated artifacts survive. Q8 accepts this atomic replacement policy for explicit subtitle-based reprocessing; preserve video-region settings because the picture is unchanged. Picture masking alone does not require transcript replacement. See [DesktopOperations](../../desktop/operations.ts).
+- Successful retranscription replaces segment identities, removes this media's vocabulary source occurrences and cached translations, and clears meaning-group masks. Vocabulary entries and generated artifacts survive. Q8 accepts this atomic replacement policy for explicit subtitle-based reprocessing; preserve video-region settings because the picture is unchanged. Picture masking alone does not require transcript replacement. See [DesktopOperations](../../../desktop/operations.ts).
 - Failure or cancellation must preserve the existing transcript under the current product contract. Track discovery must not silently replace already studied material.
 
 ## Agreed scope and remaining quality boundary
 
-The owner accepted on-demand manual video masking, source-language text-track preview/selection with speech-transcription fallback, complete-sentence playback, and explicit atomic transcript replacement. Automatic region detection and image-subtitle OCR are deferred; OCR is recorded as a future experiment in [the roadmap](../../docs/ROADMAP.md).
+The owner accepted on-demand manual video masking, source-language text-track preview/selection with speech-transcription fallback, complete-sentence playback, and explicit atomic transcript replacement. Automatic region detection and image-subtitle OCR are deferred; OCR is recorded as a future experiment in [the roadmap](../../../docs/ROADMAP.md).
 
 The simplest candidate implementation uses the existing PyAV and Whisper runtimes rather than introducing a new executable or alignment model. Preserve the current Segment validator and derive meaning groups locally after text preparation/alignment. Do not add external subtitle-file import/export, word-timing persistence, translation-track import, MKV support or a subtitle editor without a separate requirement.
 

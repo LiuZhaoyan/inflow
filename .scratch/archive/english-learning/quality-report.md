@@ -1,10 +1,12 @@
 # English Generation Semantic Quality Check
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 ## Method
 
 On 2026-10-04, three live requests through `generatePassage` using the existing DeepSeek credential and the `deepseek-flash` model returned completed passages and passed the adapter's structural validation. A fourth, inflection-focused response was rejected by the adapter as malformed. No credential was written to the script, report, or saved evidence. The first attempt from the restricted network sandbox received no provider response; the usable responses came from the scoped network requests.
 
-The original nonsecret inputs and results are in [english-quality-2026-10-04T10-26-11-246Z.json](../desktop-learning/generated-samples/english-quality-2026-10-04T10-26-11-246Z.json). The malformed follow-up is in [english-quality-2026-10-04T10-30-57-601Z.json](../desktop-learning/generated-samples/english-quality-2026-10-04T10-30-57-601Z.json), and the final bounded retry is in [english-quality-2026-10-04T10-32-38-257Z.json](../desktop-learning/generated-samples/english-quality-2026-10-04T10-32-38-257Z.json). These files are ignored evidence. The repeatable request script is [quality-check.ts](quality-check.ts); pass `--inflection-follow-up` to run only the inflection case. These are live provider attempts, not fixtures.
+The original nonsecret inputs and results are in [english-quality-2026-10-04T10-26-11-246Z.json](../../desktop-learning/generated-samples/english-quality-2026-10-04T10-26-11-246Z.json). The malformed follow-up is in [english-quality-2026-10-04T10-30-57-601Z.json](../../desktop-learning/generated-samples/english-quality-2026-10-04T10-30-57-601Z.json), and the final bounded retry is in [english-quality-2026-10-04T10-32-38-257Z.json](../../desktop-learning/generated-samples/english-quality-2026-10-04T10-32-38-257Z.json). These files are ignored evidence. The repeatable request script is [quality-check.ts](../../english-learning/quality-check.ts); pass `--inflection-follow-up` to run only the inflection case. These are live provider attempts, not fixtures.
 
 ## Observations
 

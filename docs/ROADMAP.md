@@ -31,7 +31,7 @@ The remaining frontend review is tracked in [the visual acceptance record](../.s
 
 ## 2. Broaden English quality evaluation
 
-The [English Learning Support spec](../.scratch/english-learning/spec.md) has been implemented for the source-checkout desktop application. [Acceptance](../.scratch/english-learning/acceptance.md) covers the full loop and retained Korean data. Broader quality work should:
+The [English Learning Support spec](../.scratch/archive/english-learning/spec.md) has been implemented for the source-checkout desktop application. [Acceptance](../.scratch/archive/english-learning/acceptance.md) covers the full loop and retained Korean data. Broader quality work should:
 
 - evaluate real-speaker English audio, accents and phrase grouping beyond the synthetic acceptance sample;
 - review more irregular/plural generated forms and topic adherence, preserving failures as evidence;
@@ -73,7 +73,7 @@ The active [packaged-worker ticket](../.scratch/desktop-learning/issues/06-packa
 
 ## 6. Deferred product work
 
-On-demand manual subtitle-region masking is implemented and automated checks passed; [mask acceptance](../.scratch/video-subtitles/acceptance.md) records the source-checkout boundary. Owner visual acceptance and installed-package checks remain separate. The owner removed subtitle extraction from this iteration on 2026-10-05; text-track reuse and audio alignment remain deferred with research retained in [Video Subtitle Support](../.scratch/video-subtitles/spec.md). Automatic subtitle-region detection is also deferred.
+On-demand manual subtitle-region masking is implemented and automated checks passed; [mask acceptance](../.scratch/archive/video-subtitles/acceptance.md) records the source-checkout boundary. Owner visual acceptance and installed-package checks remain separate. The owner removed subtitle extraction from this iteration on 2026-10-05; text-track reuse and audio alignment remain deferred with research retained in [Video Subtitle Support](../.scratch/archive/video-subtitles/spec.md). Automatic subtitle-region detection is also deferred.
 
 Future experiment: OCR for image-based subtitle tracks as another source of learning text. Evaluate Korean/English recognition accuracy, text cleanup, retained cue timing and Windows processing/resource requirements on representative samples before committing to implementation. This is a possible future path, outside the first subtitle-reuse version; keep speech transcription available when image-subtitle recovery is unavailable or unsuitable.
 

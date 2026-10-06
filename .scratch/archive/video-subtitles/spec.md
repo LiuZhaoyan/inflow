@@ -1,5 +1,7 @@
 # Video Subtitle Support
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 Status: complete
 Requested: 2026-10-04
 Updated: 2026-10-05
@@ -10,7 +12,7 @@ Stage: manual mask implemented with automated acceptance; subtitle extraction is
 1. Provide an on-demand manually adjustable covering over video subtitles during learning. Automatic subtitle-location detection is deferred from the first version, as confirmed on 2026-10-05.
 2. Investigate reuse of extractable subtitle tracks. The owner deferred implementing subtitle extraction from this iteration on 2026-10-05.
 
-The first outcome is this iteration's implementation scope, as recorded in [desktop ticket 08](../desktop-learning/issues/08-subtitle-mask.md). The second is deferred product work. [Feasibility research](research.md) records established facts and limits.
+The first outcome was desktop ticket 08's implementation scope; that completed ticket is consolidated into this design and [acceptance](acceptance.md). The second is deferred product work. [Feasibility research](research.md) records established facts and limits.
 
 ## Established facts
 
@@ -44,7 +46,7 @@ The owner accepted Q4 and Q5 on 2026-10-05, then accepted Q4a and the manual-onl
 
 ### Deferred subtitle-source design
 
-The owner accepted Q6 on 2026-10-05 and requested image-based subtitle OCR as a possible future experiment in [the roadmap](../../docs/ROADMAP.md), outside the first version.
+The owner accepted Q6 on 2026-10-05 and requested image-based subtitle OCR as a possible future experiment in [the roadmap](../../../docs/ROADMAP.md), outside the first version.
 
 | Question | Accepted decision |
 | --- | --- |

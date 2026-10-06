@@ -6,7 +6,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
-const output = path.join(root, 'build/sentence-mask-verification');
+const output = path.join(root, '.scratch/desktop-learning/generated-samples/sentence-mask-verification');
 await mkdir(output, { recursive: true });
 const cli = process.env.AGENT_BROWSER_CLI || 'C:/Users/123/AppData/Local/npm-cache/_npx/6de2aa2fded2970c/node_modules/agent-browser/bin/agent-browser.js';
 const fixture = path.join(output, 'fixture.js');

@@ -1,5 +1,7 @@
 # English Learning Acceptance
 
+Archived: 2026-10-06. Historical delivery record; see [the task index](../../README.md) for remaining work.
+
 Verified: 2026-10-04. Scope: the source-checkout Windows desktop application. Specification: [English Learning Support](spec.md).
 
 ## Delivered behavior
@@ -17,7 +19,7 @@ Media, vocabulary and saved-story history each have independent default-All lang
 
 ## Resources and actual worker results
 
-The workspace Python environment contains spaCy 3.8.16. The pinned `en_core_web_sm` 3.8.0 wheel is checksum-verified and extracted into `.models/english-parser`; the preparation function recognizes the installed pipeline on repeat. Runtime loading is local. The bundled FreeDict/WikDict English-Chinese snapshot contains 19,745 headwords. [Dictionary notices](../../resources/dictionaries/NOTICE.md) and the included data license record its pinned revision, source hash and transformations. The source archive and downloaded models remain ignored and outside committed runtime resources.
+The workspace Python environment contains spaCy 3.8.16. The pinned `en_core_web_sm` 3.8.0 wheel is checksum-verified and extracted into `.models/english-parser`; the preparation function recognizes the installed pipeline on repeat. Runtime loading is local. The bundled FreeDict/WikDict English-Chinese snapshot contains 19,745 headwords. [Dictionary notices](../../../resources/dictionaries/NOTICE.md) and the included data license record its pinned revision, source hash and transformations. The source archive and downloaded models remain ignored and outside committed runtime resources.
 
 Actual English local reference translation of `Good morning. The train leaves at nine.` returned `早上好 火车9点出发`. Korean `안녕하세요.` returned `哈罗。` through the retained pivot path. These outputs establish execution, not broad translation quality.
 
@@ -25,7 +27,7 @@ The ASR fixture was generated offline through Windows SAPI from `After school, t
 
 ## Native Electron acceptance
 
-The repeatable harness is [verify.cjs](verify.cjs); run it after `npm run desktop:build` with `node .scratch/english-learning/verify.cjs <English-speech.wav>`. The provided audio must contain the fixture sentence above. It creates an isolated profile and launches two native Electron processes; it does not use the owner's learning database.
+The repeatable harness is [verify.cjs](../../english-learning/verify.cjs); run it after `npm run desktop:build` with `node .scratch/english-learning/verify.cjs <English-speech.wav>`. The provided audio must contain the fixture sentence above. It creates an isolated profile and launches two native Electron processes; it does not use the owner's learning database.
 
 The final run passed:
 
@@ -36,7 +38,7 @@ The final run passed:
 - English media → collected `child` → English Story → collected `well-known` → second English Story. All translations, annotations and source relationships persisted.
 - A second Electron process reopened English and Korean state without provider calls; filters restarted at All and the import default remained English.
 
-The provider in this native UI run is a deterministic fixture. Its generated sentences prove routing, saving and interactions, not language quality. Final ignored evidence: [result](../desktop-learning/generated-samples/english-native-MNHRQw/result.json), [restart](../desktop-learning/generated-samples/english-native-MNHRQw/restart.json), [transcript](../desktop-learning/generated-samples/english-native-MNHRQw/transcript.json) and [screenshot](../desktop-learning/generated-samples/english-native-MNHRQw/story.png).
+The provider in this native UI run is a deterministic fixture. Its generated sentences prove routing, saving and interactions, not language quality. Final ignored evidence: [result](../../desktop-learning/generated-samples/english-native-MNHRQw/result.json), [restart](../../desktop-learning/generated-samples/english-native-MNHRQw/restart.json), [transcript](../../desktop-learning/generated-samples/english-native-MNHRQw/transcript.json) and [screenshot](../../desktop-learning/generated-samples/english-native-MNHRQw/story.png).
 
 ## Live generation quality and limits
 
@@ -46,4 +48,11 @@ Broader real-speaker audio, accents, dictionary coverage, irregular generated fo
 
 ## Review
 
-[The two-axis review](review.md) found no hard standards violations and four concrete spec deviations in the first implementation snapshot. All four were corrected with focused regressions; the final checks and native run include those corrections. Ambiguous English parsing still permits manual lemma corrections.
+The two-axis review compared the implementation with owner-confirmed baseline `9c15719a37fe079ba51deb47b1af83228cc6674d`, reviewing snapshot `9070d8c` and focused corrections. It found no hard standards violations. Four spec deviations were corrected with focused regressions included in the final checks and native run:
+
+- Copula contractions such as `mom's` in `My mom's home.` remain complete, while actual possessives suggest the underlying noun.
+- Plural possessives such as `teachers'` retain the complete selected surface and original offsets across lookup, saving and Story selection.
+- Import confirmation persists the last language choice before validation; failed imports retain it, while cancellation and invalid values do not replace it.
+- Preparation validates actual spaCy loading, repairs incomplete pipelines and reuses ready resources without repeat downloads.
+
+The final integration also preserves decomposed English surface text and original offsets while normalizing lemma identity. No review finding remained unresolved; ambiguous parsing still permits manual lemma corrections. Repeated two-language label expressions were retained as a low-priority observation without a current behavioral consequence.

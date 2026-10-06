@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Blocked by: None.
-Completed prerequisite: [03: Restore a processed video in the desktop application](../../archive/desktop-learning/issues/03-persistent-desktop-listening.md).
+Completed prerequisite: [03: Restore a processed video in the desktop application](../../archive/desktop-learning/desktop-listening-acceptance.md).
 Approved: 2026-09-30
 Specification: [Windows Korean Learning Desktop MVP](../../archive/desktop-learning/spec.md).
 Current product requirements: [Product Specification](../../../docs/PRODUCT_SPEC.md). The linked MVP spec is historical context; ticket 03 is completed and this ticket is unblocked.

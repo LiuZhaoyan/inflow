@@ -17,13 +17,13 @@ Do not introduce a standalone architecture refactor. Adapt the existing listenin
 
 - [01: Validate Korean media listening on native Windows](issues/01-windows-listening-baseline.md)
 - [02: Validate one vocabulary-to-passage generation path](issues/02-generation-quality-baseline.md)
-- [03: Restore a processed video in the desktop application](issues/03-persistent-desktop-listening.md)
-- [04: Collect source-linked vocabulary from video](issues/04-video-vocabulary-notebook.md)
-- [05: Generate text artifacts and collect the next vocabulary](issues/05-text-artifact-learning-cycle.md)
+- [03: Restore a processed video in the desktop application](desktop-listening-acceptance.md)
+- [04: Collect source-linked vocabulary from video](vocabulary-notebook-acceptance.md)
+- [05: Generate text artifacts and collect the next vocabulary](text-artifact-acceptance.md)
 - [06: Run the packaged Windows worker without system Python](../../desktop-learning/issues/06-packaged-windows-worker.md)
 - [07: Accept the installed Windows learning cycle](../../desktop-learning/issues/07-installed-learning-cycle-acceptance.md)
 
-The linked issue files are the single source of acceptance criteria, verification and specification coverage. This index records sequencing and current delivery boundaries.
+This index retains the approved sequencing. Completed tickets 03–05 were consolidated into their linked acceptance reports on 2026-10-06; the parent specification retains their requirements. Tickets 01–02 retain the owner's explicit quality approvals, while active tickets 06–07 own remaining acceptance criteria.
 
 ## Blocking graph
 

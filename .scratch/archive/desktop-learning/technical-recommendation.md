@@ -14,7 +14,7 @@ Status: investigated proposal for specification work; no application changes or 
 | Learning storage | Main-process SQLite through builtin `node:sqlite`, plus ordinary managed media/model files. | Fits durable local relationships without a database server or extra native SQLite package. Packaged Windows behavior remains an acceptance gate. |
 | Transcription | Retain faster-whisper base CPU/int8 as the first baseline. | Existing implementation already produces Korean text and sentence timings. Validate real-video usability on Windows before adopting an online replacement. |
 
-Supporting investigations: [framework](framework-research.md), [generation API](generation-api-research.md), [storage](storage-research.md). Speech-service candidates remain in [the earlier research](speech-api-options.md); audio generation is not required for the first release.
+Supporting investigations: [framework](framework-research.md), [generation API](generation-api-research.md), [storage](storage-research.md). Groq and Azure speech services were considered but not selected or tested; their obsolete quota comparison was removed on 2026-10-06. Local ASR was subsequently accepted in [ticket 01](issues/01-windows-listening-baseline.md); audio generation is not required for the first release.
 
 ## Desktop shape and code reuse
 

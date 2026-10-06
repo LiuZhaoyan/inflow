@@ -13,7 +13,7 @@ Build the confirmed Windows learning workspace around the existing processing, r
 
 The visual direction follows the [dark cinematic workspace reference](https://www.canva.com/design/DAHWwk4SMkc/Ss3xOd5HLxhodE6yzdEnsQ/edit): video and the current sentence in the center, Context on the right, and Library in a left-side overlay. Library is a flat list with title search, without folders or deduplication.
 
-Story generation and reading are temporarily hidden, and their associated controls are removed from the workspace. Preserve historical artifacts, selected flags and source text. The next phase will redesign that learning cycle. Subtitle Mask remains deferred to [issue 08](../../desktop-learning/issues/08-subtitle-mask.md); play the original video as supplied, including embedded subtitles.
+Story generation and reading are temporarily hidden, and their associated controls are removed from the workspace. Preserve historical artifacts, selected flags and source text. The next phase will redesign that learning cycle. Subtitle Mask remains deferred to [issue 08](../video-subtitles/spec.md); play the original video as supplied, including embedded subtitles.
 
 ## Media import and processing
 
