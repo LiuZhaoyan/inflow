@@ -167,6 +167,7 @@ async function run() {
   await wait('!document.querySelector(".workspace-vocab").hidden');
   assert.equal(await evaluate('document.querySelector(".vocab-language-filters button[aria-pressed=true]").textContent.startsWith("All")'), true);
   await evaluate(`window.inflow.selectVocabulary([${JSON.stringify(child.id)},${JSON.stringify(koreanWord.id)}])`);
+  await click('.vocab-language-filter > summary');
   await textButton('.vocab-language-filters button', 'English');
   assert.equal(await evaluate('document.querySelectorAll(".vocab-row").length'), 1);
   await click('.vocab-add-word');
@@ -212,6 +213,7 @@ async function run() {
   assert.equal(await evaluate('document.querySelectorAll("select[aria-label=\\"Open saved story\\"] option").length'), 2);
   await textButton('.workspace-topnav button', 'Library');
   assert.equal(await evaluate('document.querySelector(".workspace-library-filters button[aria-pressed=true]").textContent.startsWith("All")'), true);
+  await click('.workspace-library-filter > summary');
   await textButton('.workspace-library-filters button', 'English');
   assert.equal(await evaluate('document.querySelectorAll(".workspace-library-entry").length'), 3);
   await click('button[aria-label="Close library"]');

@@ -55,20 +55,36 @@ export default function LibraryDrawer({
   const languageName = (language: SourceLanguage) => language === 'en' ? 'English' : 'Korean';
 
   return <dialog ref={dialog} className="workspace-library-dialog" aria-labelledby="workspace-library-title"
-    onClose={onClose} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
+    onClose={event => { event.currentTarget.querySelector('details')?.removeAttribute('open'); onClose(); }}
+    onCancel={event => {
+      const menu = event.currentTarget.querySelector('details[open]');
+      if (menu) { event.preventDefault(); menu.removeAttribute('open'); menu.querySelector('summary')?.focus(); }
+    }} onClick={event => { if (event.target === event.currentTarget) event.currentTarget.close(); }}>
     <div className="workspace-library-head">
       <h2 id="workspace-library-title">Library</h2>
       <button type="button" className="workspace-icon-button" aria-label="Close library" onClick={() => dialog.current?.close()}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
       </button>
     </div>
-    <label className="workspace-library-search"><span className="workspace-sr-only">Search library by name</span><input ref={filterInput} type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Search library"/></label>
-    <div className="workspace-library-filters" role="group" aria-label="Filter library by source language">
-      {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={() => setLanguageFilter(item.id as 'all' | SourceLanguage)}>
-        {item.label}<span>{languageCounts[item.id as 'all' | SourceLanguage]}</span>
-      </button>)}
+    <div className="workspace-library-toolbar">
+      <label className="workspace-library-search"><span className="workspace-sr-only">Search library by name</span><input ref={filterInput} type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Search library"/></label>
+      <details className="workspace-library-filter" data-active={languageFilter !== 'all'}>
+        <summary className="workspace-icon-button" aria-label="Filter library by language" title={languageFilter === 'all' ? 'Filter library by language' : `Language: ${languageName(languageFilter)}`}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>
+        </summary>
+        <div className="workspace-library-filter-menu">
+          <strong>Language</strong>
+          <div className="workspace-library-filters" role="group" aria-label="Filter library by source language">
+            {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={event => {
+              setLanguageFilter(item.id as 'all' | SourceLanguage);
+              const menu = event.currentTarget.closest('details');
+              menu?.removeAttribute('open'); menu?.querySelector('summary')?.focus();
+            }}>{item.label}<span>{languageCounts[item.id as 'all' | SourceLanguage]}</span></button>)}
+          </div>
+        </div>
+      </details>
     </div>
-    <div className="workspace-library-count">{items.length + artifacts.length} saved items</div>
+    <div className="workspace-library-count">{languageFilter === 'all' ? 'All languages' : languageName(languageFilter)}</div>
     <ul className="workspace-library-list">
       {visibleItems.map(item => <li key={item.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={item.id === currentId ? 'true' : undefined} onClick={() => onOpen(item.id)}>
