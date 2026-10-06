@@ -46,9 +46,11 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     const imported = await app.importMedia(source);
     await rm(source);
     assert.deepEqual(await readFile(app.mediaPath(imported.id)), bytes);
+    assert.equal(imported.learning.videoMask, undefined);
     const processed = await app.transcribe(imported.id, 'first');
+    const videoMask = { enabled: true, x: 0.1, y: 0.7, width: 0.8, height: 0.2 };
     const masks = { [processed.segments[0].id]: [0, 2], [processed.segments[1].id]: [0] };
-    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true, mode: 'sentence' as const, masks };
+    const learning = { duration: 5, position: 3, index: 1, rate: 1.5, loop: true, mode: 'sentence' as const, masks, videoMask };
     app.saveLearning(imported.id, learning);
     app.close(); app = new DesktopOperations(library, processor);
     const restored = app.restore()!;
@@ -58,7 +60,9 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     app.saveLearning(imported.id, { position: learning.position, index: learning.index, rate: learning.rate, loop: learning.loop, duration: learning.duration });
     assert.equal(app.get(imported.id).learning.mode, 'full');
     assert.deepEqual(app.get(imported.id).learning.masks, masks);
-    app.saveLearning(imported.id, { ...learning, masks: {} });
+    assert.deepEqual(app.get(imported.id).learning.videoMask, videoMask);
+    app.saveLearning(imported.id, { ...learning, masks: {}, videoMask: { ...videoMask, enabled: false } });
+    assert.deepEqual(app.get(imported.id).learning.videoMask, { ...videoMask, enabled: false });
     assert.equal(app.get(imported.id).learning.masks, undefined);
     app.saveLearning(imported.id, learning);
     mode = 'invalid';
@@ -87,10 +91,12 @@ test('managed import, processing and learning survive reopen, cancellation, bad 
     }
     assert.throws(() => app.saveLearning(imported.id, { ...learning, masks: { 'another-sentence': [0] } }), /遮罩无效/);
     assert.throws(() => app.saveLearning(imported.id, { ...learning, masks: null as unknown as Record<string, number[]> }), /遮罩无效/);
+    assert.throws(() => app.saveLearning(imported.id, { ...learning, videoMask: { ...videoMask, x: 0.9 } }), /视频字幕遮罩无效/);
     assert.deepEqual(app.get(imported.id).learning, learning);
     mode = 'success';
     const reprocessed = await app.transcribe(imported.id, 'reprocess');
     assert.equal(reprocessed.learning.masks, undefined);
+    assert.deepEqual(reprocessed.learning.videoMask, videoMask);
     assert.notEqual(reprocessed.segments[0].id, processed.segments[0].id);
     assert.throws(() => app.saveLearning(imported.id, learning), /遮罩无效/);
     assert.throws(() => app.mediaPath('../../secrets'), /不存在/);
@@ -127,10 +133,27 @@ test('reprocessing keeps learning state saved while the worker is in flight', as
     const started = new Promise<void>(resolve => { processingStarted = resolve; });
     const pending = app.transcribe(imported.id, 'second');
     await started;
-    const latest = { duration: 10, position: 4.5, index: 0, rate: 1.5, loop: true, mode: 'sentence' as const };
+    const latest = { duration: 10, position: 4.5, index: 0, rate: 1.5, loop: true, mode: 'sentence' as const, videoMask: { enabled: false, x: 0.1, y: 0.7, width: 0.8, height: 0.2 } };
     app.saveLearning(imported.id, latest);
     finishProcessing!();
     const result = await pending;
     assert.deepEqual(result.learning, { ...latest, index: 1 });
+  } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+
+test('video mask state is independent per material and is not accepted for audio', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow video mask '));
+  const app = new DesktopOperations(path.join(root, 'library'), async () => ({ duration: 5 }));
+  try {
+    const videoFile = path.join(root, 'video.mp4'), audioFile = path.join(root, 'audio.wav');
+    await writeFile(videoFile, 'video fixture'); await writeFile(audioFile, 'audio fixture');
+    const first = await app.importMedia(videoFile), second = await app.importMedia(videoFile), audio = await app.importMedia(audioFile);
+    const videoMask = { enabled: true, x: 0.05, y: 0.8, width: 0.9, height: 0.15 };
+    app.saveLearning(first.id, { ...first.learning, videoMask });
+    assert.deepEqual(app.open(first.id).learning.videoMask, videoMask);
+    assert.equal(app.open(second.id).learning.videoMask, undefined);
+    assert.throws(() => app.saveLearning(audio.id, { ...audio.learning, videoMask }), /只适用于视频/);
+    assert.equal(app.get(audio.id).learning.videoMask, undefined);
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });

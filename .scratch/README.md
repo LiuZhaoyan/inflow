@@ -1,6 +1,6 @@
 # Task Index
 
-Updated: 2026-10-03
+Updated: 2026-10-05
 
 Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Project Status](../docs/PROJECT_STATUS.md) for implemented behavior, and [Roadmap](../docs/ROADMAP.md) for sequencing. This index identifies actionable task records and historical evidence.
 
@@ -11,7 +11,7 @@ Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Pro
 | English learning | Implemented source-checkout learning loop; broader linguistic quality and packaged Windows delivery remain separate. | [Spec](english-learning/spec.md), [acceptance](english-learning/acceptance.md), [live quality review](english-learning/quality-report.md) |
 | Windows runtime | Worker packaging is unstarted and unblocked; installed-cycle acceptance depends on packaging. | [Remaining desktop tickets](desktop-learning/README.md) |
 | Frontend workspace | The implemented Listen, Story and Vocabulary interface still needs owner visual acceptance. | [Visual acceptance](frontend-workspace/spec.md) |
-| Subtitle-region mask | Confirm interaction and persistence before implementation; separate from sentence meaning-group masks. | [Ticket 08](desktop-learning/issues/08-subtitle-mask.md) |
+| Video subtitles | Manual mask is implemented and automated acceptance passed. Subtitle extraction is deferred from this iteration; automatic region detection and image-subtitle OCR remain future work. | [Design interview](video-subtitles/spec.md), [acceptance](video-subtitles/acceptance.md), [research](video-subtitles/research.md), [mask ticket 08](desktop-learning/issues/08-subtitle-mask.md) |
 
 ## Historical records
 

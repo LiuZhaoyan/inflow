@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-04
+Last verified: 2026-10-05
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -17,6 +17,8 @@ The desktop host owns persistence, managed media, local processing, and generati
 Runtime import, transcription, local dictionary-form lookup, translation and passage generation support Korean and English. The source-checkout desktop application completes both learning loops; [English acceptance](../.scratch/english-learning/acceptance.md) separates operations tests, real local processing, native UI checks and live generation quality. Native import confirms one language and remembers the last confirmed choice even if import fails. Independent language filters preserve selected targets, and mixed-language generation fails before provider access.
 
 The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, persistent learner-selected meaning-group masks applied in mask mode, with full source text and word collection available outside the mode, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen separates live mask mode from native word selection; Listen and Story expose shared single-word collection through a local lookup and save popover. The vocabulary notebook manages the saved entries and passage generation targets.
+
+Manual video subtitle masking is implemented in this source checkout: explicit activation, one opaque rectangle, pointer/keyboard adjustment, picture-relative positioning with letterboxing, an initial adjustment pause with optional live playback, and independent per-video persistence. New video imports remain uncovered. [Mask acceptance](../.scratch/video-subtitles/acceptance.md) records automated browser interaction, real host/SQLite tests and the desktop build; owner visual acceptance and installed-package verification remain separate.
 
 ## 2. Runtime architecture
 
@@ -93,6 +95,8 @@ The Electron host stores learning records in SQLite. The current persisted domai
 - generated artifacts and artifact-source vocabulary occurrences;
 - small application settings such as the current media or artifact.
 
+Video mask settings are an optional field in the existing media learning JSON. Missing settings mean disabled; no table migration is required. The host validates bounded numeric regions, retains settings when older save requests omit them, and preserves them during successful retranscription.
+
 Large media files and local model resources are stored outside SQLite.
 
 ## 6. Verification state
@@ -116,7 +120,7 @@ The main known gaps are:
 - English dictionary coverage and irregular generated inflections need broader quality review; real-speaker English ASR beyond the synthetic acceptance sample remains unverified;
 - new cloud translations, contextual glosses and generated passages depend on the remote DeepSeek service; saved results and offline dictionary lookup remain local;
 - packaged processing resources and installed-application acceptance are not yet complete;
-- subtitle masking is deferred work.
+- automatic subtitle-region detection, subtitle-track extraction/audio alignment and bitmap subtitle OCR remain deferred; manual subtitle masking is implemented.
 
 See [ROADMAP.md](ROADMAP.md) for the work that follows from these gaps.
 

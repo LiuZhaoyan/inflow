@@ -7,6 +7,7 @@ import { validateSegments, isCompleteEnglishWord } from '../src/listening/proces
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
 import { translateSentence, glossVocabulary } from '../src/listening/translation';
 import { dictionaryMeanings } from './dictionary';
+import { validateVideoMask } from '../src/listening/video-mask';
 import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource, LookupVocabularyInput, VocabularyLookup, SourceLanguage, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput, language?: SourceLanguage) => Promise<unknown>;
@@ -134,6 +135,8 @@ export class DesktopOperations {
     if (!state || !Number.isFinite(state.duration) || state.duration <= 0 || !Number.isFinite(state.position) || state.position < 0 || state.position > state.duration ||
       !Number.isInteger(state.index) || state.index < 0 || state.index >= Math.max(1, media.segments.length) ||
       ![0.5, 0.75, 1, 1.25, 1.5, 2].includes(state.rate) || typeof state.loop !== 'boolean' || (state.mode !== undefined && state.mode !== 'full' && state.mode !== 'sentence')) throw new Error('学习状态无效。');
+    const videoMask = validateVideoMask(state.videoMask === undefined ? media.learning.videoMask : state.videoMask);
+    if (videoMask && !media.video) throw new Error('视频字幕遮罩只适用于视频。');
     const masks = state.masks === undefined ? media.learning.masks : state.masks;
     if (masks !== undefined) {
       if (!masks || typeof masks !== 'object' || Array.isArray(masks)) throw new Error('学习遮罩无效。');
@@ -143,7 +146,7 @@ export class DesktopOperations {
         if (count === undefined || !Array.isArray(groups) || groups.some(group => !Number.isInteger(group) || group < 0 || group >= count) || new Set(groups).size !== groups.length) throw new Error('学习遮罩无效。');
       }
     }
-    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration, mode: state.mode ?? 'full', ...(masks && Object.keys(masks).length ? { masks } : {}) }), id);
+    this.db.prepare('UPDATE media SET learning = ? WHERE id = ?').run(JSON.stringify({ position: state.position, index: state.index, rate: state.rate, loop: state.loop, duration: state.duration, mode: state.mode ?? 'full', ...(masks && Object.keys(masks).length ? { masks } : {}), ...(videoMask ? { videoMask } : {}) }), id);
   }
 
   private async runJob<T>(job: string, work: (signal: AbortSignal) => Promise<T>): Promise<T> {

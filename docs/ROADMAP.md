@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -73,7 +73,9 @@ The active [packaged-worker ticket](../.scratch/desktop-learning/issues/06-packa
 
 ## 6. Deferred product work
 
-Subtitle-region masking is a confirmed follow-up to the current workspace. Its interaction and persistence contract should be specified before implementation.
+On-demand manual subtitle-region masking is implemented and automated checks passed; [mask acceptance](../.scratch/video-subtitles/acceptance.md) records the source-checkout boundary. Owner visual acceptance and installed-package checks remain separate. The owner removed subtitle extraction from this iteration on 2026-10-05; text-track reuse and audio alignment remain deferred with research retained in [Video Subtitle Support](../.scratch/video-subtitles/spec.md). Automatic subtitle-region detection is also deferred.
+
+Future experiment: OCR for image-based subtitle tracks as another source of learning text. Evaluate Korean/English recognition accuracy, text cleanup, retained cue timing and Windows processing/resource requirements on representative samples before committing to implementation. This is a possible future path, outside the first subtitle-reuse version; keep speech transcription available when image-subtitle recovery is unavailable or unsuitable.
 
 Automatic contextual sense selection remains deferred; explicit cloud glosses are available. Phrase and grammatical-construction collection remain outside the current scope for both learning languages.
 
