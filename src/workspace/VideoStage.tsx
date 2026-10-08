@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MediaHTMLAttributes, type PointerEvent, type ReactNode, type RefCallback } from 'react';
-import { adjustVideoMask, containedVideoBounds, type MaskHandle, type PictureBounds, type VideoMask } from '@/listening/video-mask';
+import { adjustVideoMask, containedVideoBounds, defaultVideoMaskColor, type MaskHandle, type PictureBounds, type VideoMask } from '@/listening/video-mask';
 
 const formatTime = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
@@ -16,6 +16,7 @@ export default function VideoStage({
   onSeek,
   status,
   videoMask,
+  videoMaskColor = defaultVideoMaskColor,
   maskEditing,
   onToggleMask,
   onToggleMaskEditing,
@@ -31,6 +32,7 @@ export default function VideoStage({
   onSeek: (time: number) => void;
   status?: ReactNode;
   videoMask?: VideoMask;
+  videoMaskColor?: string;
   maskEditing: boolean;
   onToggleMask: () => void;
   onToggleMaskEditing: () => void;
@@ -89,7 +91,7 @@ export default function VideoStage({
       </div>}
       {src && video && videoMask?.enabled && bounds && <div className="workspace-video-picture" style={{ left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }}>
         <div ref={maskElement} className={`workspace-video-mask${maskEditing ? ' is-adjusting' : ''}`}
-          style={{ left: `${videoMask.x * 100}%`, top: `${videoMask.y * 100}%`, width: `${videoMask.width * 100}%`, height: `${videoMask.height * 100}%` }}
+          style={{ left: `${videoMask.x * 100}%`, top: `${videoMask.y * 100}%`, width: `${videoMask.width * 100}%`, height: `${videoMask.height * 100}%`, backgroundColor: videoMaskColor }}
           role={maskEditing ? 'group' : undefined} aria-label={maskEditing ? 'Move subtitle mask' : undefined} tabIndex={maskEditing ? 0 : undefined}
           onClick={event => event.stopPropagation()} onPointerDown={event => startDrag(event, 'move')} onPointerMove={moveDrag}
           onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }}

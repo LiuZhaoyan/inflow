@@ -30,6 +30,7 @@
     ['overlong', makeMedia('overlong', 'overlong.wav', { duration: 601, position: 7, index: 2 }, withIds('overlong'))],
   ]);
   const vocabulary = [];
+  const settings = { videoMaskColor: '#000000' };
   const pending = [];
   const stats = {
     importCalls: 0, transcribeCalls: 0, transcribeJobs: [], saveLearningCalls: 0,
@@ -113,6 +114,8 @@
     },
     async credentialStatus() { return { configured: false }; },
     async configureCredential() { return { configured: false }; },
+    async getSettings() { return clone(settings); },
+    async saveSettings(input) { Object.assign(settings, input); return clone(settings); },
     async generateArtifact() { throw new Error('Story controls should not be present in this workspace.'); },
     async listArtifacts() { return []; },
     async restoreArtifact() { return null; },

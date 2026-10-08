@@ -26,6 +26,7 @@ export type VocabularyEntry = { id: string; language: SourceLanguage; lemma: str
 export type SaveVocabularyInput = { id?: string; language?: SourceLanguage; lemma: string; meaningZh: string; context?: Omit<VocabularyContext, 'id'> };
 export type LearningArtifact = GeneratedPassage & { id: string; language: SourceLanguage; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
 export type CredentialStatus = { configured: boolean; error?: string };
+export type ApplicationSettings = { videoMaskColor: string };
 export type DesktopBridge = {
   list(): Promise<SavedMedia[]>;
   restore(): Promise<SavedMedia | null>;
@@ -43,6 +44,8 @@ export type DesktopBridge = {
   selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;
   credentialStatus(): Promise<CredentialStatus>;
   configureCredential(key: string): Promise<CredentialStatus>;
+  getSettings(): Promise<ApplicationSettings>;
+  saveSettings(settings: ApplicationSettings): Promise<ApplicationSettings>;
   generateArtifact(ids: string[], topic: string, job: string): Promise<LearningArtifact>;
   listArtifacts(): Promise<LearningArtifact[]>;
   restoreArtifact(): Promise<LearningArtifact | null>;

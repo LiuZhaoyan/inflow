@@ -7,12 +7,16 @@ export type WorkspaceView = 'video' | 'vocab';
 export default function TopNav({
   activeView,
   libraryOpen = false,
+  settingsOpen = false,
+  onOpenSettings,
   onOpenLibrary,
   onShowVideo,
   onShowVocab,
 }: {
   activeView: WorkspaceView;
   libraryOpen?: boolean;
+  settingsOpen?: boolean;
+  onOpenSettings: () => void;
   onOpenLibrary: () => void;
   onShowVideo: () => void;
   onShowVocab: () => void;
@@ -23,6 +27,9 @@ export default function TopNav({
       <button type="button" aria-haspopup="dialog" aria-expanded={libraryOpen} onClick={onOpenLibrary}>Library</button>
       <button type="button" aria-current={activeView === 'video' ? 'page' : undefined} onClick={onShowVideo}>Content</button>
       <button type="button" aria-current={activeView === 'vocab' ? 'page' : undefined} onClick={onShowVocab}>Vocab</button>
+    </nav>
+    <nav className="workspace-settings-nav" aria-label="Application">
+      <button type="button" aria-haspopup="dialog" aria-expanded={settingsOpen} onClick={onOpenSettings}>Settings</button>
     </nav>
   </header>;
 }

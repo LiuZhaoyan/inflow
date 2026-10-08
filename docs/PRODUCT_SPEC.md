@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-05
+Last updated: 2026-10-08
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -31,9 +31,11 @@ Generated passages are text-first learning artifacts. They preserve the target v
 - The first delivery target is an installable Windows desktop application.
 - The application owns processing, persistence, and managed media rather than requiring the learner to run a development server.
 - Local transcription is preferred for source media.
-- The owner configures the credential for online passage generation.
+- The owner configures one shared DeepSeek credential for online sentence translation, word meanings, and passage generation through Settings.
 - Saved learning material remains local even when a model operation uses an online provider.
 - Mobile/PWA delivery, accounts, and cross-device synchronization are outside the first-release scope.
+
+Settings opens from the top navigation as a modal in the current workspace style. A left sidebar groups the shared DeepSeek key under LLM and global video subtitle mask color under Subtitle mask; narrow windows use a horizontal category row. Switching categories preserves drafts, and the shared Save applies changes across both categories. A blank key field retains the saved key; saved keys are not displayed. Cancel discards unsaved edits. If only one field saves successfully, retain that change, identify saved/failed categories, and open the failing category for retry. Opening Settings pauses playback without seeking; closing leaves it paused for manual resumption.
 
 ## 4. Media and processing behavior
 
@@ -61,7 +63,7 @@ The learner can:
 - exit mask mode to view the complete source text and collect words;
 - reveal or hide the Chinese translation independently;
 - reopen material with learning position and playback preferences restored;
-- optionally cover video subtitles with a manually adjustable black rectangle.
+- optionally cover video subtitles with a manually adjustable solid-color rectangle.
 
 Playback segments and meaning groups are separate concepts. Previous/next navigation operates on sentences; masks operate on system-defined meaning groups inside the current sentence.
 
@@ -69,7 +71,7 @@ New sentences initially show their source text. Set masks directly toggles mask 
 
 Mask choices are saved locally per media and sentence and survive application restart. Changing or reopening a sentence exits mask mode, shows the complete source text and hides translation. Re-entering mask mode applies its saved mask choices. Successful retranscription clears masks because the sentence/group identities have changed; failure or cancellation preserves them. Translation is never generated merely because playback advances.
 
-Video subtitle covering has its own switch, independent of source-text meaning-group masks. A new video shows its original picture with no covering. First activation offers one bottom rectangle and enters adjustment, pausing once without seeking. The learner can move the rectangle and resize its edges or corners using pointer or keyboard controls, manually resume playback and adjust live. Dragging does not toggle or repeatedly pause playback; finishing adjustment retains the current playback state and hides handles. The rectangle follows the actual video picture during window resizing, including letterboxing. Save its region and switch state per video across reopening/restart and preserve it through retranscription. Automatic subtitle-location detection, subtitle-track extraction and bitmap subtitle OCR are deferred.
+Video subtitle covering has its own switch, independent of source-text meaning-group masks. A new video shows its original picture with no covering. First activation offers one bottom rectangle and enters adjustment, pausing once without seeking. The learner can move the rectangle and resize its edges or corners using pointer or keyboard controls, manually resume playback and adjust live. Dragging does not toggle or repeatedly pause playback; finishing adjustment retains the current playback state and hides handles. The rectangle follows the actual video picture during window resizing, including letterboxing. Save its region and switch state per video across reopening/restart and preserve it through retranscription. Settings selects one opaque mask color for all existing and new videos, initially black, with immediate preview over a sample picture before saving. Appearance changes do not enable disabled masks or change their regions. Automatic subtitle-location detection, subtitle-track extraction and bitmap subtitle OCR are deferred.
 
 Listen requests a Chinese translation from the cloud only on explicit action, using neighboring sentences as context while translating the current sentence alone. Keep one latest successful result locally and reuse it on ordinary revisits and restart. Actual source text or context changes invalidate reuse. Explicit refresh replaces the result only on success; failure or cancellation preserves the previous translation. A cloud failure offers retry or an explicitly chosen local reference translation. Story uses its saved sentence translations without regeneration controls.
 

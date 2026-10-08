@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-05
+Last verified: 2026-10-08
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -19,6 +19,8 @@ Runtime import, transcription, local dictionary-form lookup, translation and pas
 The current frontend workspace supports media import and processing, full and sentence playback, sentence navigation and looping, persistent learner-selected meaning-group masks applied in mask mode, with full source text and word collection available outside the mode, independent Chinese translation, source-linked vocabulary collection, and a local Library view. Listen separates live mask mode from native word selection; Listen and Story expose shared single-word collection through a local lookup and save popover. The vocabulary notebook manages the saved entries and passage generation targets.
 
 Manual video subtitle masking is implemented in this source checkout: explicit activation, one opaque rectangle, pointer/keyboard adjustment, picture-relative positioning with letterboxing, an initial adjustment pause with optional live playback, and independent per-video persistence. New video imports remain uncovered. [Mask acceptance](../.scratch/archive/video-subtitles/acceptance.md) records automated browser interaction, real host/SQLite tests and the desktop build; owner visual acceptance and installed-package verification remain separate.
+
+The top-navigation Settings modal uses the current dark workspace style, with LLM and Subtitle mask categories on one continuous surface. It replaces Story's key editor with a Settings shortcut, shares credential status with Story, and previews a global solid-color video mask before saving. The host retains encrypted credential storage and persists the color in SQLite. Save/Cancel, explicit partial-save feedback, pause without automatic resume, empty-library use, and real profile restart passed [Settings acceptance](../.scratch/settings/acceptance.md). Owner visual approval and installed-package verification remain separate.
 
 ## 2. Runtime architecture
 
@@ -93,9 +95,11 @@ The Electron host stores learning records in SQLite. The current persisted domai
 - current sentence segments, plus latest successful sentence translations and their input context;
 - vocabulary entries and media-source occurrences;
 - generated artifacts and artifact-source vocabulary occurrences;
-- small application settings such as the current media or artifact.
+- small application settings such as the current media or artifact and global video subtitle mask color.
 
 Video mask settings are an optional field in the existing media learning JSON. Missing settings mean disabled; no table migration is required. The host validates bounded numeric regions, retains settings when older save requests omit them, and preserves them during successful retranscription.
+
+The global mask color uses the existing settings table and defaults to black for existing profiles. Each video's region and enabled state stay in its learning JSON. The shared DeepSeek key remains in a Windows-encrypted host file; it is not stored in the settings table or returned to the renderer. The two settings may save independently, with explicit field-level results and retries for failed changes.
 
 Large media files and local model resources are stored outside SQLite.
 

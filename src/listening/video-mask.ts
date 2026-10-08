@@ -3,6 +3,12 @@ export type MaskHandle = 'move' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | '
 export type PictureBounds = { x: number; y: number; width: number; height: number };
 
 export const initialVideoMask: VideoMask = { enabled: true, x: 0.08, y: 0.76, width: 0.84, height: 0.18 };
+export const defaultVideoMaskColor = '#000000';
+
+export function validateVideoMaskColor(value: unknown): string {
+  if (typeof value !== 'string' || !/^#[0-9a-f]{6}$/i.test(value)) throw new Error('Choose a valid subtitle mask color.');
+  return value.toLowerCase();
+}
 
 export function validateVideoMask(value: unknown): VideoMask | undefined {
   if (value === undefined) return undefined;

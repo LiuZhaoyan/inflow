@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-05
+Last updated: 2026-10-08
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -79,7 +79,7 @@ Future experiment: OCR for image-based subtitle tracks as another source of lear
 
 Automatic contextual sense selection remains deferred; explicit cloud glosses are available. Phrase and grammatical-construction collection remain outside the current scope for both learning languages.
 
-A settings page for separate sentence-translation and vocabulary-gloss model configurations is deferred. The first implementation keeps task-specific model, prompt, output-limit and timeout settings in code while sharing the existing provider credential.
+Settings now manages the shared DeepSeek key and global video subtitle mask color with an inline preview; [Settings acceptance](../.scratch/settings/acceptance.md) records source-checkout verification. Owner visual acceptance and installed-package checks remain separate. Provider, endpoint, and per-task model controls remain deferred; task-specific model, prompt, output-limit and timeout settings stay in code.
 
 Optional follow-up: cloud Jev contextual selection from offline dictionary sense candidates. This is outside the initial translation work and requires explicit user opt-in for automatic network requests. Offline candidates and manual editing must remain available when disabled, offline or unavailable. Local JevEmbed deployment and evaluation are not planned; the initial vocabulary flow presents offline candidates and calls the cloud LLM only on user request.
 

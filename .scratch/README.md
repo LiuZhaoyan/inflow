@@ -1,6 +1,6 @@
 # Task Index
 
-Updated: 2026-10-06
+Updated: 2026-10-08
 
 Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Project Status](../docs/PROJECT_STATUS.md) for implemented behavior, and [Roadmap](../docs/ROADMAP.md) for sequencing. This index identifies actionable task records and historical evidence.
 
@@ -12,6 +12,7 @@ Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Pro
 | Windows runtime | Worker packaging is unstarted and unblocked; installed-cycle acceptance depends on packaging. | [Remaining desktop tickets](desktop-learning/README.md) |
 | Frontend workspace | The implemented Listen, Story and Vocabulary interface still needs owner visual acceptance. | [Visual acceptance](frontend-workspace/spec.md) |
 | Video mask acceptance | Manual masking is implemented; owner visual acceptance and maximized native-window/installed-package checks remain pending. | [Remaining acceptance and deferred work](video-subtitles/README.md) |
+| Application settings | Implemented on main; automated native acceptance and restart passed. Owner visual acceptance remains pending. | [Settings specification](settings/spec.md), [acceptance](settings/acceptance.md) |
 
 ## Historical records
 

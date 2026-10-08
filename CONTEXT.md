@@ -34,6 +34,9 @@ The assignment of positions in source audio to supplied text. A resulting timing
 A learner-controlled covering over a chosen region of the video picture that conceals burned-in subtitles during listening.
 _Avoid_: Meaning-group mask
 
+**Subtitle-region mask appearance**:
+The visual treatment shared by subtitle-region masks across videos, independent of each video's chosen region and enabled state.
+
 **Meaning-group mask**:
 The learner's choice to hide a complete meaning group in the source text of a playback segment.
 _Avoid_: Subtitle-region mask

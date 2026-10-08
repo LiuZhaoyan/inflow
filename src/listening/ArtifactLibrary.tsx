@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import "@/workspace/story.css";
 import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
 
@@ -14,6 +14,8 @@ type Props = {
   onRequestGenerate?: () => void;
   onArtifactChange?: (artifact: LearningArtifact | null) => void;
   onArtifactsChange?: (artifacts: LearningArtifact[]) => void;
+  credential: CredentialStatus;
+  onOpenSettings: () => void;
 };
 
 function textOf(sentence: LearningArtifact["sentences"][number]) {
@@ -23,16 +25,14 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 export default function ArtifactLibrary({
   selected, source, onBeforeChange, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate, onArtifactChange, onArtifactsChange,
+  credential, onOpenSettings,
 }: Props) {
   const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
   const [artifact, setArtifact] = useState<LearningArtifact | null>(null);
   const [historyLanguage, setHistoryLanguage] = useState<"all" | SourceLanguage>("all");
   const [loaded, setLoaded] = useState(false);
-  const [credential, setCredential] = useState<CredentialStatus>({ configured: false });
-  const [key, setKey] = useState("");
   const [topic, setTopic] = useState("");
   const [busy, setBusy] = useState(false);
-  const [configuring, setConfiguring] = useState(false);
   const [error, setError] = useState("");
   const [activeSentence, setActiveSentence] = useState(0);
   const [translations, setTranslations] = useState<Set<number>>(() => new Set());
@@ -42,14 +42,13 @@ export default function ArtifactLibrary({
 
   useEffect(() => {
     let current = true;
-    Promise.all([window.inflow!.listArtifacts(), window.inflow!.restoreArtifact(), window.inflow!.credentialStatus()])
-      .then(([items, restored, status]) => {
+    Promise.all([window.inflow!.listArtifacts(), window.inflow!.restoreArtifact()])
+      .then(([items, restored]) => {
         if (!current) return;
         setArtifacts(items);
         setArtifact(restored);
         onArtifactsChange?.(items);
         onArtifactChange?.(restored);
-        setCredential(status);
         setLoaded(true);
       })
       .catch(failure => {
@@ -91,20 +90,6 @@ export default function ArtifactLibrary({
     if (active && generationOpen && !element.open) element.showModal();
     else if ((!active || !generationOpen) && element.open) element.close();
   }, [active, generationOpen]);
-
-  async function configure(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setConfiguring(true);
-    setError("");
-    try {
-      setCredential(await window.inflow!.configureCredential(key));
-      setKey("");
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "The API key could not be saved.");
-    } finally {
-      setConfiguring(false);
-    }
-  }
 
   async function generate() {
     if (mixedLanguageSelection) {
@@ -281,13 +266,12 @@ export default function ArtifactLibrary({
           {mixedLanguageSelection && <p className="story-hint" role="alert">Choose vocabulary in one source language. Return to vocabulary selection to adjust your choices; all selected words are preserved.</p>}
         </section>
         <label className="story-topic">Topic <span>Optional</span><input name="topic" value={topic} maxLength={200} disabled={busy} onChange={event => setTopic(event.currentTarget.value)} /></label>
-        <details className="story-credential" open={!credential.configured || !!credential.error}>
-          <summary>{credential.configured ? "API key configured · Change key" : "Configure API key"}</summary>
-          <form onSubmit={event => void configure(event)}><label>DeepSeek API key<input type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} required disabled={busy || configuring} onChange={event => setKey(event.currentTarget.value)} /></label><button type="submit" disabled={configuring || busy || !key}>{configuring ? "Saving…" : "Save key"}</button></form>
-          <p>The key is stored encrypted on this device.</p>{credential.error && <p role="alert">{credential.error}</p>}
-        </details>
+        <section className="story-credential" aria-label="Cloud configuration">
+          <button type="button" disabled={busy} onClick={onOpenSettings}>{credential.configured ? "API key configured · Open settings" : "Configure API key in Settings"}</button>
+          {credential.error && <p role="alert">{credential.error}</p>}
+        </section>
         {error && <p className="story-notice" role="alert">{error}</p>}
-        <footer>{busy && <button type="button" onClick={cancelGeneration}>Cancel generation</button>}{!busy && <button type="button" onClick={closeDialog}>Cancel</button>}<button type="button" disabled={busy || configuring || !credential.configured || mixedLanguageSelection || selected.length < 1 || selected.length > 20} onClick={() => void generate()}>{busy ? "Generating…" : error ? "Retry generation" : "Generate story"}</button></footer>
+        <footer>{busy && <button type="button" onClick={cancelGeneration}>Cancel generation</button>}{!busy && <button type="button" onClick={closeDialog}>Cancel</button>}<button type="button" disabled={busy || !credential.configured || mixedLanguageSelection || selected.length < 1 || selected.length > 20} onClick={() => void generate()}>{busy ? "Generating…" : error ? "Retry generation" : "Generate story"}</button></footer>
       </div>
     </dialog>
   </section>;

@@ -7,8 +7,8 @@ import { validateSegments, isCompleteEnglishWord } from '../src/listening/proces
 import { generatePassage, validatePassage, type GenerationTarget } from '../src/generation';
 import { translateSentence, glossVocabulary } from '../src/listening/translation';
 import { dictionaryMeanings } from './dictionary';
-import { validateVideoMask } from '../src/listening/video-mask';
-import type { LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource, LookupVocabularyInput, VocabularyLookup, SourceLanguage, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
+import { defaultVideoMaskColor, validateVideoMask, validateVideoMaskColor } from '../src/listening/video-mask';
+import type { ApplicationSettings, LearningArtifact, LearningState, LearningStateInput, SavedMedia, SaveVocabularyInput, VocabularyEntry, VocabularyContext, MediaVocabularySource, ArtifactVocabularySource, LookupVocabularyInput, VocabularyLookup, SourceLanguage, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput, language?: SourceLanguage) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string; language: SourceLanguage };
@@ -82,6 +82,17 @@ export class DesktopOperations {
   getImportLanguage(): SourceLanguage {
     const saved = this.db.prepare("SELECT value FROM settings WHERE key = 'importLanguage'").get();
     return saved?.value === 'en' ? 'en' : 'ko';
+  }
+
+  getSettings(): ApplicationSettings {
+    const saved = this.db.prepare("SELECT value FROM settings WHERE key = 'videoMaskColor'").get();
+    return { videoMaskColor: saved ? validateVideoMaskColor(saved.value) : defaultVideoMaskColor };
+  }
+
+  saveSettings(settings: ApplicationSettings): ApplicationSettings {
+    const videoMaskColor = validateVideoMaskColor(settings?.videoMaskColor);
+    this.db.prepare("INSERT INTO settings VALUES ('videoMaskColor', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(videoMaskColor);
+    return { videoMaskColor };
   }
 
   open(id: string): SavedMedia {

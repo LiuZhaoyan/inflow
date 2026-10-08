@@ -6,7 +6,7 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
-import type { LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
+import type { ApplicationSettings, LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
 const root = path.resolve(__dirname, '../../..');
@@ -70,6 +70,8 @@ async function start() {
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
     credentialStatus: () => credential.status(),
     configureCredential: (key: string) => credential.configure(key),
+    getSettings: () => operations.getSettings(),
+    saveSettings: (settings: ApplicationSettings) => operations.saveSettings(settings),
     generateArtifact: async (ids: string[], topic: string, job: string) => {
       try { return await operations.generateArtifact(ids, topic, job, credential.get()); }
       catch (error) {

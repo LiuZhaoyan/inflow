@@ -84,7 +84,7 @@
 .story-empty-state h1 { margin: 0; color: #f0edf5; font-size: 28px; font-weight: 550; }
 .story-empty-state p { margin: 0; color: #aaa7b2; font-size: 14px; }
 .story-empty-state label { color: #b5b1bd; font-size: 13px; }
-.story-empty-state select, .story-topic input, .story-credential input, .story-dropdown-panel select { color-scheme: dark; }
+.story-empty-state select, .story-topic input, .story-dropdown-panel select { color-scheme: dark; }
 .story-empty-state select { display: block; width: min(420px, 100%); min-height: 40px; margin-top: 7px; padding: 0 10px; border: 1px solid #3b3943; border-radius: 5px; background: #15161b; color: #eeeaf4; }
 .story-empty-state > button, .story-dialog-content footer button { min-height: 39px; justify-self: start; padding: 0 15px; border: 1px solid #4d3c64; border-radius: 5px; background: #342743; color: #f0e5ff; cursor: pointer; font-size: 13px; }
 
@@ -108,11 +108,9 @@
 .story-selected-targets .story-hint { color: #dbb8c0; }
 .story-topic { display: block; margin: 16px 0; color: #dedbe5; font-size: 13px; }
 .story-topic > span { margin-left: 5px; color: #96929e; font-size: 11px; }
-.story-topic input, .story-credential input { width: 100%; min-height: 40px; box-sizing: border-box; margin-top: 7px; padding: 0 10px; border: 1px solid #393741; border-radius: 5px; background: #101115; color: #eeeaf4; }
-.story-credential > summary { color: #d5c2f1; cursor: pointer; font-size: 13px; }
-.story-credential form { display: flex; align-items: end; gap: 10px; margin-top: 12px; }
-.story-credential form label { flex: 1; min-width: 0; color: #c6c2cd; font-size: 12px; }
-.story-credential form button, .story-dialog-content footer button:first-child { min-height: 39px; padding: 0 13px; border: 1px solid #37353f; border-radius: 5px; background: #1b1c22; color: #d4d0db; cursor: pointer; }
+.story-topic input { width: 100%; min-height: 40px; box-sizing: border-box; margin-top: 7px; padding: 0 10px; border: 1px solid #393741; border-radius: 5px; background: #101115; color: #eeeaf4; }
+.story-credential > button { min-height: 40px; padding: 0; color: var(--workspace-accent); cursor: pointer; font-size: 13px; text-align: left; }
+.story-dialog-content footer button:first-child { min-height: 39px; padding: 0 13px; border: 1px solid #37353f; border-radius: 5px; background: #1b1c22; color: #d4d0db; cursor: pointer; }
 .story-credential > p { margin: 8px 0 0; color: #96929e; font-size: 11px; }
 .story-credential [role="alert"] { color: #f2bbc4; }
 .story-dialog-content footer { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
