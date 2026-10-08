@@ -13,6 +13,7 @@ Use [Product Specification](../docs/PRODUCT_SPEC.md) for intended behavior, [Pro
 | Frontend workspace | The implemented Listen, Story and Vocabulary interface still needs owner visual acceptance. | [Visual acceptance](frontend-workspace/spec.md) |
 | Video mask acceptance | Manual masking is implemented; owner visual acceptance and maximized native-window/installed-package checks remain pending. | [Remaining acceptance and deferred work](video-subtitles/README.md) |
 | Application settings | Implemented on main; automated native acceptance and restart passed. Owner visual acceptance remains pending. | [Settings specification](settings/spec.md), [acceptance](settings/acceptance.md) |
+| Learning artifact state | Shared ownership is implemented and verified; overlapping Story request ordering requires reproduction as a separate TODO. | [Refactor and verification](artifact-state/spec.md), [reproduction TODO](artifact-state/issues/01-reproduce-story-request-ordering.md) |
 
 ## Historical records
 

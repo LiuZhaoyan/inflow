@@ -3,27 +3,31 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
+const artifactMode = process.argv.includes('--artifacts');
 
 async function run() {
   if (!process.versions.electron) {
     const env = { ...process.env };
     delete env.ELECTRON_RUN_AS_NODE;
     await new Promise((resolve, reject) => {
-      const child = require('node:child_process').spawn(require('electron'), [__filename], { env, stdio: 'inherit', windowsHide: true });
+      const child = require('node:child_process').spawn(require('electron'), [__filename, ...process.argv.slice(2)], { env, stdio: 'inherit', windowsHide: true });
       child.on('error', reject);
       child.on('exit', code => code === 0 ? resolve() : reject(new Error(`Library acceptance exited ${code}`)));
     });
     return;
   }
-  const { app, BrowserWindow, protocol } = require('electron');
+  const { app, BrowserWindow, protocol, ipcMain } = require('electron');
   protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
   const output = await fs.mkdtemp(path.join(root, '.scratch/desktop-learning/generated-samples/library-native-'));
   const profile = path.join(output, 'profile');
   app.setPath('userData', profile);
   const { DesktopOperations } = require(path.join(root, 'build/desktop/desktop/operations.js'));
-  const ops = new DesktopOperations(profile, async mode => mode === 'probe' ? { duration: 2 } : {
+  const lookupInputs = [];
+  const ops = new DesktopOperations(profile, async (mode, ...args) => mode === 'probe' ? { duration: 2 } : mode === 'lookup' ? {
+    ...args[2], lemma: args[2].surface,
+  } : {
     segments: [{ start: 0, end: 2, text: 'Library fixture.', groups: ['Library fixture.'] }],
-  }, async input => ({ title: `${input.language === 'en' ? 'English' : 'Korean'} story`, requestedModel: 'fixture',
+  }, async input => ({ title: input.topic || `${input.language === 'en' ? 'English' : 'Korean'} story`, requestedModel: 'fixture',
     sentences: [{ parts: [{ text: input.targets[0].lemma, targetId: input.targets[0].id }], translationZh: '朋友' }],
   }));
   const wav = Buffer.alloc(44 + 64000);
@@ -37,7 +41,24 @@ async function run() {
     const word = ops.saveVocabulary({ language, lemma: language === 'en' ? 'friend' : '친구', meaningZh: '朋友' });
     await ops.generateArtifact([word.id], '', `story-${language}`, 'fixture');
   }
-  ops.close();
+  if (!artifactMode) ops.close();
+  let holdOpen = false, failGeneration = false;
+  const pendingOpen = [];
+  if (artifactMode) {
+    const handle = ipcMain.handle.bind(ipcMain);
+    ipcMain.handle = (channel, handler) => handle(channel, (event, ...args) => {
+      if (channel === 'inflow:credentialStatus') return { configured: true };
+      if (channel === 'inflow:lookupVocabulary') { lookupInputs.push(args[0]); return ops.lookupVocabulary(...args); }
+      if (channel === 'inflow:generateArtifact') {
+        if (failGeneration) throw new Error('Fixture generation failure');
+        return ops.generateArtifact(...args, 'fixture');
+      }
+      if (channel === 'inflow:openArtifact' && holdOpen) return new Promise(resolve => pendingOpen.push(() => resolve(handler(event, ...args))));
+      return handler(event, ...args);
+    });
+    const { GenerationCredential } = require(path.join(root, 'build/desktop/desktop/credentials.js'));
+    GenerationCredential.prototype.initialize = async function () {};
+  }
   const errors = [];
   app.on('browser-window-created', (_event, window) => {
     window.hide(); window.webContents.setBackgroundThrottling(false);
@@ -62,6 +83,74 @@ async function run() {
   const geometry = () => evaluate(`(() => { const el=document.querySelector('.workspace-library-dialog'), rect=el.getBoundingClientRect(); return {left:rect.left,top:rect.top,bottom:rect.bottom,width:rect.width,header:document.querySelector('.workspace-topnav').getBoundingClientRect().bottom,viewport:innerHeight,radius:getComputedStyle(el).borderRadius}; })()`);
   await wait('!!window.inflow && !!document.querySelector(".workspace-topnav")');
   await wait('document.querySelectorAll(".workspace-library-entry").length === 4');
+  if (artifactMode) {
+    const stories = ops.listArtifacts(), english = stories.find(item => item.language === 'en'), korean = stories.find(item => item.language === 'ko');
+    async function consistent(artifact) {
+      await wait(`document.querySelector('.story-sentences')?.dataset.artifactId === ${JSON.stringify(artifact.id)}`);
+      assert.equal(await evaluate('document.querySelector(".workspace-library-item[aria-current=true] strong")?.textContent'), artifact.title);
+    }
+    async function chooseStory(artifact) {
+      await evaluate(`(() => { const el=document.querySelector('select[aria-label="Open saved story"]'); el.value=${JSON.stringify(artifact.id)}; el.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    }
+    async function collect(artifact, meaning) {
+      await evaluate(`(() => { document.activeElement?.blur(); const range=document.createRange(); range.selectNodeContents(document.querySelector('.artifact-korean')); getSelection().removeAllRanges(); getSelection().addRange(range); })()`);
+      await wait('!!document.querySelector(".vocabulary-selection input[name=meaningZh]")');
+      await wait('!document.querySelector(".vocabulary-selection [role=status]")?.textContent.includes("Finding dictionary")');
+      assert.equal(lookupInputs.at(-1).source.artifactId, artifact.id);
+      assert.equal(lookupInputs.at(-1).language, artifact.language);
+      await evaluate(`(() => { const el=document.querySelector('.vocabulary-selection input[name=meaningZh]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,${JSON.stringify(meaning)}); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+      await delay(50);
+    }
+    await wait(`document.querySelector('.story-sentences')?.dataset.artifactId === ${JSON.stringify(english.id)}`);
+    await click('.workspace-topnav button', 'Library'); await click('.workspace-library-item', 'STORYEnglish story');
+    await consistent(english);
+    await chooseStory(korean); await consistent(korean);
+    await collect(korean, 'Draft to retain');
+    await chooseStory(english);
+    await wait('document.querySelector(".vocabulary-selection [role=alert]")?.textContent.includes("Save or discard")');
+    await consistent(korean);
+    await click('.vocabulary-selection button', 'Discard');
+    holdOpen = true;
+    await chooseStory(english);
+    for (let count = 0; !pendingOpen.length && count < 100; count++) await delay(50);
+    assert.equal(pendingOpen.length, 1);
+    await collect(korean, 'Shared Korean context');
+    pendingOpen.shift()();
+    await wait('document.querySelector(".vocabulary-selection [role=alert]")?.textContent.includes("Save or discard")');
+    await consistent(korean);
+    await click('.vocabulary-selection button[type=submit]'); await wait('!document.querySelector(".vocabulary-selection")');
+    assert.equal(ops.listVocabulary().find(entry => entry.meaningZh === 'Shared Korean context').contexts[0].source.artifactId, korean.id);
+    holdOpen = false;
+    await click('.workspace-topnav button', 'Library'); await click('.workspace-library-item', 'STORYEnglish story');
+    await consistent(english);
+    await click('.story-options summary'); await click('.story-options button', 'Generate a story');
+    await wait('!!document.querySelector(".workspace-target-dialog[open]")');
+    await evaluate(`(() => { const label=[...document.querySelectorAll('.workspace-target-list label')].find(el=>el.querySelector('strong').textContent==='friend'); label.querySelector('input').click(); })()`);
+    await click('.workspace-target-dialog button[type=submit]'); await wait('!!document.querySelector(".story-generation-dialog[open]")');
+    await evaluate(`(() => { const el=document.querySelector('.story-generation-dialog input[name=topic]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'Generated story'); el.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+    failGeneration = true;
+    await click('.story-generation-dialog footer button', 'Generate story');
+    await wait('document.querySelector(".story-generation-dialog [role=alert]")?.textContent.includes("Fixture generation failure")');
+    await consistent(english); assert.equal(ops.listArtifacts().length, 2);
+    failGeneration = false;
+    await click('.story-generation-dialog footer button', 'Retry generation');
+    await wait('!document.querySelector(".story-generation-dialog[open]")');
+    const generated = ops.listArtifacts()[0]; await consistent(generated);
+    assert.equal(generated.title, 'Generated story');
+    assert.equal(await evaluate('document.querySelectorAll(".workspace-library-entry").length'), 5);
+    await collect(generated, 'Shared generated context');
+    await click('.vocabulary-selection button[type=submit]'); await wait('!document.querySelector(".vocabulary-selection")');
+    assert.equal(ops.listVocabulary().find(entry => entry.meaningZh === 'Shared generated context').contexts[0].source.artifactId, generated.id);
+    window.webContents.reload();
+    await wait(`document.querySelector('.story-sentences')?.dataset.artifactId === ${JSON.stringify(generated.id)}`);
+    await click('.workspace-topnav button', 'Library'); await click('.workspace-library-item', 'STORYGenerated story');
+    await consistent(generated);
+    assert.equal(ops.restoreArtifact().id, generated.id);
+    assert.equal(errors.length, 0, errors.join('\n'));
+    await fs.writeFile(path.join(output, 'result.json'), JSON.stringify({ passed: true, artifact: generated.id, lookupInputs, errors }, null, 2));
+    console.log(`PASS: shared Story restoration, history/Library navigation, draft protection, generation failure/retry and vocabulary provenance.\nEvidence: ${output}`);
+    ops.close(); app.quit(); return;
+  }
   window.setContentSize(1440, 900); window.show(); window.focus(); window.webContents.focus();
   await click('.workspace-topnav button', 'Library'); await delay(250);
   const wide = await geometry();

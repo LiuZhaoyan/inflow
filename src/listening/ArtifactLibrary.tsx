@@ -5,6 +5,8 @@ import "@/workspace/story.css";
 import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
 
 type Props = {
+  artifacts: LearningArtifact[];
+  artifact: LearningArtifact | null;
   selected: VocabularyEntry[];
   source: ArtifactVocabularySource | null;
   onBeforeChange: () => boolean;
@@ -12,8 +14,8 @@ type Props = {
   generationOpen?: boolean;
   onGenerationClose?: () => void;
   onRequestGenerate?: () => void;
-  onArtifactChange?: (artifact: LearningArtifact | null) => void;
-  onArtifactsChange?: (artifacts: LearningArtifact[]) => void;
+  onArtifactChange: (artifact: LearningArtifact | null) => void;
+  onArtifactsChange: (artifacts: LearningArtifact[]) => void;
   credential: CredentialStatus;
   onOpenSettings: () => void;
 };
@@ -23,12 +25,11 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 }
 
 export default function ArtifactLibrary({
+  artifacts, artifact,
   selected, source, onBeforeChange, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate, onArtifactChange, onArtifactsChange,
   credential, onOpenSettings,
 }: Props) {
-  const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
-  const [artifact, setArtifact] = useState<LearningArtifact | null>(null);
   const [historyLanguage, setHistoryLanguage] = useState<"all" | SourceLanguage>("all");
   const [loaded, setLoaded] = useState(false);
   const [topic, setTopic] = useState("");
@@ -45,10 +46,8 @@ export default function ArtifactLibrary({
     Promise.all([window.inflow!.listArtifacts(), window.inflow!.restoreArtifact()])
       .then(([items, restored]) => {
         if (!current) return;
-        setArtifacts(items);
-        setArtifact(restored);
-        onArtifactsChange?.(items);
-        onArtifactChange?.(restored);
+        onArtifactsChange(items);
+        onArtifactChange(restored);
         setLoaded(true);
       })
       .catch(failure => {
@@ -69,8 +68,7 @@ export default function ArtifactLibrary({
     let current = true;
     window.inflow!.openArtifact(artifactId).then(next => {
       if (!current || !onBeforeChange()) return;
-      setArtifact(next);
-      onArtifactChange?.(next);
+      onArtifactChange(next);
       const index = Math.max(0, Math.min(sentenceIndex, Math.max(0, next.sentences.length - 1)));
       setActiveSentence(index);
       setTranslations(new Set());
@@ -104,10 +102,8 @@ export default function ArtifactLibrary({
     try {
       const next = await window.inflow!.generateArtifact(selected.map(entry => entry.id), topic, id);
       const items = [next, ...artifacts.filter(item => item.id !== next.id)];
-      setArtifacts(items);
-      onArtifactsChange?.(items);
-      setArtifact(next);
-      onArtifactChange?.(next);
+      onArtifactsChange(items);
+      onArtifactChange(next);
       setActiveSentence(0);
       setTranslations(new Set());
       if (dialog.current?.open) dialog.current.close();
@@ -125,8 +121,7 @@ export default function ArtifactLibrary({
     try {
       const next = await window.inflow!.openArtifact(id);
       if (!onBeforeChange()) return;
-      setArtifact(next);
-      onArtifactChange?.(next);
+      onArtifactChange(next);
       setActiveSentence(0);
       setTranslations(new Set());
       setError("");

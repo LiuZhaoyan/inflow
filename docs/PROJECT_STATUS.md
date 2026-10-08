@@ -36,6 +36,8 @@ SQLite        Python worker        DeepSeek API
 
 Electron loads a static Next.js export. Managed media is served through the custom `inflow://` protocol with byte-range support for seeking and sentence playback. No local HTTP server is required by the desktop runtime.
 
+LearningWorkspace owns the Learning artifact list and active Learning artifact used by the Story reader, Library selection and vocabulary collection. ArtifactLibrary updates this shared state directly and retains reader-local sentence selection, translation visibility and filtering. [Shared-state verification](../.scratch/artifact-state/spec.md) covers the refactor; [overlapping Story request reproduction](../.scratch/artifact-state/issues/01-reproduce-story-request-ordering.md) is a separate TODO and is not a confirmed ordinary-runtime bug.
+
 ## 3. Implemented learning domains
 
 ### Media and listening
