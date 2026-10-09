@@ -70,6 +70,12 @@ Evidence folders retain JSON results, screenshots and small logs only. Seven inh
 After building/installing, run these from the checkout. The example uses the built package; supply `exe=<installed Inflow.exe path>` to test another installed copy. Credentials are read from the ignored environment file, never from command-line arguments. `cycle` resets only its isolated test profile under `build/package-test/profiles/`; do not use a learner's real profile. Model weights are seeded from `.models/` and the default media is the preserved Korean sample.
 
 ```powershell
+node --env-file-if-exists=.env scripts/verify-packaged.cjs suite .scratch/desktop-learning/generated-samples/rerun-suite
+```
+
+The `suite` entry point runs all phases in dependency order, derives restart/reopen expectations from earlier results, and removes only the named disposable profiles after every phase passes. A failed phase retains its profiles and evidence. Use `keep=true` or `cleanup=false` when retaining successful-run profiles is useful. Individual phases remain available for focused reruns:
+
+```powershell
 node scripts/verify-packaged.cjs download .scratch/desktop-learning/generated-samples/rerun-download
 node --env-file-if-exists=.env scripts/verify-packaged.cjs cycle .scratch/desktop-learning/generated-samples/rerun-cycle
 node scripts/verify-packaged.cjs restart .scratch/desktop-learning/generated-samples/rerun-restart expectedFile=.scratch/desktop-learning/generated-samples/rerun-cycle/result.json
