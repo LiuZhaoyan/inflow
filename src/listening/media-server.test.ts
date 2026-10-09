@@ -3,7 +3,31 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { readBody, foreignOrigin, runProcessor } from './media-server';
+import { readBody, foreignOrigin, runProcessor, processorCommand, processorPaths } from './media-server';
+
+test('packaged worker binary bypasses the Python interpreter and keeps stdio conventions', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow packaged worker '));
+  const originalWorker = process.env.INFLOW_WORKER;
+  const originalModels = process.env.INFLOW_MODELS_DIR;
+  try {
+    const worker = path.join(root, 'resources', 'media-processor', 'media_processor.exe');
+    process.env.INFLOW_WORKER = worker;
+    delete process.env.INFLOW_MODELS_DIR;
+    const paths = processorPaths(root, process.env, 'win32');
+    assert.equal(paths.binary, path.win32.resolve(root, worker));
+    assert.deepEqual(processorCommand('transcribe', '韩语 sample.webm', 'ko', paths),
+      { command: paths.binary, args: ['transcribe', '韩语 sample.webm', 'ko'] });
+    assert.deepEqual(processorCommand('models', undefined, 'ko', paths), { command: paths.binary, args: ['models'] });
+    assert.deepEqual(processorCommand('setup', undefined, 'ko', paths), { command: paths.binary, args: ['setup'] });
+    await assert.rejects(runProcessor('models', new AbortController().signal), /本地处理组件缺失/);
+  } finally {
+    if (originalWorker === undefined) delete process.env.INFLOW_WORKER;
+    else process.env.INFLOW_WORKER = originalWorker;
+    if (originalModels === undefined) delete process.env.INFLOW_MODELS_DIR;
+    else process.env.INFLOW_MODELS_DIR = originalModels;
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test('processor uses configured paths and encoding, and permits retry after cancellation', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow media worker '));

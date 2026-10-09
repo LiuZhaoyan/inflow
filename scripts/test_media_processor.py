@@ -1,6 +1,9 @@
 import unittest
 import os
 import wave
+import subprocess
+import sys
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -8,6 +11,12 @@ from media_processor import ProcessingError, meaning_groups, probe, sentences, t
 from faster_whisper.audio import decode_audio
 
 class ProcessingTests(unittest.TestCase):
+    def test_worker_allows_model_downloads_only_in_setup_mode(self):
+        script = "import sys; sys.argv = ['media_processor.py', sys.argv[1]]; import media_processor; from huggingface_hub.constants import HF_HUB_OFFLINE; assert HF_HUB_OFFLINE == (sys.argv[1] != 'setup')"
+        for mode in ['setup', 'models', 'transcribe']:
+            result = subprocess.run([sys.executable, '-c', script, mode], cwd=Path(__file__).parent, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_audio_decoder_accepts_installed_dependencies(self):
         with TemporaryDirectory() as directory:
             filename = os.path.join(directory, 'sample.wav')

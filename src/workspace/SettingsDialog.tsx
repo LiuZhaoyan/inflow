@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import type { ApplicationSettings, CredentialStatus } from '@/listening/desktop';
+import type { ApplicationSettings, CredentialStatus, ModelStatus } from '@/listening/desktop';
 import { initialVideoMask } from '@/listening/video-mask';
 
 export default function SettingsDialog({ settings, credential, onSettingsChange, onCredentialChange, onClose }: {
@@ -12,7 +12,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [category, setCategory] = useState<'llm' | 'subtitles'>('llm');
+  const [category, setCategory] = useState<'llm' | 'subtitles' | 'models'>('llm');
   const [key, setKey] = useState('');
   const [color, setColor] = useState(settings.videoMaskColor);
   const [busy, setBusy] = useState(false);
@@ -21,6 +21,39 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
   const [keyError, setKeyError] = useState('');
   const [colorError, setColorError] = useState('');
   const host = typeof window === 'undefined' ? undefined : window.inflow;
+
+  const [models, setModels] = useState<ModelStatus | null>(null);
+  const [modelsBusy, setModelsBusy] = useState(false);
+  const [modelsError, setModelsError] = useState('');
+  const modelsJob = useRef('');
+
+  useEffect(() => {
+    if (category !== 'models' || !host || models) return;
+    let current = true;
+    host.modelStatus().then(status => { if (current) setModels(status); })
+      .catch(failure => { if (current) setModelsError(failure instanceof Error ? failure.message : 'Could not read model status. Retry.'); });
+    return () => { current = false; };
+  }, [category, host, models]);
+
+  async function downloadModels() {
+    if (!host || modelsBusy) return;
+    const missing = models ? [
+      ...(!models.whisper ? ['whisper'] : []),
+      ...(!models.translate['ko-en'] || !models.translate['en-zh'] ? ['translate'] : []),
+      ...(!models.englishParser ? ['english-parser'] : []),
+    ] : [];
+    setModelsBusy(true); setModelsError('');
+    modelsJob.current = crypto.randomUUID();
+    try {
+      setModels(await host.setupModels(modelsJob.current, missing));
+    } catch (failure) {
+      setModelsError(failure instanceof Error ? failure.message : 'The model download failed. Retry.');
+    } finally { setModelsBusy(false); }
+  }
+
+  function cancelModelDownload() {
+    if (modelsJob.current) void host?.cancel(modelsJob.current).catch(() => {});
+  }
 
   useEffect(() => {
     const element = dialog.current!;
@@ -74,6 +107,10 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 11h4M14 11h3M7 15h10"/></svg><span>Subtitle mask</span>
             {(colorError || colorResult) && <small className={colorError ? 'workspace-settings-error' : 'workspace-settings-result'}>{colorError ? 'Error' : 'Saved'}</small>}
           </button>
+          {host && <button type="button" aria-current={category === 'models' ? 'page' : undefined} aria-controls="settings-models-panel" disabled={busy} onClick={() => setCategory('models')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>Processing models</span>
+            {modelsError && <small className="workspace-settings-error">Error</small>}
+          </button>}
         </nav>
         <fieldset className="workspace-settings-content" disabled={busy}>
         {!host && <p className="workspace-settings-help">Settings are saved in the Inflow desktop app.</p>}
@@ -105,6 +142,28 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           {colorResult && <p className="workspace-settings-result" role="status">{colorResult}</p>}
           {colorError && <p id="settings-mask-error" className="workspace-settings-error" role="alert">{colorError}</p>}
         </section>
+        {host && <section id="settings-models-panel" hidden={category !== 'models'} aria-labelledby="settings-models-heading">
+          <div className="workspace-settings-section-heading"><h3 id="settings-models-heading">Processing models</h3><span>{models ? `${[models.whisper, ...Object.values(models.translate), models.englishParser].filter(Boolean).length}/4 installed` : 'Checking…'}</span></div>
+          <p className="workspace-settings-description">Local models used for transcription, translation, and word analysis. They download once and then work fully offline.</p>
+          <ul className="workspace-settings-models">
+            {[
+              { label: 'Speech recognition · Whisper large-v3-turbo', ok: models?.whisper },
+              { label: 'Translation · Korean to English', ok: models?.translate['ko-en'] },
+              { label: 'Translation · English to Chinese', ok: models?.translate['en-zh'] },
+              { label: 'English word analysis · spaCy', ok: models?.englishParser },
+            ].map(item => <li key={item.label} data-state={item.ok === undefined ? 'checking' : item.ok ? 'ready' : 'missing'}>
+              <span aria-hidden="true">{item.ok === undefined ? '…' : item.ok ? '✓' : '—'}</span>{item.label}
+              <small>{item.ok === undefined ? 'Checking' : item.ok ? 'Installed' : 'Not installed'}</small>
+            </li>)}
+          </ul>
+          {models && ![models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <div className="workspace-settings-models-actions">
+            {modelsBusy
+              ? <><button type="button" className="workspace-settings-cancel" onClick={cancelModelDownload}>Cancel download</button><span role="status">Downloading missing models…</span></>
+              : <button type="button" className="workspace-primary-button" onClick={() => void downloadModels()}>Download missing models</button>}
+          </div>}
+          {models && [models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <p className="workspace-settings-result" role="status">All models are installed. Processing runs fully offline.</p>}
+          {modelsError && <p className="workspace-settings-error" role="alert">{modelsError}</p>}
+        </section>}
         </fieldset>
       </div>
       <footer><button type="button" className="workspace-settings-cancel" disabled={busy} onClick={onClose}>Cancel</button><button type="submit" className="workspace-primary-button" disabled={busy || !host}>{busy ? 'Saving…' : 'Save'}</button></footer>

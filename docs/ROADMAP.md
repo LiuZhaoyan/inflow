@@ -58,18 +58,11 @@ Evaluate live cloud output and dictionary coverage against representative Korean
 
 Goal: turn the source-checkout desktop application into a dependable personal-use Windows installation.
 
-Remaining work includes:
-
-- package the Python processing worker and required local model resources;
-- remove dependencies on developer-only paths or system setup;
-- verify managed media and SQLite data directories in the installed application;
-- verify paths containing Chinese characters and spaces;
-- verify clean shutdown, cancellation, retry, and missing-resource behavior;
-- exercise the complete learning loop after install and restart.
+Completed on 2026-10-09: native worker packaging, a personal PowerShell installer, explicit profile-owned model setup, managed media/SQLite restoration, Chinese/spaced paths, cancellation, missing-media relinking and the complete installed learning cycle with authenticated generation.
 
 Installed-app behavior, not successful execution from the repository, is the acceptance boundary for this milestone.
 
-The active [packaged-worker ticket](../.scratch/desktop-learning/issues/06-packaged-windows-worker.md) is unstarted and unblocked. [Installed learning-cycle acceptance](../.scratch/desktop-learning/issues/07-installed-learning-cycle-acceptance.md) remains dependent on it. Completed desktop foundation tickets and research are archived in [the task index](../.scratch/README.md).
+Both [packaged-worker](../.scratch/desktop-learning/issues/06-packaged-windows-worker.md) and [installed learning-cycle](../.scratch/desktop-learning/issues/07-installed-learning-cycle-acceptance.md) tickets are complete. The [delivery report](../.scratch/desktop-learning/subagent-06-07-report.md) records the observed Windows prerequisites and developer-machine isolation boundary; clean-VM and broader codec qualification were not performed. Earlier foundation records remain archived in [the task index](../.scratch/README.md).
 
 ## 6. Deferred product work
 

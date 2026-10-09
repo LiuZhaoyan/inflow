@@ -51,11 +51,19 @@ def install_english_parser(models_dir):
     print('English parser ready for offline processing.', flush=True)
 
 
-def install(models_dir=None):
+def install_whisper(models_dir=None):
     root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
     root.mkdir(parents=True, exist_ok=True)
+    if (root/'whisper-turbo'/'model.bin').is_file():
+        print('Whisper large-v3-turbo already installed', flush=True)
+        return
     print('Downloading Whisper large-v3-turbo from huggingface.co (~1.6 GB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
     snapshot_download('dropbox-dash/faster-whisper-large-v3-turbo', revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf', local_dir=str(root/'whisper-turbo'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*','preprocessor_config.json','README.md'])
+
+
+def install_translate(models_dir=None):
+    root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
+    root.mkdir(parents=True, exist_ok=True)
     for name, folder, revision, digest in PACKAGES:
         if (root/folder/'model/model.bin').exists() and (root/folder/'sentencepiece.model').exists():
             print(name+' already installed', flush=True)
@@ -67,6 +75,13 @@ def install(models_dir=None):
             for item in archive.infolist():
                 if not (root/item.filename).resolve().is_relative_to(root.resolve()): raise ValueError('Unsafe archive path')
             archive.extractall(root)
+
+
+def install(models_dir=None):
+    root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
+    root.mkdir(parents=True, exist_ok=True)
+    install_whisper(root)
+    install_translate(root)
     install_english_parser(root)
     print('Local models ready. Runtime processing does not use third-party services.', flush=True)
 

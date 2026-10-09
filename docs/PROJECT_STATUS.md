@@ -125,7 +125,7 @@ The main known gaps are:
 - local Chinese translation can be literal or lossy; Korean uses an English pivot;
 - English dictionary coverage and irregular generated inflections need broader quality review; real-speaker English ASR beyond the synthetic acceptance sample remains unverified;
 - new cloud translations, contextual glosses and generated passages depend on the remote DeepSeek service; saved results and offline dictionary lookup remain local;
-- packaged processing resources and installed-application acceptance are not yet complete;
+- personal Windows packaging and installed-cycle acceptance passed; clean-VM and broader codec qualification remain unverified ([delivery report](../.scratch/desktop-learning/subagent-06-07-report.md));
 - automatic subtitle-region detection, subtitle-track extraction/audio alignment and bitmap subtitle OCR remain deferred; manual subtitle masking is implemented.
 
 See [ROADMAP.md](ROADMAP.md) for the work that follows from these gaps.

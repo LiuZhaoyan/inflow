@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol } from 'electron';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DesktopOperations } from './operations';
@@ -6,13 +7,22 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
-import type { ApplicationSettings, LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
+import type { ApplicationSettings, LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, ModelStatus, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
+// Verification hook: an external driver script registers dialog stubs before the app boots.
+if (process.env.INFLOW_DESKTOP_DRIVER) createRequire(__filename)(process.env.INFLOW_DESKTOP_DRIVER);
 const root = path.resolve(__dirname, '../../..');
-process.env.INFLOW_PYTHON ||= path.join(root, '.venv-win', 'python.exe');
-process.env.INFLOW_MODELS_DIR ||= path.join(root, '.models');
+if (app.isPackaged) {
+  // The packaged app bundles its own worker; models and learning data stay in writable user folders.
+  process.env.INFLOW_WORKER ||= path.join(process.resourcesPath, 'media_processor', 'media_processor.exe');
+  process.env.INFLOW_MODELS_DIR ||= path.join(app.getPath('userData'), 'models');
+} else {
+  process.env.INFLOW_PYTHON ||= path.join(root, '.venv-win', 'python.exe');
+  process.env.INFLOW_MODELS_DIR ||= path.join(root, '.models');
+}
 let operations: DesktopOperations;
+const modelJobs = new Map<string, AbortController>();
 const trustedUrl = (value: string) => { const url = new URL(value); return url.protocol === 'inflow:' && url.host === 'app' && url.pathname === '/'; };
 
 async function start() {
@@ -38,7 +48,7 @@ async function start() {
     } catch { return new Response('Not found', { status: 404 }); }
   });
 
-  const window = new BrowserWindow({ width: 1440, height: 960, title: 'Inflow', icon: path.join(root, 'desktop/icon.png'),
+  const window = new BrowserWindow({ width: 1440, height: 960, title: 'Inflow', icon: path.join(__dirname, '../icon.png'),
     titleBarStyle: 'hidden', titleBarOverlay: { color: '#0e1013', symbolColor: '#c7c4d0', height: 48 },
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   window.setMenu(null);
@@ -61,7 +71,15 @@ async function start() {
     relink: async (id: string) => { operations.get(id); const file = await choose(); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (input: SentenceTranslationInput, job: string, options?: TranslationOptions) => operations.translate(input, job, credential.get(), options),
-    cancel: (job: string) => operations.cancel(job),
+    modelStatus: () => runProcessor('models', new AbortController().signal) as Promise<ModelStatus>,
+    setupModels: async (job: string, components?: string[]) => {
+      if (typeof job !== 'string' || !/^[\w-]{1,100}$/.test(job) || modelJobs.has(job)) throw new Error('处理编号无效。');
+      const controller = new AbortController();
+      modelJobs.set(job, controller);
+      try { return await runProcessor('setup', controller.signal, undefined, components, root) as ModelStatus; }
+      finally { modelJobs.delete(job); }
+    },
+    cancel: (job: string) => { modelJobs.get(job)?.abort(); operations.cancel(job); },
     saveLearning: (id: string, state: LearningStateInput) => operations.saveLearning(id, state),
     listVocabulary: () => operations.listVocabulary(),
     lookupVocabulary: (input: LookupVocabularyInput, job: string) => operations.lookupVocabulary(input, job),
@@ -109,5 +127,5 @@ else {
   });
   app.whenReady().then(start).catch(error => { console.error(error); app.quit(); });
 }
-app.on('before-quit', () => operations?.close());
+app.on('before-quit', () => { for (const job of modelJobs.values()) job.abort(); operations?.close(); });
 app.on('window-all-closed', () => app.quit());

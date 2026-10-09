@@ -301,7 +301,7 @@ export async function requestStructuredOutput(
   const parsed = responseText(body);
   let passage: unknown;
   try {
-    passage = JSON.parse(parsed.text);
+    passage = JSON.parse(parsed.text.trim().match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/u)?.[1] ?? parsed.text);
   } catch {
     throw new GenerationError('invalid_response', 'DeepSeek returned malformed passage data. Retry generation.');
   }

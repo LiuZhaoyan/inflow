@@ -217,6 +217,14 @@
 .workspace-settings-dialog .workspace-settings-result { margin-top:8px; color:var(--workspace-accent); font-size:13px; }
 .workspace-settings-dialog footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; }
 .workspace-settings-cancel { min-height:44px; padding:0 18px; border:1px solid var(--workspace-control-line); border-radius:10px; background:var(--workspace-raised); color:var(--workspace-text); font-size:14px; }
+.workspace-settings-models { display:flex; flex-direction:column; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
+.workspace-settings-models li { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--workspace-line); border-radius:8px; background:var(--workspace-raised); font-size:13px; }
+.workspace-settings-models li>span { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; flex:none; border-radius:50%; background:var(--workspace-bg); color:var(--workspace-muted); }
+.workspace-settings-models li[data-state='ready']>span { color:var(--workspace-accent); }
+.workspace-settings-models li[data-state='missing']>span { color:#f2bbc4; }
+.workspace-settings-models li>small { margin-left:auto; color:var(--workspace-muted); }
+.workspace-settings-models-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
+.workspace-settings-models-actions span { color:var(--workspace-muted); font-size:13px; }
 
 .workspace-vocab { width:100%; margin:0; padding:0; }
 .workspace-vocab .vocabulary-notebook { margin:0; border-color:var(--workspace-line); border-radius:5px; background:var(--workspace-panel); }

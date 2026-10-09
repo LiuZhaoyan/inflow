@@ -1,4 +1,5 @@
 """Local Korean ASR and Chinese translation. Model downloads are setup-only."""
+import contextlib
 import json
 import math
 import os
@@ -10,7 +11,11 @@ from functools import lru_cache
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGLISH_WORD_SEPARATORS = {"'", '’', '-', '‐', '‑'}
-os.environ['HF_HUB_OFFLINE'] = '1'
+os.environ['HF_HUB_OFFLINE'] = '0' if len(sys.argv) > 1 and sys.argv[1] == 'setup' else '1'
+# Frozen Windows builds inherit the console code page (often GBK); stdio JSON must stay UTF-8.
+for stream in (sys.stdout, sys.stderr, sys.stdin):
+    if stream is not None and hasattr(stream, 'reconfigure'):
+        stream.reconfigure(encoding='utf-8')
 
 
 class ProcessingError(ValueError):
@@ -271,12 +276,7 @@ def translate(text, language='ko'):
     if language not in {'ko', 'en'}: raise ProcessingError('不支持的翻译语言。')
     pairs = [('ko','en'),('en','zh')] if language == 'ko' else [('en','zh')]
     for source, target in pairs:
-        folder = None
-        for metadata in _models_root().glob('*/metadata.json'):
-            data = json.loads(metadata.read_text())
-            if data.get('from_code') == source and data.get('to_code') == target:
-                folder = metadata.parent
-                break
+        folder = find_translation_model(source, target)
         if folder is None: raise ProcessingError('翻译模型尚未安装，请运行模型安装脚本后重试。')
         tokenizer = sentencepiece.SentencePieceProcessor(model_file=str(folder/'sentencepiece.model'))
         model = ctranslate2.Translator(str(folder/'model'), device='cpu', compute_type='int8', inter_threads=1, intra_threads=4)
@@ -288,10 +288,50 @@ def translate(text, language='ko'):
     return {'translation': text}
 
 
+def find_translation_model(source, target):
+    for metadata in _models_root().glob('*/metadata.json'):
+        try: data = json.loads(metadata.read_text())
+        except (OSError, ValueError): continue
+        if data.get('from_code') == source and data.get('to_code') == target: return metadata.parent
+    return None
+
+
+def models_status():
+    root = _models_root()
+    return {
+        'whisper': (root/'whisper-turbo'/'model.bin').is_file(),
+        'translate': {
+            'ko-en': find_translation_model('ko', 'en') is not None,
+            'en-zh': find_translation_model('en', 'zh') is not None,
+        },
+        'englishParser': (root/'english-parser'/'en_core_web_sm'/'en_core_web_sm-3.8.0'/'config.cfg').is_file(),
+    }
+
+
+def setup_models_data(components=None):
+    # Downloads print progress to stderr so stdout stays a single JSON line.
+    import setup_models
+    with contextlib.redirect_stdout(sys.stderr):
+        if components in (None, []):
+            setup_models.install(_models_root())
+        else:
+            root = _models_root()
+            installers = {'whisper': setup_models.install_whisper, 'translate': setup_models.install_translate, 'english-parser': setup_models.install_english_parser}
+            for component in components:
+                if component not in installers: raise ProcessingError('未知的模型组件。')
+                installers[component](root)
+    return models_status()
+
+
 if __name__ == '__main__':
     try:
         if sys.argv[1] == 'probe': output = probe(sys.argv[2])
         elif sys.argv[1] == 'transcribe': output = transcribe(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'ko')
+        elif sys.argv[1] == 'models': output = models_status()
+        elif sys.argv[1] == 'setup':
+            raw = '' if sys.stdin.isatty() else sys.stdin.read()
+            request = json.loads(raw) if raw.strip() else {}
+            output = setup_models_data(request.get('components') if isinstance(request, dict) else None)
         elif sys.argv[1] == 'translate':
             request = json.load(sys.stdin)
             output = translate(request.get('text'), request.get('language', 'ko'))

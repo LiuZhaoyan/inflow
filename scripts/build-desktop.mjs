@@ -25,5 +25,6 @@ function run(script, args) {
 run('typescript/bin/tsc', ['-p', 'desktop/tsconfig.json']);
 await cp(path.join(root, 'resources/dictionaries'), path.join(root, 'build/desktop/resources/dictionaries'), { recursive: true });
 await cp(path.join(root, 'desktop/preload.cjs'), path.join(root, 'build/desktop/desktop/preload.cjs'));
+await cp(path.join(root, 'desktop/icon.png'), path.join(root, 'build/desktop/icon.png'));
 run('next/dist/bin/next', ['build', stage, '--webpack']);
 await cp(path.join(stage, 'out'), path.join(root, 'build/renderer'), { recursive: true });

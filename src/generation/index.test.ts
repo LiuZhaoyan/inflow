@@ -2,6 +2,27 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { GenerationError, generatePassage } from './index';
 
+test('a single JSON code fence is accepted without relaxing passage validation', async () => {
+  const passage = { title: '인사', sentences: [{ parts: [{ text: '안녕하세요.', targetId: 'greeting' }], translationZh: '你好。' }] };
+  const input = { targets: [{ id: 'greeting', lemma: '안녕하다', meaningZh: '你好' }] };
+  const generate = (text: string) => generatePassage(input, {
+    apiKey: 'fixture-secret',
+    fetcher: async () => Response.json({ id: 'resp-fenced', status: 'completed', output: [{
+      type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text }],
+    }] }),
+  });
+  const fenced = '```json\n' + JSON.stringify(passage) + '\n```';
+  assert.deepEqual((await generate(fenced)).sentences, passage.sentences);
+  for (const text of [
+    'Commentary\n' + fenced,
+    '```json\nnot JSON\n```',
+    fenced.replace('"greeting"', '"unknown"'),
+    '```json\n' + JSON.stringify({ ...passage, audio: 'unexpected' }) + '\n```',
+  ]) {
+    await assert.rejects(generate(text), (error: unknown) => error instanceof GenerationError && error.code === 'invalid_response');
+  }
+});
+
 test('generation sends selected word context and returns a completed text passage', async () => {
   let requestBody: Record<string, unknown> | undefined;
   const result = await generatePassage({

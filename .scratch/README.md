@@ -9,10 +9,11 @@ Intended behavior: [Product Specification](../docs/PRODUCT_SPEC.md) · implement
 | Effort | Remaining | Entry point |
 | --- | --- | --- |
 | English quality | Broaden evaluation: real-speaker audio, dictionary coverage, irregular generated forms. | [english-learning/README.md](english-learning/README.md) |
-| Windows runtime | Ticket 06 worker packaging (in progress, 2026-10-09) → ticket 07 installed learning-cycle acceptance. | [desktop-learning/README.md](desktop-learning/README.md) |
 | Video mask follow-up | Maximized native-window verification; installed-app masking check after packaging. | [video-subtitles/README.md](video-subtitles/README.md) |
 
 Owner visual acceptance of the workspace, settings screens and native-window video masking was recorded on 2026-10-09 in [frontend-workspace/spec.md](frontend-workspace/spec.md) and [settings/spec.md](settings/spec.md); those records await archiving.
+
+Windows worker packaging and scoped installed learning-cycle acceptance completed on 2026-10-09. The [delivery report](desktop-learning/subagent-06-07-report.md) and tickets 06–07 remain available pending archival; clean-VM qualification was not performed.
 
 ## Historical records
 
