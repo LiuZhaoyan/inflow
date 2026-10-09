@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { translateSentence, glossVocabulary } from './translation';
+import { GenerationError } from '../generation';
+
+const invalidInput = (error: unknown) => error instanceof GenerationError && error.code === 'invalid_input';
 
 test('cloud translation sends context but returns only the requested Chinese field without reasoning', async () => {
   const requests: Record<string, unknown>[] = [];
@@ -41,4 +44,56 @@ test('English translation and gloss requests use English prompts and return Chin
   assert.equal(JSON.parse(String(requests[1].input)).language, 'en');
   assert.equal(requests[0].max_output_tokens, 2048);
   assert.equal(requests[1].max_output_tokens, 256);
+});
+
+test('gloss preserves the exact UTF-16 occurrence and rejects mismatched vocabulary context before requesting', async () => {
+  const input = { language: 'en' as const, surface: 'walk', sentence: '😀 walk walk.', start: 8, lemma: 'walk', candidates: [] };
+  let requests = 0;
+  const options = { apiKey: 'test-only', fetcher: async (_url: string | URL | Request, init?: RequestInit) => {
+    requests += 1;
+    assert.deepEqual(JSON.parse(JSON.parse(String(init?.body)).input), input);
+    return Response.json({ id: 'gloss-offset', status: 'completed', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: '{"meaningZh":" 散步 "}' }] }] });
+  } };
+  assert.equal(await glossVocabulary(input, options), '散步');
+  for (const fields of [{ start: 2 }, { start: -1 }, { start: 8.5 }, { start: 100 }, { surface: 'run' },
+    { surface: 'walk walk' }, { lemma: 'to walk' }, { candidates: [''] }, { candidates: ['词'.repeat(301)] },
+    { candidates: Array(101).fill('词') }]) {
+    await assert.rejects(glossVocabulary({ ...input, ...fields }, options), invalidInput);
+  }
+  assert.equal(requests, 1);
+});
+
+test('sentence translation rejects empty, oversized and NUL-containing context before requesting', async () => {
+  let requests = 0;
+  const options = { apiKey: 'test-only', fetcher: async () => { requests += 1; return Response.json({}); } };
+  for (const fields of [{ text: '' }, { text: ' \t' }, { text: 'a\0b' }, { text: 'a'.repeat(10001) },
+    { previous: '' }, { previous: 'a'.repeat(10001) }, { next: 'a\0b' }, { next: 'a'.repeat(10001) }]) {
+    await assert.rejects(translateSentence({ language: 'en', text: 'Hello.', ...fields }, options), invalidInput);
+  }
+  assert.equal(requests, 0);
+});
+
+test('translation and gloss reject extra fields and invalid output instead of accepting partial results', async () => {
+  for (const field of ['translation', 'meaningZh'] as const) {
+    const limit = field === 'translation' ? 10000 : 300;
+    for (const value of [{ [field]: '正确', commentary: 'extra' }, { [field]: '' }, { [field]: ' \t' },
+      { [field]: 'a\0b' }, { [field]: '词'.repeat(limit + 1) }, { [field]: 123 }, {}, []]) {
+      const options = { apiKey: 'test-only', fetcher: async () => Response.json({ id: 'invalid-translation', status: 'completed', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: JSON.stringify(value) }] }] }) };
+      const pending = field === 'translation'
+        ? translateSentence({ language: 'en', text: 'Hello.' }, options)
+        : glossVocabulary({ language: 'en', surface: 'Hello', sentence: 'Hello.', start: 0, lemma: 'hello', candidates: [] }, options);
+      await assert.rejects(pending, (error: unknown) => error instanceof GenerationError && error.code === 'invalid_response');
+    }
+  }
+});
+
+test('translation and gloss accept exact text and dictionary limits', async () => {
+  const options = { apiKey: 'test-only', fetcher: async (_url: string | URL | Request, init?: RequestInit) => {
+    const field = JSON.parse(String(init?.body)).text.format.name as 'translation' | 'meaningZh';
+    return Response.json({ id: 'limits', status: 'completed', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: JSON.stringify({ [field]: '词'.repeat(field === 'translation' ? 10000 : 300) }) }] }] });
+  } };
+  const sentence = 'a'.repeat(10000);
+  assert.equal((await translateSentence({ language: 'en', text: sentence, previous: sentence, next: sentence }, options)).length, 10000);
+  assert.equal((await glossVocabulary({ language: 'en', surface: 'a'.repeat(100), lemma: 'a'.repeat(100), sentence, start: 0,
+    candidates: Array(100).fill('词'.repeat(300)) }, options)).length, 300);
 });

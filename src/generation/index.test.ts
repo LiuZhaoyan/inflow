@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GenerationError, generatePassage } from './index';
+import { GenerationError, generatePassage, requestStructuredOutput, validatePassage } from './index';
 
 test('a single JSON code fence is accepted without relaxing passage validation', async () => {
   const passage = { title: '인사', sentences: [{ parts: [{ text: '안녕하세요.', targetId: 'greeting' }], translationZh: '你好。' }] };
@@ -259,4 +259,139 @@ test('declared oversized responses release the provider stream', async () => {
     fetcher: async () => new Response(body, { headers: { 'content-length': '1048577' } }),
   }), (error: unknown) => error instanceof GenerationError && error.code === 'invalid_response');
   assert.equal(cancelled, true);
+});
+
+const target = { id: 'walk', lemma: 'walk', meaningZh: '散步' };
+const passage = { title: 'A walk', sentences: [{ parts: [{ text: 'We ', targetId: null }, { text: 'walk.', targetId: 'walk' }], translationZh: '我们散步。' }] };
+const completedResponse = (text: string) => ({ id: 'regression-response', status: 'completed', output: [{
+  type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text }],
+}] });
+const hasCode = (code: GenerationError['code']) => (error: unknown) => error instanceof GenerationError && error.code === code;
+
+test('generation enforces unique IDs, required text and field limits before contacting the provider', async () => {
+  let requests = 0;
+  const options = { apiKey: 'test-only', fetcher: async () => { requests += 1; return Response.json(completedResponse(JSON.stringify(passage))); } };
+  for (const fields of [{ id: '' }, { id: ' ' }, { id: 'a\0b' }, { id: 'a'.repeat(129) },
+    { lemma: 'a'.repeat(101) }, { lemma: 'a\0b' }, { meaningZh: '' }, { meaningZh: '词'.repeat(301) },
+    { meaningZh: 'a\0b' }, { sourceSentence: 'a'.repeat(1001) }]) {
+    await assert.rejects(generatePassage({ targets: [{ ...target, ...fields }] }, options), hasCode('invalid_input'));
+  }
+  await assert.rejects(generatePassage({ targets: [target, target] }, options), hasCode('invalid_input'));
+  await assert.rejects(generatePassage({ targets: [target], topic: 'a'.repeat(201) }, options), hasCode('invalid_input'));
+  const escapedContext = Array.from({ length: 20 }, (_, id) => ({ ...target, id: String(id), sourceSentence: '\u0001'.repeat(1000) }));
+  await assert.rejects(generatePassage({ targets: escapedContext }, options), hasCode('invalid_input'));
+  assert.equal(requests, 0);
+});
+
+test('generation accepts maximum field lengths and target count while trimming the topic', async () => {
+  const targets = Array.from({ length: 20 }, (_, index) => ({ id: String(index).padEnd(128, 'x'),
+    lemma: 'a'.repeat(100), meaningZh: '词'.repeat(300), sourceSentence: 'a'.repeat(1000) }));
+  const expected = { title: 'All words', sentences: [{ parts: targets.map(item => ({ text: item.lemma, targetId: item.id })), translationZh: '所有词。' }] };
+  const result = await generatePassage({ targets, topic: '  ' + 'a'.repeat(196) + '  ' }, {
+    apiKey: 'test-only', fetcher: async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.text.format.name, 'korean_learning_passage');
+      assert.deepEqual(JSON.parse(body.input), { targets, topic: 'a'.repeat(196) });
+      return Response.json(completedResponse(JSON.stringify(expected)));
+    },
+  });
+  assert.deepEqual(result.sentences, expected.sentences);
+});
+
+test('passage validation preserves ordered repeated targets and requires every selected ID across sentences', () => {
+  const targets = [target, { id: 'run', lemma: 'run', meaningZh: '跑步' }];
+  const second = { parts: [{ text: 'Then run and ', targetId: 'run' }, { text: 'walk.', targetId: 'walk' }], translationZh: '然后跑步和散步。' };
+  const value = { ...passage, sentences: [...passage.sentences, second] };
+  assert.deepEqual(validatePassage(value, targets), value);
+  assert.throws(() => validatePassage(passage, targets), hasCode('invalid_response'));
+});
+
+test('passage validation rejects malformed nested fields even when a selected target is present', () => {
+  const sentence = passage.sentences[0];
+  const markedPart = sentence.parts[1];
+  for (const value of [null, [], { ...passage, title: ' ' }, { ...passage, title: 'a\0b' }, { ...passage, sentences: [] },
+    ...[{ ...sentence, translationZh: '' }, { ...sentence, translationZh: 'a\0b' }, { ...sentence, parts: [] },
+      { ...sentence, audio: 'extra' }, { ...sentence, parts: [{ ...markedPart, annotation: 'extra' }] },
+      { ...sentence, parts: [{ ...markedPart, text: 'a\0b' }] }, { ...sentence, parts: [{ text: 'walk.' }] },
+      { ...sentence, parts: [{ ...markedPart, targetId: '' }] }].map(item => ({ ...passage, sentences: [item] }))]) {
+    assert.throws(() => validatePassage(value, [target]), hasCode('invalid_response'));
+  }
+});
+
+test('generation joins only completed assistant output text and discards invalid usage metadata', async () => {
+  const text = JSON.stringify(passage);
+  const response = completedResponse(text);
+  response.output[0].content = [{ type: 'output_text', text: text.slice(0, 30) }, { type: 'refusal', text: 'not JSON' }, { type: 'output_text', text: text.slice(30) }];
+  response.output.unshift(
+    { ...response.output[0], role: 'user', content: [{ type: 'output_text', text: 'not JSON' }] },
+    { ...response.output[0], status: 'in_progress', content: [{ type: 'output_text', text: 'not JSON' }] },
+    { ...response.output[0], type: 'reasoning', content: [{ type: 'output_text', text: 'not JSON' }] },
+  );
+  for (const usage of [{ input_tokens: -1, output_tokens: 2, total_tokens: 1 },
+    { input_tokens: 1.5, output_tokens: 2, total_tokens: 3.5 }, { input_tokens: '1', output_tokens: 2, total_tokens: 3 },
+    { input_tokens: 1, output_tokens: 2 }, { input_tokens: 0, output_tokens: 0, total_tokens: 0 }]) {
+    const result = await generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => Response.json({ ...response, usage }) });
+    assert.deepEqual(result.sentences, passage.sentences);
+    assert.equal(result.responseId, response.id);
+    if (usage.input_tokens === 0) assert.deepEqual(result.usage, { inputTokens: 0, outputTokens: 0, totalTokens: 0 });
+    else assert.equal(result.usage, undefined);
+  }
+});
+
+test('generation rejects unreadable envelopes, missing completed text and invalid UTF-8', async () => {
+  const response = completedResponse(JSON.stringify(passage));
+  for (const [body, code] of [[{ ...response, id: '' }, 'incomplete'], [{ ...response, output: [] }, 'invalid_response'],
+    [{ ...response, output: [{ ...response.output[0], status: 'in_progress' }] }, 'invalid_response'],
+    [{ ...response, output: [{ ...response.output[0], role: 'user' }] }, 'invalid_response']] as const) {
+    await assert.rejects(generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => Response.json(body) }), hasCode(code));
+  }
+  const invalidUtf8 = new TextEncoder().encode(JSON.stringify(completedResponse(JSON.stringify({ ...passage, title: 'INVALID_UTF8' }))));
+  invalidUtf8[invalidUtf8.indexOf('I'.charCodeAt(0))] = 0xff;
+  for (const body of ['not JSON', invalidUtf8]) {
+    await assert.rejects(generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => new Response(body) }), hasCode('invalid_response'));
+  }
+});
+
+test('generation classifies remaining provider errors and network failures without leaking secrets', async () => {
+  for (const [status, code] of [[403, 'unauthorized'], [402, 'quota'], [503, 'service'], [400, 'request']] as const) {
+    await assert.rejects(generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => new Response('private body', { status }) }), (error: unknown) => {
+      assert.ok(error instanceof GenerationError);
+      assert.equal(error.code, code);
+      assert.doesNotMatch(error.message, /private body|test-only/);
+      return true;
+    });
+  }
+  await assert.rejects(generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => { throw new Error('private connection details'); } }), hasCode('network'));
+});
+
+test('already canceled generation preserves the caller reason and never contacts the provider', async () => {
+  const reason = new Error('User stopped generation');
+  let requests = 0;
+  await assert.rejects(generatePassage({ targets: [target] }, { apiKey: 'test-only', signal: AbortSignal.abort(reason),
+    fetcher: async () => { requests += 1; return Response.json({}); } }), (error: unknown) => error === reason);
+  assert.equal(requests, 0);
+});
+
+test('structured output times out while reading a stalled body and cancels the stream', async (t) => {
+  // AbortSignal.timeout uses an unreferenced timer; keep the test alive until it fires.
+  const keepAlive = setTimeout(() => {}, 2000);
+  t.after(() => clearTimeout(keepAlive));
+  let cancelled = false;
+  await assert.rejects(requestStructuredOutput({ model: 'deepseek-flash', instructions: 'Return JSON', payload: '{}',
+    schema: {}, name: 'timeout', maxOutputTokens: 10, timeoutMs: 10 }, {
+    apiKey: 'test-only', fetcher: async () => new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } })),
+  }), hasCode('timeout'));
+  assert.equal(cancelled, true);
+});
+
+test('generation accepts exactly one mebibyte with UTF-8 characters split between chunks', async () => {
+  const bytes = new TextEncoder().encode(JSON.stringify(completedResponse(JSON.stringify(passage))));
+  const body = new Uint8Array(1_048_576).fill(32);
+  body.set(bytes);
+  const split = bytes.findIndex(byte => byte >= 0x80) + 1;
+  assert.ok(split > 0);
+  const result = await generatePassage({ targets: [target] }, { apiKey: 'test-only', fetcher: async () => new Response(new ReadableStream({
+    start(stream) { stream.enqueue(body.slice(0, split)); stream.enqueue(body.slice(split)); stream.close(); },
+  }), { headers: { 'content-length': String(body.length) } }) });
+  assert.deepEqual(result.sentences, passage.sentences);
 });
