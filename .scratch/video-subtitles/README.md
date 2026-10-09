@@ -1,23 +1,14 @@
-# Video Mask Follow-up
+# Video Mask: Deferred Verification
 
 Updated: 2026-10-09
 
-On-demand manual subtitle masking is implemented and automated source-checkout acceptance passed. Native screenshots were recorded on 2026-10-06. The owner recorded visual acceptance in the native window on 2026-10-09. Current behavior belongs in [Project Status](../../docs/PROJECT_STATUS.md).
+The manual video mask is implemented. Automated source-checkout checks and owner visual acceptance were recorded. These are **not active release blockers**.
 
-## Remaining acceptance
+## When to verify
 
-- [x] Record owner visual acceptance in the native normal/maximized window. Recorded 2026-10-09.
-- [ ] Verify the maximized native window; browser viewport resizing and native screenshot preview do not establish this check.
-- [ ] Verify masking in the installed application after [Windows packaging](../desktop-learning/README.md).
+- [ ] At a convenient development checkpoint, verify actual Electron window maximization keeps the mask aligned with the displayed video.
+- [ ] **At the next packaged release**, install to an isolated test profile, check masking, maximize the window, restart, and verify mask persistence. Do not package/install solely for this check during rapid development.
 
-Broader workspace visual acceptance remains in [Frontend Workspace](../frontend-workspace/spec.md).
+Owner visual acceptance on 2026-10-09 does not establish the separate maximized-window or installed-package checks.
 
-## Deferred work and historical evidence
-
-Subtitle-track extraction and audio alignment were removed from this iteration. Automatic region detection and bitmap subtitle OCR also remain deferred in [Roadmap](../../docs/ROADMAP.md#6-deferred-product-work). The retained designs do not authorize implementing those features now.
-
-- [Confirmed manual-mask contract and deferred subtitle design](../archive/video-subtitles/spec.md).
-- [Automated acceptance, native screenshots and verification limits](../archive/video-subtitles/acceptance.md).
-- [Dated extraction/alignment feasibility research](../archive/video-subtitles/research.md).
-
-Verification scripts, fixtures and generated evidence remain at their original paths.
+Subtitle-track extraction, alignment, automatic detection and OCR remain out of scope. See [manual-mask acceptance](../archive/video-subtitles/implementation-and-acceptance.md), [research](../archive/video-subtitles/research.md) and [Roadmap](../../docs/ROADMAP.md#6-deferred-product-work).

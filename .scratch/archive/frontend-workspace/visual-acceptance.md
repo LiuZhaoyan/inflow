@@ -7,7 +7,7 @@ The Listen, Story and Vocabulary workspace is implemented and has recorded local
 
 ## Current scope
 
-Review the current workspace against the owner-supplied visual references and [Product Specification](../../docs/PRODUCT_SPEC.md). Story reading and generation are available. Listen and Story use the shared collection popover; source text is visible outside Listen mask mode. The historical phase's temporary Story hiding and separate vocabulary confirmation form are superseded.
+Review the current workspace against the owner-supplied visual references and [Product Specification](../../../docs/PRODUCT_SPEC.md). Story reading and generation are available. Listen and Story use the shared collection popover; source text is visible outside Listen mask mode. The historical phase's temporary Story hiding and separate vocabulary confirmation form are superseded.
 
 ## Recorded acceptance
 
@@ -24,9 +24,9 @@ Vocabulary now uses the same collapsed Language menu pattern. Choosing a languag
 
 `npm run desktop:build`, `npm run lint` and `node .scratch/frontend-workspace/verify-library.cjs` passed. The isolated native check uses real host storage and IPC with synthetic audio and saved Story fixtures; it does not contact a model provider. It verified Korean/English media and Story filtering, search, keyboard activation, close/reopen behavior, and drawer geometry at 1440×900 and 390×760. Vocabulary language and source filtering passed; its menu remains within the list panel at 1440×900 and 1100×800, with no horizontal overflow in the narrower desktop window. Evidence is under `.scratch/desktop-learning/generated-samples/library-native-MGNI3x/`; the collapsed and expanded filter screenshots were inspected. The owner recorded visual acceptance on 2026-10-09.
 
-- [Original phase and its dated checklist](../archive/frontend-workspace/spec.md).
-- [Listen workspace verification](../archive/frontend-workspace/acceptance.md).
-- [Story, Vocabulary and native header verification](../archive/frontend-workspace/reading-vocab-acceptance.md).
-- [Sentence-mask verification](../archive/sentence-masks/spec.md).
+- [Original phase and its dated checklist](design-and-acceptance.md).
+- [Listen workspace verification](design-and-acceptance.md).
+- [Story, Vocabulary and native header verification](design-and-acceptance.md).
+- [Sentence-mask verification](../sentence-masks/spec.md).
 
 Design references remain at their original locations. The retired verification scripts (`run.mjs`, `verify-library.cjs`, `verify-reading.cjs`) were deleted on 2026-10-09 when this acceptance was recorded; `fixture.js` is retained for shared use by active efforts. Commands named in this record are historical descriptions, not maintained entry points. This visual acceptance effort does not include subtitle-region masking or English implementation.

@@ -108,6 +108,6 @@ Verification reuses the host unit suite and a focused native Electron runner for
 
 ## References
 
-- [Product specification](../../docs/PRODUCT_SPEC.md)
-- [Project status](../../docs/PROJECT_STATUS.md)
-- [Domain vocabulary](../../CONTEXT.md)
+- [Product specification](../../../docs/PRODUCT_SPEC.md)
+- [Project status](../../../docs/PROJECT_STATUS.md)
+- [Domain vocabulary](../../../CONTEXT.md)

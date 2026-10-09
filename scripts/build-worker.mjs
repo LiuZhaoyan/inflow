@@ -42,4 +42,8 @@ const result = spawnSync(pyinstaller, [
 if (result.status !== 0) process.exit(result.status ?? 1);
 const exe = path.join(dist, 'media_processor', 'media_processor.exe');
 if (!existsSync(exe)) throw new Error('Worker executable was not produced: ' + exe);
+// Successful builds need only the distribution, not PyInstaller's work/spec cache.
+if (process.env.INFLOW_KEEP_BUILD_WORK !== '1') {
+  await rm(path.join(root, 'build', 'pyinstaller-work'), { recursive: true, force: true });
+}
 console.log('Worker built at ' + exe);

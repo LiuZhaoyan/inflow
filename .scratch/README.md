@@ -2,30 +2,22 @@
 
 Updated: 2026-10-09
 
-Intended behavior: [Product Specification](../docs/PRODUCT_SPEC.md) · implemented behavior: [Project Status](../docs/PROJECT_STATUS.md) · sequencing: [Roadmap](../docs/ROADMAP.md). This index lists remaining actionable work; completed records live under [archive/](archive/) and are historical evidence, not current instructions.
+Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
-## Active work
+## Current development
 
-| Effort | Remaining | Entry point |
-| --- | --- | --- |
-| English quality | Broaden evaluation: real-speaker audio, dictionary coverage, irregular generated forms. | [english-learning/README.md](english-learning/README.md) |
-| Video mask follow-up | Maximized native-window verification; installed-app masking check after packaging. | [video-subtitles/README.md](video-subtitles/README.md) |
+No active implementation ticket is tracked here. Continue developing from the source checkout; do not install a new package solely for subtitle-mask verification.
 
-Owner visual acceptance of the workspace, settings screens and native-window video masking was recorded on 2026-10-09 in [frontend-workspace/spec.md](frontend-workspace/spec.md) and [settings/spec.md](settings/spec.md); those records await archiving.
+## Deferred quality and release checks
 
-Windows worker packaging and scoped installed learning-cycle acceptance completed on 2026-10-09. The [delivery report](desktop-learning/subagent-06-07-report.md) and tickets 06–07 remain available pending archival; clean-VM qualification was not performed.
+- [English quality evaluation](english-learning/README.md): postponed by the owner; not a current blocker.
+- [Video mask verification](video-subtitles/README.md): native maximized-window check when convenient; installed-app smoke test at the next release, not during rapid development.
+- [Artifact request-ordering risk](archive/artifact-state/architecture-and-verification.md): known renderer/persistence divergence under controlled delayed replies; evaluation deferred, not fixed.
 
-## Historical records
+## Completed records
 
-| Effort | Evidence |
-| --- | --- |
-| Desktop foundation | [MVP spec](archive/desktop-learning/spec.md) · [ticket plan](archive/desktop-learning/ticket-plan.md) · [listening acceptance](archive/desktop-learning/desktop-listening-acceptance.md) · [text artifact acceptance](archive/desktop-learning/text-artifact-acceptance.md) · [vocabulary notebook acceptance](archive/desktop-learning/vocabulary-notebook-acceptance.md) · research notes and archived tickets 01–02 |
-| Frontend implementation | [spec](archive/frontend-workspace/spec.md) · [listening acceptance](archive/frontend-workspace/acceptance.md) · [Story/Vocabulary acceptance](archive/frontend-workspace/reading-vocab-acceptance.md) |
-| Sentence masks | [mask contract](archive/sentence-masks/spec.md) |
-| Vocabulary lookup | [decisions](archive/vocabulary-lookup/notes.md) · [acceptance](archive/vocabulary-lookup/acceptance.md) |
-| Translation lookup | [decisions](archive/translation-lookup/notes.md) · [acceptance](archive/translation-lookup/acceptance.md) |
-| English implementation | [spec](archive/english-learning/spec.md) · [acceptance](archive/english-learning/acceptance.md) · [quality probes](archive/english-learning/quality-report.md) |
-| Video subtitle masking | [design](archive/video-subtitles/spec.md) · [acceptance](archive/video-subtitles/acceptance.md) · [extraction research](archive/video-subtitles/research.md) |
-| Learning artifact state | [scope](archive/artifact-state/spec.md) · [flow deepening](archive/artifact-state/issues/02-evaluate-story-flow-deepening.md) · [request ordering report](archive/artifact-state/request-ordering-report.md) |
+- [Frontend visual acceptance](archive/frontend-workspace/visual-acceptance.md)
+- [Settings acceptance](archive/settings/acceptance.md)
+- [Windows desktop foundation and packaging](archive/desktop-learning/windows-packaging-acceptance.md)
 
-When an effort is archived, its retired verification scripts are deleted; commands recorded in archived records are historical descriptions, not maintained entry points. Generated evidence stays under `.scratch/`, not `build/`.
+Other historical designs and verification records remain under [archive/](archive/). Generated samples and local scripts are not active tasks.

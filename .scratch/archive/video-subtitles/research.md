@@ -71,7 +71,7 @@ The installed faster-whisper 1.2.1 uses CTranslate2 4.8.2. CTranslate2's Whisper
 
 The existing `.models/whisper-turbo/config.json` includes six `alignment_heads`; the installed model loaded as multilingual with 128 mel features. The CTranslate2 implementation requires these heads and builds an alignment for supplied text. [Version 4.8.2 source](https://github.com/OpenNMT/CTranslate2/blob/v4.8.2/src/models/whisper.cc). No additional model, package or executable was installed for the probe.
 
-A read-only CPU/int8/4-thread probe used the existing 6.427875-second Windows SAPI English fixture described in [English acceptance](../english-learning/acceptance.md). It called `find_alignment` on supplied text, then adapted the returned words to the existing worker's `sentences()` function. It did not call speech recognition or write data.
+A read-only CPU/int8/4-thread probe used the existing 6.427875-second Windows SAPI English fixture described in [English acceptance](../english-learning/implementation-and-acceptance.md). It called `find_alignment` on supplied text, then adapted the returned words to the existing worker's `sentences()` function. It did not call speech recognition or write data.
 
 | Supplied text | Observed result | Implication |
 | --- | --- | --- |

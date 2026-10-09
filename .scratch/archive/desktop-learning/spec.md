@@ -106,6 +106,6 @@ Save each generated passage as a learning artifact with target-vocabulary highli
 
 - The owner confirmed shared understanding on 2026-09-30. The initial generated-audio idea was subsequently narrowed to text-only generation, and that correction governs this specification.
 - Product behavior is summarized in [the product specification](../../../docs/PRODUCT_SPEC.md); delivery sequencing is in [the roadmap](../../../docs/ROADMAP.md). [The domain glossary](../../../CONTEXT.md) defines vocabulary used here.
-- [Technical research](technical-recommendation.md) contains the source evidence and trade-offs; [generation research](generation-api-research.md) describes the candidate contract and semantic evaluation; [storage research](storage-research.md) outlines record relationships.
+- [Architecture decisions](architecture-decisions.md) summarize the original framework, storage and generation trade-offs; [learning-cycle acceptance](learning-cycle-acceptance.md) records the generation quality baseline.
 - Windows Node and Miniconda Python were found during read-only investigation. Native worker feasibility, packaged SQLite behavior, codec/seek quality and generation account/semantic quality remain unverified. These are implementation evidence gates, not completed delivery claims.
 - The existing listening prototype and Linux/WSL backend evidence are reusable starting points. No application implementation, dependency installation, live API call or Windows build was performed in the requirements/specification phase.

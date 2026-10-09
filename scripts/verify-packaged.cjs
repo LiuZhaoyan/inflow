@@ -4,6 +4,8 @@
 // environment without any development paths, and records evidence + orphan-process checks.
 // Usage: node scripts/verify-packaged.cjs <phase> <runDir> [option=value ...]
 // Phases: credential models download listen reopen missing cancel cycle failures restart screenshots
+// Use cleanup=true on the LAST phase of a suite to delete its default disposable test profiles
+// after success; failures retain profiles for debugging. Use keep=true to preserve them.
 const { spawn, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -125,5 +127,22 @@ child.on('exit', (code) => {
   };
   fs.writeFileSync(path.join(out, 'launch-' + phase + '.json'), JSON.stringify(summary, null, 2));
   console.log('exit=' + code + ' driverOk=' + summary.driverOk + ' orphans=' + orphans + ' duration=' + Math.round(summary.durationMs / 1000) + 's');
-  process.exit(summary.driverOk && orphans === 0 ? 0 : 1);
+  const passed = summary.driverOk && orphans === 0;
+  if (passed && options.cleanup === 'true' && options.keep !== 'true') {
+    const disposableRoot = path.join(root, 'build', 'package-test', 'profiles');
+    const target = path.resolve(profile);
+    const evidence = path.resolve(out);
+    if (options.profile || !target.startsWith(disposableRoot + path.sep) ||
+        evidence === target || evidence.startsWith(target + path.sep)) {
+      console.error('Cleanup skipped: custom profile or evidence inside profile.');
+    } else {
+      try {
+        fs.rmSync(target, { recursive: true, force: true });
+        console.log('Removed disposable test profile: ' + target);
+      } catch (error) {
+        console.error('Cleanup failed, profile retained: ' + error.message);
+      }
+    }
+  }
+  process.exit(passed ? 0 : 1);
 });
