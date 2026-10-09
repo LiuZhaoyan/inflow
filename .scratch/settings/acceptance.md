@@ -1,7 +1,7 @@
 # Settings Acceptance
 
-Date: 2026-10-08
-Status: Automated source-checkout acceptance passed; owner visual acceptance pending.
+Date: 2026-10-08 (owner visual acceptance recorded 2026-10-09)
+Status: Automated source-checkout acceptance passed; owner visual acceptance recorded 2026-10-09.
 Delivery branch: `main`; implementation prepared in `codex/settings`.
 Base: `aa2912f`
 
@@ -39,7 +39,7 @@ The initial sandboxed checks encountered Windows filesystem restrictions in Next
 
 ## Remaining boundaries
 
-- Owner visual acceptance is not claimed by screenshot inspection.
+- Owner visual acceptance was recorded by the owner on 2026-10-09; it is not claimed by screenshot inspection.
 - These checks cover the source checkout, not an installed Windows package.
 - Saving a key does not verify provider authorization or linguistic quality. No live cloud request is made by this feature or its acceptance runner.
 - Settings implementation and the main checkout's design drafts are delivered together on main.
@@ -48,4 +48,4 @@ The initial sandboxed checks encountered Windows filesystem restrictions in Next
 
 Both existing worktree branch tips were confirmed as ancestors of `main` before removal. The sentence-boundary worktree's uncommitted documentation and both worktrees' generated evidence were copied and verified by file hashes before deleting the old worktrees. Shared directory junctions were removed without touching their targets. The missing worktree record was pruned.
 
-Backups remain under `D:/DeskBox/project/inflow/.scratch/desktop-learning/generated-samples/worktree-backups-20261008/`. Implementation used `D:/DeskBox/project/inflow/.worktrees/settings`, with a dependency junction to the main checkout's installed dependencies. Main-checkout design drafts were incorporated into the implementation records. Successful native screenshots and result files were copied to main and verified by file hashes before removing the temporary Settings worktree; generated evidence remains ignored by Git.
+The temporary backups under `D:/DeskBox/project/inflow/.scratch/desktop-learning/generated-samples/worktree-backups-20261008/` were deleted on 2026-10-09 during `.scratch` volume cleanup once the merged work was confirmed on `main`. Implementation used `D:/DeskBox/project/inflow/.worktrees/settings`, with a dependency junction to the main checkout's installed dependencies. Main-checkout design drafts were incorporated into the implementation records. Successful native screenshots and result files were copied to main and verified by file hashes before removing the temporary Settings worktree; generated evidence remains ignored by Git.

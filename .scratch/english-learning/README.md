@@ -19,4 +19,4 @@ Owner visual acceptance is tracked in [Frontend Workspace](../frontend-workspace
 - [Source-checkout acceptance](../archive/english-learning/acceptance.md).
 - [Live generation quality probes from 2026-10-04](../archive/english-learning/quality-report.md).
 
-The repeatable [native acceptance harness](verify.cjs) and [live quality probe](quality-check.ts) remain here. Generated evidence retains its original paths. Archiving records does not claim new verification or broader linguistic acceptance.
+The repeatable [native acceptance harness](verify.cjs) and [live quality probe](quality-check.ts) remain here.

@@ -1,7 +1,7 @@
 # Application Settings
 
-Status: Implemented on main; automated acceptance passed; owner visual acceptance pending.
-Updated: 2026-10-08
+Status: Implemented on main; automated acceptance and owner visual acceptance passed.
+Updated: 2026-10-09
 
 ## Requested outcome
 
