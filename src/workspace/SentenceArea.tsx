@@ -76,13 +76,13 @@ export default function SentenceArea({
     <div className="workspace-sentence-meta">
       <div className="workspace-sentence-heading"><h2>Current sentence</h2><span>{segment ? formatTime(segment.start) + ' – ' + formatTime(segment.end) : 'No sentence selected'}</span></div>
       {segment && <span className="workspace-sentence-count">{currentNumber} / {totalNumber}</span>}
+      {segment && maskEditing && <span className="workspace-mask-summary" id="sentence-mask-summary" role="status">{maskedGroups.length} / {segment.groups.length} masked</span>}
       <button type="button" className="workspace-mask-toggle" disabled={!segment} aria-pressed={maskEditing} aria-describedby={maskEditing ? 'sentence-mask-summary' : undefined} onClick={onToggleMaskEditing}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M7 12h10"/></svg>
         Set masks
       </button>
     </div>
-    <p className="workspace-mask-summary" id="sentence-mask-summary" role="status">{segment && maskEditing ? `${maskedGroups.length} / ${segment.groups.length} masked` : ''}</p>
-    <div className="workspace-sentence-copy">
+    <div className="workspace-sentence-copy" key={segment ? `${segment.start}-${segment.text}` : 'empty'}>
     {segment ? <p className="workspace-sentence-text" ref={transcriptRef} lang={language} aria-live="polite"><span className="workspace-sentence-text-groups">{segment.groups.map((group, groupIndex) => {
       const masked = maskedGroups.includes(groupIndex);
       const hidden = maskEditing && masked;
