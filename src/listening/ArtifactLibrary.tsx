@@ -2,20 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import "@/workspace/story.css";
-import type { ArtifactVocabularySource, CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
+import type { CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
+import type { LearningArtifacts } from "@/workspace/useLearningArtifacts";
 
 type Props = {
-  artifacts: LearningArtifact[];
-  artifact: LearningArtifact | null;
+  learning: LearningArtifacts;
   selected: VocabularyEntry[];
-  source: ArtifactVocabularySource | null;
   onBeforeChange: () => boolean;
   active?: boolean;
   generationOpen?: boolean;
   onGenerationClose?: () => void;
   onRequestGenerate?: () => void;
-  onArtifactChange: (artifact: LearningArtifact | null) => void;
-  onArtifactsChange: (artifacts: LearningArtifact[]) => void;
   credential: CredentialStatus;
   onOpenSettings: () => void;
 };
@@ -25,62 +22,33 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 }
 
 export default function ArtifactLibrary({
-  artifacts, artifact,
-  selected, source, onBeforeChange, active = true, generationOpen = false,
-  onGenerationClose, onRequestGenerate, onArtifactChange, onArtifactsChange,
+  learning,
+  selected, onBeforeChange, active = true, generationOpen = false,
+  onGenerationClose, onRequestGenerate,
   credential, onOpenSettings,
 }: Props) {
+  const { artifacts, selection, loaded, error, busy, open, cancelGeneration } = learning;
+  const { artifact, source } = selection;
+  const initialSentence = Math.max(0, Math.min(source?.sentenceIndex ?? 0, Math.max(0, (artifact?.sentences.length ?? 0) - 1)));
+  const [previousSelection, setPreviousSelection] = useState(selection);
   const [historyLanguage, setHistoryLanguage] = useState<"all" | SourceLanguage>("all");
-  const [loaded, setLoaded] = useState(false);
   const [topic, setTopic] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [activeSentence, setActiveSentence] = useState(0);
+  const [activeSentence, setActiveSentence] = useState(initialSentence);
   const [translations, setTranslations] = useState<Set<number>>(() => new Set());
-  const job = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const mixedLanguageSelection = new Set(selected.map(entry => entry.language)).size > 1;
 
-  useEffect(() => {
-    let current = true;
-    Promise.all([window.inflow!.listArtifacts(), window.inflow!.restoreArtifact()])
-      .then(([items, restored]) => {
-        if (!current) return;
-        onArtifactsChange(items);
-        onArtifactChange(restored);
-        setLoaded(true);
-      })
-      .catch(failure => {
-        if (current) {
-          setError(failure instanceof Error ? failure.message : "Saved stories could not be loaded.");
-          setLoaded(true);
-        }
-      });
-    return () => {
-      current = false;
-      if (job.current) void window.inflow!.cancel(job.current).catch(() => {});
-    };
-  }, [onArtifactChange, onArtifactsChange]);
+  if (previousSelection !== selection) {
+    setPreviousSelection(selection);
+    setActiveSentence(initialSentence);
+    setTranslations(new Set());
+  }
 
   useEffect(() => {
-    if (!loaded || !source) return;
-    const { artifactId, sentenceIndex } = source;
-    let current = true;
-    window.inflow!.openArtifact(artifactId).then(next => {
-      if (!current || !onBeforeChange()) return;
-      onArtifactChange(next);
-      const index = Math.max(0, Math.min(sentenceIndex, Math.max(0, next.sentences.length - 1)));
-      setActiveSentence(index);
-      setTranslations(new Set());
-      setError("");
-      requestAnimationFrame(() => {
-        if (current) document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center" });
-      });
-    }).catch(failure => {
-      if (current) setError(failure instanceof Error ? failure.message : "The source story could not be opened.");
-    });
-    return () => { current = false; };
-  }, [loaded, source, onArtifactChange, onBeforeChange]);
+    if (!source) return;
+    const frame = requestAnimationFrame(() => document.getElementById("artifact-sentence-" + initialSentence)?.scrollIntoView({ block: "center" }));
+    return () => cancelAnimationFrame(frame);
+  }, [selection, source, initialSentence]);
 
   useEffect(() => {
     const element = dialog.current;
@@ -90,43 +58,10 @@ export default function ArtifactLibrary({
   }, [active, generationOpen]);
 
   async function generate() {
-    if (mixedLanguageSelection) {
-      setError("Choose vocabulary in one source language before generating. All selected words are preserved.");
-      return;
-    }
-    if (selected.length < 1 || selected.length > 20 || !credential.configured || !onBeforeChange()) return;
-    setBusy(true);
-    setError("");
-    const id = crypto.randomUUID();
-    job.current = id;
-    try {
-      const next = await window.inflow!.generateArtifact(selected.map(entry => entry.id), topic, id);
-      const items = [next, ...artifacts.filter(item => item.id !== next.id)];
-      onArtifactsChange(items);
-      onArtifactChange(next);
-      setActiveSentence(0);
-      setTranslations(new Set());
+    if (!credential.configured) return;
+    if (await learning.generate(selected, topic)) {
       if (dialog.current?.open) dialog.current.close();
       else onGenerationClose?.();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Story generation failed. Please try again.");
-    } finally {
-      job.current = null;
-      setBusy(false);
-    }
-  }
-
-  async function openStory(id: string) {
-    if (!onBeforeChange()) return;
-    try {
-      const next = await window.inflow!.openArtifact(id);
-      if (!onBeforeChange()) return;
-      onArtifactChange(next);
-      setActiveSentence(0);
-      setTranslations(new Set());
-      setError("");
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "The saved story could not be opened.");
     }
   }
 
@@ -144,12 +79,6 @@ export default function ArtifactLibrary({
   function closeDialog() {
     if (dialog.current?.open) dialog.current.close();
     else onGenerationClose?.();
-  }
-
-  function cancelGeneration() {
-    if (job.current) void window.inflow!.cancel(job.current).catch(failure => {
-      setError(failure instanceof Error ? failure.message : "Generation could not be cancelled.");
-    });
   }
 
   const wordCount = artifact ? artifact.sentences.map(textOf).join(" ").trim().split(/\s+/u).filter(Boolean).length : 0;
@@ -178,7 +107,7 @@ export default function ArtifactLibrary({
                       </select>
                     </label>
                     <label>Open saved story
-                  <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; event.currentTarget.closest("details")?.removeAttribute("open"); if (id) void openStory(id); }}>
+                  <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; event.currentTarget.closest("details")?.removeAttribute("open"); if (id) void open(id); }}>
                     <option value="">Choose a saved story</option>{visibleArtifacts.map(item => <option key={item.id} value={item.id}>{languageName(item.language)} · {item.title}</option>)}
                   </select>
                     </label>
@@ -241,7 +170,7 @@ export default function ArtifactLibrary({
           </select>
         </label>
         <label>Saved stories
-        <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; if (id) void openStory(id); }}>
+        <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; if (id) void open(id); }}>
           <option value="">Choose a saved story</option>{visibleArtifacts.map(item => <option key={item.id} value={item.id}>{languageName(item.language)} · {item.title}</option>)}
         </select>
         </label>

@@ -28,7 +28,8 @@ async function run() {
   } : {
     segments: [{ start: 0, end: 2, text: 'Library fixture.', groups: ['Library fixture.'] }],
   }, async input => ({ title: input.topic || `${input.language === 'en' ? 'English' : 'Korean'} story`, requestedModel: 'fixture',
-    sentences: [{ parts: [{ text: input.targets[0].lemma, targetId: input.targets[0].id }], translationZh: '朋友' }],
+    sentences: [{ parts: [{ text: input.targets[0].lemma, targetId: input.targets[0].id }], translationZh: '朋友' },
+      ...(artifactMode ? [{ parts: [{ text: input.language === 'en' ? 'A second sentence.' : '두 번째 문장.', targetId: null }], translationZh: '第二句。' }] : [])],
   }));
   const wav = Buffer.alloc(44 + 64000);
   wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVE', 8); wav.write('fmt ', 12);
@@ -39,7 +40,10 @@ async function run() {
     await fs.writeFile(sample, wav);
     await ops.transcribe((await ops.importMedia(sample, language)).id, `seed-${language}`);
     const word = ops.saveVocabulary({ language, lemma: language === 'en' ? 'friend' : '친구', meaningZh: '朋友' });
-    await ops.generateArtifact([word.id], '', `story-${language}`, 'fixture');
+    const story = await ops.generateArtifact([word.id], '', `story-${language}`, 'fixture');
+    if (artifactMode && language === 'en') ops.saveVocabulary({ language, lemma: 'second', meaningZh: '第二', context: {
+      surface: 'second', sentence: 'A second sentence.', source: { type: 'artifact', artifactId: story.id, sentenceIndex: 1, name: story.title },
+    } });
   }
   if (!artifactMode) ops.close();
   let holdOpen = false, failGeneration = false;
@@ -104,6 +108,20 @@ async function run() {
     await wait(`document.querySelector('.story-sentences')?.dataset.artifactId === ${JSON.stringify(english.id)}`);
     await click('.workspace-topnav button', 'Library'); await click('.workspace-library-item', 'STORYEnglish story');
     await consistent(english);
+    await click('button[aria-label="Next sentence"]');
+    await wait('document.querySelector("#artifact-sentence-1")?.getAttribute("aria-current") === "location"');
+    await click('button[aria-label="Show Chinese translation"]');
+    await wait('document.querySelector(".story-translation")?.textContent === "第二句。"');
+    await evaluate(`(() => { const el=document.querySelector('select[aria-label="Filter saved stories"]'); el.value='en'; el.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await chooseStory(english); await consistent(english);
+    await wait('document.querySelector("#artifact-sentence-0")?.getAttribute("aria-current") === "location" && !document.querySelector(".story-translation")');
+    assert.equal(await evaluate('document.querySelector("select[aria-label=\\"Filter saved stories\\"]").value'), 'en');
+    await evaluate(`(() => { const el=document.querySelector('select[aria-label="Filter saved stories"]'); el.value='all'; el.dispatchEvent(new Event('change',{bubbles:true})); })()`);
+    await click('.workspace-topnav button', 'Vocab');
+    await click('.vocab-row', 'second');
+    await click('.vocab-open-source'); await consistent(english);
+    await wait('document.querySelector("#artifact-sentence-1")?.getAttribute("aria-current") === "location"');
+    assert.equal(await evaluate('document.querySelectorAll(".story-translation").length'), 0);
     await chooseStory(korean); await consistent(korean);
     await collect(korean, 'Draft to retain');
     await chooseStory(english);
@@ -148,7 +166,7 @@ async function run() {
     assert.equal(ops.restoreArtifact().id, generated.id);
     assert.equal(errors.length, 0, errors.join('\n'));
     await fs.writeFile(path.join(output, 'result.json'), JSON.stringify({ passed: true, artifact: generated.id, lookupInputs, errors }, null, 2));
-    console.log(`PASS: shared Story restoration, history/Library navigation, draft protection, generation failure/retry and vocabulary provenance.\nEvidence: ${output}`);
+    console.log(`PASS: owned Story restoration, history/Library/vocabulary-source navigation, reader-local resets/filtering, draft protection, generation failure/retry and vocabulary provenance.\nEvidence: ${output}`);
     ops.close(); app.quit(); return;
   }
   window.setContentSize(1440, 900); window.show(); window.focus(); window.webContents.focus();

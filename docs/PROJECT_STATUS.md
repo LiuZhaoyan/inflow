@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-08
+Last verified: 2026-10-09
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -36,7 +36,7 @@ SQLite        Python worker        DeepSeek API
 
 Electron loads a static Next.js export. Managed media is served through the custom `inflow://` protocol with byte-range support for seeking and sentence playback. No local HTTP server is required by the desktop runtime.
 
-LearningWorkspace owns the Learning artifact list and active Learning artifact used by the Story reader, Library selection and vocabulary collection. ArtifactLibrary updates this shared state directly and retains reader-local sentence selection, translation visibility and filtering. [Shared-state verification](../.scratch/artifact-state/spec.md) covers the refactor; [overlapping Story request reproduction](../.scratch/artifact-state/issues/01-reproduce-story-request-ordering.md) is a separate TODO and is not a confirmed ordinary-runtime bug.
+LearningWorkspace owns Learning artifact state through useLearningArtifacts, which handles restoration, source/history opening, generation and cancellation behind shared snapshots and commands. ArtifactLibrary no longer owns host orchestration or paired shared-state updates; it retains sentence selection, translation visibility, filtering, topic and scrolling. Library selection and vocabulary collection consume the same accepted artifact. [Flow ownership and verification](../.scratch/artifact-state/issues/02-evaluate-story-flow-deepening.md) covers native restoration, opening, draft protection, generation failure/retry and provenance. The separate [ordering investigation](../.scratch/artifact-state/request-ordering-report.md) remains a bounded negative result in ordinary scripted use, with renderer/persistence divergence under controlled reply delays; this refactor preserves that behavior.
 
 ## 3. Implemented learning domains
 

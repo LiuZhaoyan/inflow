@@ -5,7 +5,7 @@ Status: implemented
 
 ## Scope
 
-LearningWorkspace owns the Learning artifact list and active Learning artifact. ArtifactLibrary reads these values directly and updates the same owner during restoration, source navigation, history selection and generation. LibraryDrawer and vocabulary collection consume this shared state.
+LearningWorkspace owns the Learning artifact state through useLearningArtifacts. That module performs restoration, source navigation, history opening and generation, and exposes shared snapshots and commands. ArtifactLibrary reads the snapshots and invokes commands; LibraryDrawer and vocabulary collection consume the same artifact selection.
 
 Remove the reader's duplicate state and paired synchronization calls. Keep reader-local sentence selection, translation visibility, history filtering, scrolling and generation controls. Preserve the existing draft checks, request completion behavior, DesktopBridge contract and SQLite storage.
 
@@ -19,7 +19,13 @@ Remove the reader's duplicate state and paired synchronization calls. Keep reade
 
 ## Deferred work
 
-[Reproduce overlapping Story requests](issues/01-reproduce-story-request-ordering.md) before deciding whether request ordering needs a separate fix. No request-ordering fix belongs to this refactor.
+Request-ordering changes are outside the approved shared-state refactor.
+
+## Flow ownership — 2026-10-09
+
+[Artifact #02](issues/02-evaluate-story-flow-deepening.md) completes the follow-up flow deepening approved on 2026-10-09. The workspace-level owner holds the artifact list, accepted selection, load/error/busy state and generation job. The reader no longer calls Story DesktopBridge operations or synchronizes shared state through paired setters. Sentence selection, translation visibility, filtering, topic and scrolling remain reader-local; accepted source metadata identifies the sentence to show.
+
+The desktop build, type checking, focused ESLint and host artifact-cycle test passed. Extended [native acceptance](../desktop-learning/generated-samples/library-native-nSjlAh/result.json) covers restoration, both opening paths, vocabulary-source navigation, reader resets/filter preservation, draft protection, generation failure/retry, provenance and reload. The [ordering check](../desktop-learning/generated-samples/ordering-native-eAiwO3/result.json) passed all eight scenarios and fresh-process restarts, retaining the previously recorded delay-related divergences. No request-ordering, IPC or SQLite behavior was changed.
 
 ## Verification — 2026-10-08
 
