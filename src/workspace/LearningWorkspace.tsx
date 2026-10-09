@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { validateSegments, type Segment } from '@/listening/processing';
 import { defaultVideoMaskColor, initialVideoMask, type VideoMask } from '@/listening/video-mask';
 import { managedMediaUrl, type ApplicationSettings, type CredentialStatus, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type VocabularyContext, type VocabularyEntry, type PlaybackMode } from '@/listening/desktop';
@@ -17,10 +17,29 @@ import SettingsDialog from '@/workspace/SettingsDialog';
 import { useLearningArtifacts } from '@/workspace/useLearningArtifacts';
 import '@/workspace/workspace.css';
 
+const measureStage = (column: HTMLDivElement | null) => ({
+  height: column?.querySelector<HTMLElement>('.workspace-video-stage')?.clientHeight ?? 180,
+  max: Math.min(720, Math.max(140, (column?.clientHeight ?? 600) - 260)),
+});
+const measureContext = (grid: HTMLElement | null) => ({
+  width: grid?.querySelector<HTMLElement>('.workspace-context-panel')?.clientWidth ?? 280,
+  max: Math.min(480, Math.max(240, (grid?.clientWidth ?? 1000) - 520)),
+});
+const defaultVideoRatio = 16 / 9;
+
 export default function LearningWorkspace() {
   const media = useRef<HTMLMediaElement | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const transcript = useRef<HTMLParagraphElement>(null);
+  const mainColumn = useRef<HTMLDivElement>(null);
+  const contentGrid = useRef<HTMLElement>(null);
+  const contextDrag = useRef<{ id: number; x: number; width: number } | null>(null);
+  const [contextWidth, setContextWidth] = useState<number>();
+  const [contextSize, setContextSize] = useState({ width: 280, max: 480 });
+  const stageDrag = useRef<{ id: number; y: number; height: number } | null>(null);
+  const [stageHeight, setStageHeight] = useState<number>();
+  const [stageSize, setStageSize] = useState({ height: 180, max: 180 });
+  const [videoRatio, setVideoRatio] = useState(defaultVideoRatio);
   const processing = useRef<AbortController | null>(null);
   const translating = useRef<AbortController | null>(null);
   const autoProcess = useRef('');
@@ -66,6 +85,23 @@ export default function LearningWorkspace() {
   const segment = segments[index] ?? null;
   const video = !!file && (file.type.startsWith('video/') || /\.(mp4|webm|mov)$/i.test(file.name));
   const canPlay = !!src && ready && duration > 0 && duration <= 600;
+  useEffect(() => {
+    const column = mainColumn.current;
+    const stage = column?.querySelector<HTMLElement>('.workspace-video-stage');
+    const grid = contentGrid.current;
+    const context = grid?.querySelector<HTMLElement>('.workspace-context-panel');
+    if (!column || !stage || !grid || !context) return;
+    const observer = new ResizeObserver(() => {
+      if (!column.clientHeight) return;
+      setStageSize(measureStage(column));
+      if (grid.clientWidth > 860) setContextSize(measureContext(grid));
+    });
+    observer.observe(column); observer.observe(stage);
+    observer.observe(grid); observer.observe(context);
+    return () => observer.disconnect();
+  }, []);
+  const resizeStage = (height: number) => setStageHeight(Math.max(140, Math.min(measureStage(mainColumn.current).max, height)));
+  const resizeContext = (width: number) => setContextWidth(Math.max(240, Math.min(measureContext(contentGrid.current).max, width)));
   const resetSentence = useCallback(() => {
     if (vocabularySelection.current?.beforeChange() === false) return;
     setMaskEditing(false); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
@@ -76,6 +112,7 @@ export default function LearningWorkspace() {
     if (vocabularySelection.current?.beforeChange() === false) return false;
     processing.current?.abort(); translating.current?.abort(); media.current?.pause(); autoProcess.current = '';
     setSavedMedia(next); setFile({ name: next.name, type: next.video ? 'video/' : 'audio/' });
+    setStageHeight(undefined); setVideoRatio(defaultVideoRatio);
     setSrc(next.missing || next.learning.duration > 600 ? '' : managedMediaUrl(next.id));
     setReady(false); setDuration(next.learning.duration); setPosition(next.learning.position); setIndex(next.learning.index);
     setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments); setMasks(next.learning.masks ?? {});
@@ -224,6 +261,7 @@ export default function LearningWorkspace() {
       if (choice !== fileChoice.current) { URL.revokeObjectURL(url); return; }
       processing.current?.abort(); translating.current?.abort(); media.current?.pause();
       setSavedMedia(null); setFile(next); setSrc(url); setReady(false); setDuration(length); setPosition(0); setPlaying(false);
+      setStageHeight(undefined); setVideoRatio(defaultVideoRatio);
       setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setMasks({}); setVideoMask(undefined); setVideoMaskEditing(false); setBusy(false); setError(''); setShowContext(false); resetSentence();
       autoProcess.current = url; setContentKind('media'); setView('video'); setLibraryOpen(false);
     } catch (failure) {
@@ -401,7 +439,6 @@ export default function LearningWorkspace() {
   }, [view, busy, editing, contentKind, savedMedia, index, maskEditing, activeArtifact]);
 
   const status = <div className="workspace-status">
-    <span title={file?.name}>{file?.name || '支持音频与视频 · 50 MB / 10 分钟以内'}</span>
     {file && (busy ? <><span role="status">正在转写与切句…</span><button onClick={() => { processing.current?.abort(); setBusy(false); }}>取消处理</button></> : <button disabled={!canPlay || editing} onClick={() => void processMedia()}>{segments.length ? '重新处理' : '开始处理 / 重试'}</button>)}
     {savedMedia?.missing && <button onClick={() => void openSaved(savedMedia.id, true)}>重新关联媒体</button>}
   </div>;
@@ -410,12 +447,46 @@ export default function LearningWorkspace() {
     <TopNav activeView={view} libraryOpen={libraryOpen} settingsOpen={settingsOpen} onOpenSettings={openSettings} onOpenLibrary={() => { if (allowChange()) setLibraryOpen(true); }} onShowVideo={() => { if (allowChange()) setView('video'); }} onShowVocab={showVocab}/>
     <input className="file-input" ref={picker} type="file" accept="audio/*,video/*,.m4a,.mp3,.mp4,.wav,.webm,.ogg,.flac,.aac,.mov" aria-label="选择音频或视频" onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = ''; }}/>
     {error && <p className="notice workspace-notice" role="alert">{error}</p>}
-    <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
-      <div className="workspace-main-column">
-        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
+    <main className="workspace-content-grid" ref={contentGrid} style={{ '--workspace-context-width': contextWidth === undefined ? undefined : `${contextWidth}px` } as CSSProperties} hidden={view !== 'video' || contentKind !== 'media'}>
+      <div className="workspace-main-column" ref={mainColumn} style={{ '--workspace-stage-height': stageHeight === undefined ? undefined : `${stageHeight}px`, '--workspace-video-ratio': videoRatio } as CSSProperties}>
+        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>导入媒体</button>}
+        <div className="workspace-stage-divider" role="separator" tabIndex={0} aria-label="Resize video and sentence areas" aria-orientation="horizontal" aria-valuemin={140} aria-valuemax={stageSize.max} aria-valuenow={stageSize.height}
+          onPointerDown={event => {
+            if (event.button !== 0) return;
+            event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
+            stageDrag.current = { id: event.pointerId, y: event.clientY, height: measureStage(mainColumn.current).height };
+          }}
+          onPointerMove={event => {
+            const drag = stageDrag.current;
+            if (drag?.id === event.pointerId) resizeStage(drag.height + event.clientY - drag.y);
+          }}
+          onPointerUp={() => { stageDrag.current = null; }} onPointerCancel={() => { stageDrag.current = null; }} onLostPointerCapture={() => { stageDrag.current = null; }}
+          onKeyDown={event => {
+            if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const current = measureStage(mainColumn.current);
+            resizeStage(event.key === 'Home' ? 140 : event.key === 'End' ? current.max : current.height + (event.key === 'ArrowUp' ? -1 : 1) * (event.shiftKey ? 40 : 10));
+          }}/>
         <SentenceArea segment={segment} index={index} total={segments.length} language={savedMedia?.language ?? 'ko'} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} maskedGroups={maskedGroups} maskEditing={maskEditing} onToggleMaskEditing={toggleMaskEditing} onToggleGroup={toggleGroup} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
       </div>
+      <div className="workspace-context-divider" role="separator" tabIndex={0} aria-label="Resize Context panel" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={contextSize.max} aria-valuenow={contextSize.width}
+        onPointerDown={event => {
+          if (event.button !== 0) return;
+          event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
+          contextDrag.current = { id: event.pointerId, x: event.clientX, width: measureContext(contentGrid.current).width };
+        }}
+        onPointerMove={event => {
+          const drag = contextDrag.current;
+          if (drag?.id === event.pointerId) resizeContext(drag.width + drag.x - event.clientX);
+        }}
+        onPointerUp={() => { contextDrag.current = null; }} onPointerCancel={() => { contextDrag.current = null; }} onLostPointerCapture={() => { contextDrag.current = null; }}
+        onKeyDown={event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const current = measureContext(contentGrid.current);
+          resizeContext(event.key === 'Home' ? 240 : event.key === 'End' ? current.max : current.width + (event.key === 'ArrowLeft' ? 1 : -1) * (event.shiftKey ? 40 : 10));
+        }}/>
       <ContextPanel segments={segments} language={savedMedia?.language ?? 'ko'} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>
     <section className="workspace-story" hidden={view !== 'video' || contentKind !== 'story'} aria-label="Story workspace">

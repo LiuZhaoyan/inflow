@@ -14,6 +14,7 @@ export default function VideoStage({
   duration,
   position,
   onSeek,
+  onVideoDimensions,
   status,
   videoMask,
   videoMaskColor = defaultVideoMaskColor,
@@ -30,6 +31,7 @@ export default function VideoStage({
   duration: number;
   position: number;
   onSeek: (time: number) => void;
+  onVideoDimensions?: (width: number, height: number) => void;
   status?: ReactNode;
   videoMask?: VideoMask;
   videoMaskColor?: string;
@@ -78,7 +80,11 @@ export default function VideoStage({
   return <section className="workspace-video-stage-wrap" aria-label="Media player">
     <div className="workspace-video-stage" ref={stage}>
       {src && video ? <video ref={element => { videoElement.current = element; mediaRef(element); }} {...mediaProps} src={src} playsInline aria-label={name || 'Video player'}
-        onLoadedMetadata={event => { updatePicture(); mediaProps.onLoadedMetadata?.(event); }}
+        onLoadedMetadata={event => {
+          updatePicture();
+          onVideoDimensions?.(event.currentTarget.videoWidth, event.currentTarget.videoHeight);
+          mediaProps.onLoadedMetadata?.(event);
+        }}
         onResize={updatePicture}/> : src ? <>
         <audio ref={mediaRef} {...mediaProps} src={src} className="workspace-audio-element" aria-hidden="true" tabIndex={-1}/>
         <div className="workspace-audio-card" aria-label={`Audio: ${name}`} role="img">
@@ -102,17 +108,19 @@ export default function VideoStage({
         </div>
       </div>}
     </div>
-    {src && video && <div className="workspace-video-mask-controls">
-      <button type="button" aria-label="Hide video subtitles" aria-pressed={videoMask?.enabled ?? false} onClick={onToggleMask}>遮挡字幕</button>
-      {videoMask?.enabled && <button type="button" aria-label={maskEditing ? 'Finish subtitle mask adjustment' : 'Adjust subtitle mask'} aria-pressed={maskEditing} onClick={onToggleMaskEditing}>{maskEditing ? '完成调整' : '调整区域'}</button>}
-      {maskEditing && <span>拖动区域移动，拖动边缘调整大小；方向键可微调，播放后可实时调整。</span>}
-    </div>}
     <div className="workspace-progress">
       <input type="range" min="0" max={duration || 1} step="0.01" value={Math.min(value, duration || 1)} disabled={!src || !duration} aria-label="Playback position"
         style={{ background: `linear-gradient(90deg, var(--workspace-accent) ${progress}%, var(--workspace-line) ${progress}%)` }}
         onChange={event => onSeek(Number(event.target.value))}/>
       <span className="workspace-timecode">{formatTime(value)} <span aria-hidden="true">/</span> {formatTime(duration)}</span>
     </div>
-    {status && <div className="workspace-stage-status">{status}</div>}
+    {status && <div className="workspace-stage-status">
+      {src && video && <div className="workspace-video-mask-controls">
+        <button type="button" aria-label="Hide video subtitles" aria-pressed={videoMask?.enabled ?? false} onClick={onToggleMask}>遮挡字幕</button>
+        {videoMask?.enabled && <button type="button" aria-label={maskEditing ? 'Finish subtitle mask adjustment' : 'Adjust subtitle mask'} aria-pressed={maskEditing} onClick={onToggleMaskEditing}>{maskEditing ? '完成调整' : '调整区域'}</button>}
+        {maskEditing && <span>拖动区域移动，拖动边缘调整大小；方向键可微调，播放后可实时调整。</span>}
+      </div>}
+      {status}
+    </div>}
   </section>;
 }
