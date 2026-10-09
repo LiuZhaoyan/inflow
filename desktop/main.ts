@@ -23,7 +23,10 @@ if (app.isPackaged) {
 }
 let operations: DesktopOperations;
 const modelJobs = new Map<string, AbortController>();
-const trustedUrl = (value: string) => { const url = new URL(value); return url.protocol === 'inflow:' && url.host === 'app' && url.pathname === '/'; };
+const trustedUrl = (value: string) => {
+  try { const url = new URL(value); return url.protocol === 'inflow:' && url.host === 'app' && url.pathname === '/' && !url.username && !url.password; }
+  catch { return false; }
+};
 
 async function start() {
   operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text, language) => runProcessor(mode, signal, file, text, root, language));
@@ -74,9 +77,18 @@ async function start() {
     modelStatus: () => runProcessor('models', new AbortController().signal) as Promise<ModelStatus>,
     setupModels: async (job: string, components?: string[]) => {
       if (typeof job !== 'string' || !/^[\w-]{1,100}$/.test(job) || modelJobs.has(job)) throw new Error('处理编号无效。');
+      if (components !== undefined && (!Array.isArray(components) || components.length > 3 ||
+        Array.from(components).some(component => !['whisper', 'translate', 'english-parser'].includes(component)) || new Set(components).size !== components.length)) throw new Error('模型组件无效。');
       const controller = new AbortController();
       modelJobs.set(job, controller);
-      try { return await runProcessor('setup', controller.signal, undefined, components, root) as ModelStatus; }
+      try {
+        const result = await runProcessor('setup', controller.signal, undefined, components, root) as ModelStatus;
+        if (controller.signal.aborted) throw new Error('处理已取消。');
+        return result;
+      } catch (error) {
+        if (controller.signal.aborted) throw new Error('处理已取消。');
+        throw error;
+      }
       finally { modelJobs.delete(job); }
     },
     cancel: (job: string) => { modelJobs.get(job)?.abort(); operations.cancel(job); },
