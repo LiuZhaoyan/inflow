@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { LearningArtifact, SavedMedia, SourceLanguage } from '@/listening/desktop';
+import Dropdown from '@/workspace/Dropdown';
 
 const formatTime = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`;
 
@@ -68,21 +69,11 @@ export default function LibraryDrawer({
     </div>
     <div className="workspace-library-toolbar">
       <label className="workspace-library-search"><span className="workspace-sr-only">Search library by name</span><input ref={filterInput} type="search" value={filter} onChange={event => setFilter(event.target.value)} placeholder="Search library"/></label>
-      <details className="workspace-library-filter" data-active={languageFilter !== 'all'}>
-        <summary className="workspace-icon-button" aria-label="Filter library by language" title={languageFilter === 'all' ? 'Filter library by language' : `Language: ${languageName(languageFilter)}`}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>
-        </summary>
-        <div className="workspace-library-filter-menu">
-          <strong>Language</strong>
-          <div className="workspace-library-filters" role="group" aria-label="Filter library by source language">
-            {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={event => {
-              setLanguageFilter(item.id as 'all' | SourceLanguage);
-              const menu = event.currentTarget.closest('details');
-              menu?.removeAttribute('open'); menu?.querySelector('summary')?.focus();
-            }}>{item.label}<span>{languageCounts[item.id as 'all' | SourceLanguage]}</span></button>)}
-          </div>
-        </div>
-      </details>
+      <Dropdown label="Filter library by language" className={`workspace-library-filter${languageFilter !== 'all' ? ' is-active' : ''}`} title={languageFilter === 'all' ? 'Filter library by language' : `Language: ${languageName(languageFilter)}`} trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>} value={languageFilter} options={[
+        { value: 'all', label: `All (${languageCounts.all})` },
+        { value: 'ko', label: `Korean (${languageCounts.ko})` },
+        { value: 'en', label: `English (${languageCounts.en})` },
+      ]} onChange={setLanguageFilter}/>
     </div>
     <div className="workspace-library-count">{languageFilter === 'all' ? 'All languages' : languageName(languageFilter)}</div>
     <ul className="workspace-library-list">

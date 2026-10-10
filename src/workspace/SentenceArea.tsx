@@ -1,5 +1,6 @@
 "use client";
 
+import Dropdown from "@/workspace/Dropdown";
 import type { Ref } from 'react';
 import type { Segment } from '@/listening/processing';
 import type { PlaybackMode, SourceLanguage } from '@/listening/desktop';
@@ -79,7 +80,7 @@ export default function SentenceArea({
       {segment && maskEditing && <span className="workspace-mask-summary" id="sentence-mask-summary" role="status">{maskedGroups.length} / {segment.groups.length} masked</span>}
       <button type="button" className="workspace-mask-toggle" disabled={!segment} aria-pressed={maskEditing} aria-describedby={maskEditing ? 'sentence-mask-summary' : undefined} onClick={onToggleMaskEditing}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M7 12h10"/></svg>
-        Set masks
+        <span>{maskEditing ? 'Done editing' : 'Set masks'}</span>
       </button>
     </div>
     <div className="workspace-sentence-copy" key={segment ? `${segment.start}-${segment.text}` : 'empty'}>
@@ -120,9 +121,7 @@ export default function SentenceArea({
           <button type="button" aria-pressed={mode === 'sentence'} disabled={!segment} onClick={() => onModeChange('sentence')}>Sentence</button>
         </fieldset>
         <div className="workspace-sentence-tools">
-          <label><span className="workspace-sr-only">Speed</span><select aria-label="Playback speed" value={rate} onChange={event => onRateChange(Number(event.target.value))}>
-            {[0.5, 0.75, 1, 1.25, 1.5, 2].map(value => <option key={value} value={value}>{value}×</option>)}
-          </select></label>
+          <Dropdown label="Playback speed" value={String(rate)} direction="up" options={[0.5, 0.75, 1, 1.25, 1.5, 2].map(value => ({ value: String(value), label: value + "×" }))} onChange={value => onRateChange(Number(value))}/>
           <button type="button" aria-label={loop ? 'Turn sentence loop off' : 'Loop sentence'} title={loop ? 'Turn sentence loop off' : 'Loop sentence'} aria-pressed={loop} disabled={!segment || mode === 'full'} onClick={() => onLoopChange(!loop)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3"/></svg><span>Loop</span>
           </button>

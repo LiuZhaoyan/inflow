@@ -1,5 +1,6 @@
 "use client";
 
+import Dropdown from "@/workspace/Dropdown";
 import { useEffect, useState } from 'react';
 import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
 import SourceThumbnail from '@/workspace/SourceThumbnail';
@@ -23,7 +24,7 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
   }}>
     <h2>{draft.id ? 'Edit vocabulary' : 'Add vocabulary'}</h2>
     <fieldset disabled={busy}>
-      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? 'English' : 'Korean'}</span></p> : <label>Confirm source language<select name="language" value={language} onChange={event => setLanguage(event.target.value as SourceLanguage)}><option value="ko">Korean</option><option value="en">English</option></select></label>}
+      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? 'English' : 'Korean'}</span></p> : <label>Confirm source language<Dropdown label="Source language" value={language} options={[{ value: "ko", label: "Korean" }, { value: "en", label: "English" }]} onChange={setLanguage}/></label>}
       <label>Dictionary form<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
       <label>Chinese meaning<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
       <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? 'Saving…' : 'Save vocabulary'}</button><button type="button" onClick={onCancel}>Cancel</button></div>
@@ -171,25 +172,11 @@ export default function VocabularyNotebook({
             {item.label}<span>{counts[item.id]}</span>
           </button>)}
         </div>
-        <details className="vocab-language-filter" data-active={languageFilter !== 'all'} onKeyDown={event => {
-          if (event.key === 'Escape' && event.currentTarget.open) {
-            event.preventDefault(); event.stopPropagation(); event.currentTarget.removeAttribute('open'); event.currentTarget.querySelector('summary')?.focus();
-          }
-        }}>
-          <summary aria-label="Filter vocabulary by language" title={languageFilter === 'all' ? 'Filter vocabulary by language' : `Language: ${languageFilter === 'en' ? 'English' : 'Korean'}`}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>
-          </summary>
-          <div className="vocab-language-filter-menu">
-            <strong>Language</strong>
-            <div className="vocab-language-filters" role="group" aria-label="Filter vocabulary by source language">
-              {[{ id: 'all', label: 'All' }, { id: 'ko', label: 'Korean' }, { id: 'en', label: 'English' }].map(item => <button type="button" key={item.id} aria-pressed={languageFilter === item.id} onClick={event => {
-                setLanguageFilter(item.id as LanguageFilter);
-                const menu = event.currentTarget.closest('details');
-                menu?.removeAttribute('open'); menu?.querySelector('summary')?.focus();
-              }}>{item.label}<span>{languageCounts[item.id as LanguageFilter]}</span></button>)}
-            </div>
-          </div>
-        </details>
+        <Dropdown label="Filter vocabulary by language" className={`vocab-language-filter${languageFilter !== 'all' ? ' is-active' : ''}`} title={languageFilter === 'all' ? 'Filter vocabulary by language' : `Language: ${languageFilter === 'en' ? 'English' : 'Korean'}`} trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>} value={languageFilter} options={[
+          { value: 'all', label: `All (${languageCounts.all})` },
+          { value: 'ko', label: `Korean (${languageCounts.ko})` },
+          { value: 'en', label: `English (${languageCounts.en})` },
+        ]} onChange={setLanguageFilter}/>
       </div>
       {error && <p className="vocab-error" role="alert">{error}</p>}
       <div className="vocab-rows" aria-live="polite">

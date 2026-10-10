@@ -1,5 +1,6 @@
 "use client";
 
+import Dropdown from "@/workspace/Dropdown";
 import { useEffect, useRef, useState } from "react";
 import "@/workspace/story.css";
 import type { CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
@@ -102,14 +103,10 @@ export default function ArtifactLibrary({
                 {onRequestGenerate && <button type="button" onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); onRequestGenerate(); }}>Generate a story</button>}
                   {!!artifacts.length && <>
                     <label>Filter saved stories
-                      <select aria-label="Filter saved stories" value={historyLanguage} onChange={event => setHistoryLanguage(event.currentTarget.value as "all" | SourceLanguage)}>
-                        <option value="all">All</option><option value="ko">Korean</option><option value="en">English</option>
-                      </select>
+                      <Dropdown label="Filter saved stories" value={historyLanguage} options={[{ value: "all", label: "All" }, { value: "ko", label: "Korean" }, { value: "en", label: "English" }]} onChange={setHistoryLanguage}/>
                     </label>
                     <label>Open saved story
-                  <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; event.currentTarget.closest("details")?.removeAttribute("open"); if (id) void open(id); }}>
-                    <option value="">Choose a saved story</option>{visibleArtifacts.map(item => <option key={item.id} value={item.id}>{languageName(item.language)} · {item.title}</option>)}
-                  </select>
+                  <Dropdown label="Open saved story" value="" placeholder="Choose a saved story" options={visibleArtifacts.map(item => ({ value: item.id, label: languageName(item.language) + " · " + item.title }))} onChange={id => { if (id) { void open(id); document.querySelector<HTMLDetailsElement>(".story-options[open]")?.removeAttribute("open"); } }}/>
                     </label>
                   </>}
               </div>
@@ -165,14 +162,10 @@ export default function ArtifactLibrary({
       <p>{loaded ? "Saved stories remain available for offline reading." : "Reading saved stories from this device."}</p>
       {!!artifacts.length && <>
         <label>Filter saved stories
-          <select aria-label="Filter saved stories" value={historyLanguage} onChange={event => setHistoryLanguage(event.currentTarget.value as "all" | SourceLanguage)}>
-            <option value="all">All</option><option value="ko">Korean</option><option value="en">English</option>
-          </select>
+          <Dropdown label="Filter saved stories" value={historyLanguage} options={[{ value: "all", label: "All" }, { value: "ko", label: "Korean" }, { value: "en", label: "English" }]} onChange={setHistoryLanguage}/>
         </label>
         <label>Saved stories
-        <select aria-label="Open saved story" value="" onChange={event => { const id = event.currentTarget.value; if (id) void open(id); }}>
-          <option value="">Choose a saved story</option>{visibleArtifacts.map(item => <option key={item.id} value={item.id}>{languageName(item.language)} · {item.title}</option>)}
-        </select>
+        <Dropdown label="Open saved story" value="" placeholder="Choose a saved story" options={visibleArtifacts.map(item => ({ value: item.id, label: languageName(item.language) + " · " + item.title }))} onChange={id => { if (id) { void open(id); document.querySelector<HTMLDetailsElement>(".story-options[open]")?.removeAttribute("open"); } }}/>
         </label>
       </>}
       {onRequestGenerate && <button type="button" onClick={onRequestGenerate}>Generate a story</button>}

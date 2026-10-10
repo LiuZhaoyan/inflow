@@ -16,7 +16,7 @@
 }
 .vocab-workspace * { box-sizing:border-box; }
 .vocab-workspace button { color:inherit; font:inherit; -webkit-tap-highlight-color:transparent; }
-.vocab-workspace button:focus-visible,.vocab-workspace input:focus-visible,.vocab-workspace select:focus-visible,.vocab-workspace textarea:focus-visible,.vocab-language-filter>summary:focus-visible {
+.vocab-workspace button:focus-visible,.vocab-workspace input:focus-visible,.vocab-workspace select:focus-visible,.vocab-workspace textarea:focus-visible {
   outline:2px solid var(--vocab-accent);
   outline-offset:2px;
 }
@@ -93,18 +93,10 @@
 .vocab-filters button span { color:#a2a0ad; font-size:12px; }
 .vocab-filters button[aria-pressed="true"] { border-color:var(--vocab-accent); background:#211b2d; color:#e8d9ff!important; }
 .vocab-filters button[aria-pressed="true"] span { color:#d9baff; }
-.vocab-language-filter { position:relative; flex:none; }
-.vocab-language-filter>summary { width:45px; height:45px; display:grid; place-items:center; border:1px solid var(--workspace-control-line); border-radius:9px; background:var(--workspace-raised); color:var(--vocab-muted); list-style:none; cursor:pointer; }
-.vocab-language-filter>summary::-webkit-details-marker { display:none; }
-.vocab-language-filter>summary svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
-.vocab-language-filter[data-active="true"]>summary { border-color:var(--vocab-accent); background:var(--workspace-accent-soft); color:var(--vocab-accent); }
-.vocab-language-filter-menu { position:absolute; right:0; top:calc(100% + 8px); z-index:1; width:190px; padding:12px; border:1px solid var(--workspace-control-line); border-radius:4px; background:var(--vocab-panel); box-shadow:0 8px 24px #0006; }
-.vocab-language-filter-menu>strong { display:block; margin-bottom:8px; color:var(--vocab-muted); font-size:12px; font-weight:550; }
-.vocab-language-filters { display:grid; gap:6px; }
-.vocab-language-filters button { min-height:38px; display:flex; align-items:center; gap:6px; padding:0 9px; border:1px solid #30313a; border-radius:8px; background:#18191f; color:#c5c3cf!important; font-size:12px!important; white-space:nowrap; }
-.vocab-language-filters button span { color:#a2a0ad; font-size:11px; }
-.vocab-language-filters button[aria-pressed="true"] { border-color:var(--vocab-accent); background:#211b2d; color:#e8d9ff!important; }
-.vocab-language-filters button[aria-pressed="true"] span { color:#d9baff; }
+.inflow-dropdown.vocab-language-filter>summary { width:45px; height:45px; min-height:0; padding:0; display:grid; place-items:center; border:1px solid var(--workspace-control-line); border-radius:9px; background:var(--workspace-raised); color:var(--vocab-muted); }
+.inflow-dropdown.vocab-language-filter>summary svg { width:18px; height:18px; stroke-width:1.6; }
+.inflow-dropdown.vocab-language-filter>summary:focus-visible { outline:2px solid var(--vocab-accent); outline-offset:2px; }
+.inflow-dropdown.vocab-language-filter.is-active>summary { border-color:var(--vocab-accent); background:var(--workspace-accent-soft); color:var(--vocab-accent); }
 .vocab-rows {
   min-height:0;
   flex:1;
