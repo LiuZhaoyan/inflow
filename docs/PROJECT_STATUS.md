@@ -67,6 +67,8 @@ The notebook now returns and highlights saved occurrence positions, retries fail
 
 ### Generated artifacts
 
+Vocabulary Contexts include both historical and newly generated stories by stable target entry ID. Each story appears once, showing the first marked target sentence and opening that sentence in Story. Collected occurrences remain stored for contextual lookup, while duplicate story cards are collapsed on read. Entry edits preserve links and historical target snapshots; deleting and recreating an entry does not inherit the old links. Successful generation refreshes the notebook without a database migration.
+
 Up to 20 selected vocabulary entries in one language can be sent to DeepSeek to generate one short passage in that language. Generation receives the selected lemma, contextual Chinese meaning, and available source sentence. Returned target IDs are structurally validated before the artifact and its language are saved. Filtering never omits selected targets from this check.
 
 Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.

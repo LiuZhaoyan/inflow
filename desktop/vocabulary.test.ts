@@ -178,8 +178,9 @@ test('transcript replacement atomically clears only its media sources and permit
     assert.deepEqual(generated.targets, [{ id: friend.id, lemma: friend.lemma, meaningZh: friend.meaningZh }]);
     const collected = app.saveVocabulary({ lemma: friend.lemma, meaningZh: friend.meaningZh, context: context(updated, '친구', 0) });
     assert.equal(collected.id, friend.id); assert.equal(collected.selected, true);
-    assert.equal(collected.contexts.length, 1);
+    assert.equal(collected.contexts.length, 2);
     assert.deepEqual(collected.contexts[0].source, context(updated, '친구', 0).source);
+    assert.equal(collected.contexts[1].source.type === 'artifact' && collected.contexts[1].source.artifactId, generated.id);
     assert.equal(app.listVocabulary().length, before.length);
   } finally { db?.close(); app.close(); await rm(root, { recursive: true, force: true }); }
 });
@@ -234,8 +235,10 @@ test('existing vocabulary rows gain language identity without losing historical 
     const extended = app.saveVocabulary({ lemma: corrected.lemma, meaningZh: corrected.meaningZh,
       context: { ...entries[1].contexts[1], surface: '그냥' } });
     assert.equal(extended.id, 'entry');
-    assert.equal(extended.contexts.length, 3);
-    assert.deepEqual(extended.contexts.slice(0, 2), entries[1].contexts);
+    assert.deepEqual(extended.contexts, entries[1].contexts);
+    const lookup = await app.lookupVocabulary({ language: 'ko', lemma: corrected.lemma, surface: '그냥', sentence: '그냥 그대로 있어.', start: 0,
+      source: { type: 'artifact', artifactId: 'artifact', sentenceIndex: 0, name: artifact.title } }, 'collected-lookup');
+    assert.equal(lookup.meaningZh, corrected.meaningZh);
     const expected = app.listVocabulary();
     app.close(); app = new DesktopOperations(root, processor);
     assert.deepEqual(app.listVocabulary(), expected);

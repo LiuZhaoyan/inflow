@@ -174,7 +174,7 @@ export default function LearningWorkspace() {
   const updateVocabularyEntries = useCallback((entries: VocabularyEntry[]) => {
     setVocabularyEntries(entries); setGenerationTargets(entries.filter(entry => entry.selected));
   }, []);
-  const learningArtifacts = useLearningArtifacts(desktop, allowChange);
+  const learningArtifacts = useLearningArtifacts(desktop, allowChange, () => setVocabularyRevision(value => value + 1));
   const { artifacts, selection: { artifact: activeArtifact } } = learningArtifacts;
   const sentenceKey = savedMedia?.segments[index]?.id ?? String(index);
   const maskedGroups = masks[sentenceKey] ?? [];

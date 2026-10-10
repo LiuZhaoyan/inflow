@@ -2,83 +2,73 @@
 
 Last updated: 2026-10-10
 
-This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
+This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); implemented capabilities and completed milestones belong in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
 ## Current direction
 
-The persistent desktop foundation already supports listening, vocabulary, generated artifacts, and their provenance. The next work should build on those capabilities rather than redesigning the backend around the current UI.
+The Korean and English desktop learning loops, frontend visual acceptance, Settings, and personal Windows installer have reached their recorded acceptance boundaries. See [Project Status](PROJECT_STATUS.md) and [the task index](../.scratch/README.md) for current implementation and completed evidence.
 
-The implemented learning loop now supports Korean and English. Frontend and Settings owner visual acceptance were recorded on 2026-10-09. English quality evaluation is postponed by owner choice; the next work is demand-driven development and release preparation:
+Next work is demand-driven quality improvement and release qualification rather than rebuilding the existing foundation.
 
-```text
-Media → Listening → Vocabulary → Generated Artifact → Vocabulary
-```
+## 1. Release qualification
 
-## 1. Frontend visual acceptance (completed)
+Before a broader packaged release:
 
-Owner visual acceptance was recorded on 2026-10-09. See [archived acceptance](../.scratch/archive/frontend-workspace/visual-acceptance.md). No active frontend visual-acceptance ticket remains.
+- Verify subtitle masking and Settings in the installed package, including an actual maximized window.
+- Consider clean-VM installation and broader media codec compatibility tests. These were outside the completed personal-installation acceptance boundary.
+- Preserve installed-app behavior, not merely source-checkout execution, as the release acceptance boundary.
 
-## 2. Broaden English quality evaluation (deferred)
+The prior [Windows packaging acceptance](../.scratch/archive/desktop-learning/windows-packaging-acceptance.md) provides the baseline.
 
-The [English Learning Support spec](../.scratch/archive/english-learning/implementation-and-acceptance.md) has been implemented for the source-checkout desktop application. [Acceptance](../.scratch/archive/english-learning/implementation-and-acceptance.md) covers the full loop and retained Korean data. The owner postponed broader quality improvement during rapid development. Future evaluation may:
+## 2. Quality evaluation
 
-- evaluate real-speaker English audio, accents and phrase grouping beyond the synthetic acceptance sample;
-- review more irregular/plural generated forms and topic adherence, preserving failures as evidence;
-- sample the fixed English–Chinese dictionary's coverage and candidate quality while retaining manual entry;
-- keep deterministic provider fixtures separate from live linguistic quality evidence.
+### English learning (deferred)
 
-English resources use the existing preparation workflow. Owner visual review and Windows packaging were completed separately; future language-quality evaluation is not a current blocker.
+Broader English quality evaluation is postponed by owner choice. When resumed:
 
-## 3. Revisit listening data only where the new UX requires it
+- Test real-speaker audio, varied accents, and phrase grouping beyond synthetic acceptance.
+- Review irregular and plural generated forms and topic adherence, preserving failures as evidence.
+- Sample offline English–Chinese dictionary coverage and candidate quality while retaining manual entry.
+- Keep deterministic provider fixtures separate from live linguistic quality evidence.
 
-The current persisted Segment model is sentence-level. Whisper produces word timestamps internally, but they are discarded after sentence construction.
+See [English acceptance and quality evidence](../.scratch/archive/english-learning/implementation-and-acceptance.md).
 
-Do not expand the data model merely because finer alignment exists. First determine whether the redesigned listening interaction needs word-level highlighting, word-level seeking, transcript correction, or another concrete feature that cannot be expressed with sentence timing plus meaning groups.
+### Translation and vocabulary
 
-If such a requirement is confirmed, define the migration and provenance behavior before persisting word alignment.
+Evaluate live cloud translations and offline dictionary candidates against representative Korean and English learning sentences. Local reference translations may be literal or lossy. Keep saved learning results independent of the current provider.
 
-## 4. Evaluate translation and dictionary quality
+Automatic contextual sense selection remains deferred. An optional cloud Jev selection from offline candidates would require explicit opt-in for automatic requests; offline choices and manual editing must remain available. Local JevEmbed deployment and evaluation are not planned.
 
-Listen now supports explicit cloud sentence translation with a latest-result cache and an explicit local reference fallback. Word collection uses bundled offline dictionary candidates and optional user-requested contextual glosses.
+## 3. Listening data: expand only for concrete UX needs
 
-Evaluate live cloud output and dictionary coverage against representative Korean and English learning sentences. Local reference translations can still be literal or lossy. Keep provider and model details outside the learning domain; saved results remain reusable independently of the current provider.
+The persisted Segment model remains sentence-level, without individual word timestamps.
 
-## 5. Package the Windows runtime
+Do not expand it merely because Whisper has finer alignment internally. First establish a concrete need such as word highlighting, word-level seeking, or transcript/timing correction. If confirmed, define migration and provenance behavior before persisting alignment.
 
-Goal: turn the source-checkout desktop application into a dependable personal-use Windows installation.
+## 4. Known architectural risk
 
-Completed on 2026-10-09: native worker packaging, a personal PowerShell installer, explicit profile-owned model setup, managed media/SQLite restoration, Chinese/spaced paths, cancellation, missing-media relinking and the complete installed learning cycle with authenticated generation.
+The [artifact request-ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) documents renderer/persistence divergence under controlled delayed replies. This remains unfixed and should be revisited when relevant work touches artifact state or request ordering.
 
-Installed-app behavior, not successful execution from the repository, is the acceptance boundary for this milestone.
+## 5. Deferred product opportunities
 
-Both [packaged-worker](../.scratch/archive/desktop-learning/windows-packaging-acceptance.md) and [installed learning-cycle](../.scratch/archive/desktop-learning/windows-packaging-acceptance.md) tickets are complete. The [delivery report](../.scratch/archive/desktop-learning/windows-packaging-acceptance.md) records the observed Windows prerequisites and developer-machine isolation boundary; clean-VM and broader codec qualification were not performed. Earlier foundation records remain archived in [the task index](../.scratch/README.md).
-
-## 6. Deferred product work
-
-On-demand manual subtitle-region masking is implemented and automated checks passed; [mask acceptance](../.scratch/archive/video-subtitles/implementation-and-acceptance.md) records the source-checkout boundary. Owner visual acceptance was recorded on 2026-10-09. Actual maximized-window verification is deferred; installed-package masking verification belongs to the next packaged release, not a new installation during rapid development. The owner removed subtitle extraction from this iteration on 2026-10-05; text-track reuse and audio alignment remain deferred with research retained in [Video Subtitle Support](../.scratch/archive/video-subtitles/implementation-and-acceptance.md). Automatic subtitle-region detection is also deferred.
-
-Future experiment: OCR for image-based subtitle tracks as another source of learning text. Evaluate Korean/English recognition accuracy, text cleanup, retained cue timing and Windows processing/resource requirements on representative samples before committing to implementation. This is a possible future path, outside the first subtitle-reuse version; keep speech transcription available when image-subtitle recovery is unavailable or unsuitable.
-
-Automatic contextual sense selection remains deferred; explicit cloud glosses are available. Phrase and grammatical-construction collection remain outside the current scope for both learning languages.
-
-Settings now manages the shared DeepSeek key and global video subtitle mask color with an inline preview; [Settings acceptance](../.scratch/archive/settings/acceptance.md) records source-checkout verification and owner visual acceptance on 2026-10-09. Additional installed-package Settings checks may be performed at the next packaged release. Provider, endpoint, and per-task model controls remain deferred; task-specific model, prompt, output-limit and timeout settings stay in code.
-
-Optional follow-up: cloud Jev contextual selection from offline dictionary sense candidates. This is outside the initial translation work and requires explicit user opt-in for automatic network requests. Offline candidates and manual editing must remain available when disabled, offline or unavailable. Local JevEmbed deployment and evaluation are not planned; the initial vocabulary flow presents offline candidates and calls the cloud LLM only on user request.
-
-The [artifact request-ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) records a still-unfixed renderer/persistence divergence under controlled delayed replies. This is a known risk to revisit, not a completed fix or current implementation ticket.
-
-Other possible improvements remain demand-driven rather than roadmap commitments: A–B looping, revisit marks, lightweight transcript/timing correction, generated-passage audio, and additional platforms. Compact optional vocabulary notes and local dictionary-form pronunciation are implemented.
+- Subtitle text-track reuse and audio alignment; subtitle extraction was removed from the October 5 iteration. Automatic subtitle-region detection is also deferred. See [subtitle research](../.scratch/archive/video-subtitles/implementation-and-acceptance.md).
+- Experiment with OCR for image-based subtitle tracks only after assessing Korean/English accuracy, cleanup, cue timing, and Windows resource costs on representative samples. Speech transcription remains the fallback.
+- Phrase and grammatical-construction collection remains outside current scope for both languages.
+- Provider, endpoint, and per-task model controls in Settings remain deferred; task-specific generation settings stay in code.
+- Other demand-driven possibilities: A–B looping, revisit marks, notes, lightweight transcript/timing correction, generated audio/TTS, and additional platforms.
 
 Future pronunciation setting: let learners choose a pronunciation method in Settings. [Vocabulary acceptance](../.scratch/vocab-ui/acceptance.md) records local system speech for dictionary forms; alternative methods and implementation timing remain undefined, and the Settings selector is outside this iteration.
+
+These are opportunities, not committed delivery milestones.
 
 ## Working rules
 
 For each substantial effort:
 
-1. define the task under `.scratch/<effort>/` using the repository's agent workflow;
-2. use task-local specs, research, tickets, and acceptance evidence while the effort is active;
-3. when the effort finishes, update [PROJECT_STATUS.md](PROJECT_STATUS.md) with the new current truth;
-4. update this roadmap only when the remaining direction or dependency order changes;
-5. update [PRODUCT_SPEC.md](PRODUCT_SPEC.md) only when the intended product behavior or scope changes.
+1. Define the task under `.scratch/<effort>/` using the repository's agent workflow.
+2. Keep task-local specs, research, tickets, decisions, and acceptance evidence while active.
+3. On completion, update [PROJECT_STATUS.md](PROJECT_STATUS.md) with the resulting current truth.
+4. Update this roadmap only when future direction or dependencies change.
+5. Update [PRODUCT_SPEC.md](PRODUCT_SPEC.md) only when intended behavior or scope changes.
 
-Use [the task index](../.scratch/README.md) to locate active work. Superseded plans and completed delivery records under `.scratch/archive/` remain historical evidence and are not required to describe the current system. Preserve verification utilities and generated evidence at their existing paths when archiving Markdown records.
+Use [the task index](../.scratch/README.md) to locate active work. Archived task records remain historical evidence, not current system documentation. Preserve verification utilities and generated evidence at their existing paths when archiving Markdown records.

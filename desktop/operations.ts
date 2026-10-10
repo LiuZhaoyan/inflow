@@ -239,18 +239,17 @@ export class DesktopOperations {
   }
 
   private vocabularySuggestions(input: LookupVocabularyInput, lemma: string): Pick<VocabularyLookup, 'candidates' | 'meaningZh'> {
-    const entries = (this.db.prepare('SELECT id FROM vocabulary WHERE language = ? AND lemma = ? ORDER BY rowid DESC').all(input.language, lemma) as { id: string }[]).map(row => this.vocabulary(row.id));
+    const entries = this.db.prepare('SELECT id, meaning AS meaningZh FROM vocabulary WHERE language = ? AND lemma = ? ORDER BY rowid DESC').all(input.language, lemma) as Pick<VocabularyEntry, 'id' | 'meaningZh'>[];
     const dictionary = dictionaryMeanings(lemma, input.language);
     const candidates = [...new Set([...dictionary, ...entries.map(entry => entry.meaningZh)])];
-    const matching = entries.filter(entry => entry.contexts.some(context => {
+    const matching = entries.filter(entry => this.vocabularyContexts(entry.id).some(context => {
       if (!input.source || context.sentence !== input.sentence || context.surface !== input.surface) return false;
       const source = context.source, requested = input.source;
       const sameSource = source.type === 'media' && requested.type === 'media'
         ? source.mediaId === requested.mediaId && source.segmentId === requested.segmentId
         : source.type === 'artifact' && requested.type === 'artifact' && source.artifactId === requested.artifactId && source.sentenceIndex === requested.sentenceIndex;
       if (!sameSource) return false;
-      const positions = this.db.prepare('SELECT start FROM vocabulary_positions WHERE context_id = ?').all(context.id) as { start: number }[];
-      return positions.length ? positions.some(position => position.start === input.start)
+      return context.surfaceStarts?.length ? context.surfaceStarts.includes(input.start)
         : input.sentence.indexOf(input.surface) === input.start && input.sentence.lastIndexOf(input.surface) === input.start;
     }));
     const meaningZh = matching.length === 1 ? matching[0].meaningZh
@@ -300,13 +299,25 @@ export class DesktopOperations {
     if (typeof id !== 'string') throw new Error('词汇编号无效。');
     const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, note, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
     if (!entry) throw new Error('词汇不存在。');
+    const stories = new Set<string>();
+    const contexts = this.vocabularyContexts(id).filter(context => {
+      if (context.source.type !== 'artifact') return true;
+      if (stories.has(context.source.artifactId)) return false;
+      stories.add(context.source.artifactId);
+      return true;
+    });
+    const { note, ...details } = entry;
+    return { ...details, ...(note ? { note } : {}), selected: entry.selected === 1, contexts };
+  }
+
+  private vocabularyContexts(id: string): VocabularyContext[] {
     const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
       s.media_id AS mediaId, m.name AS name, json_extract(s.content, '$.start') AS start
       FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
       WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<MediaVocabularySource, 'type'>)[];
     const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS name,
       o.sentence_index AS sentenceIndex, o.surface, o.sentence
-      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<ArtifactVocabularySource, 'type'>)[];
+      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.sentence_index, o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<ArtifactVocabularySource, 'type'>)[];
     const contexts: VocabularyContext[] = [
       ...sources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'media' as const, ...source } })),
       ...artifactSources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'artifact' as const, ...source } })),
@@ -315,8 +326,28 @@ export class DesktopOperations {
       const positions = this.db.prepare('SELECT start FROM vocabulary_positions WHERE context_id = ? ORDER BY start').all(context.id) as { start: number }[];
       if (positions.length) context.surfaceStarts = positions.map(position => position.start);
     }
-    const { note, ...details } = entry;
-    return { ...details, ...(note ? { note } : {}), selected: entry.selected === 1, contexts };
+    const generated: VocabularyContext[] = [];
+    const artifacts = this.db.prepare(`SELECT id, content FROM artifacts WHERE EXISTS (
+      SELECT 1 FROM json_each(artifacts.content, '$.targets') WHERE json_extract(value, '$.id') = ?
+    ) ORDER BY rowid`).all(id) as { id: string; content: string }[];
+    for (const row of artifacts) {
+      const artifact = JSON.parse(row.content) as LearningArtifact;
+      const sentenceIndex = artifact.sentences.findIndex(sentence => sentence.parts.some(part => part.targetId === id));
+      if (sentenceIndex < 0) continue;
+      const parts = artifact.sentences[sentenceIndex].parts;
+      const surface = parts.find(part => part.targetId === id)!.text;
+      const surfaceStarts: number[] = [];
+      let start = 0;
+      for (const part of parts) {
+        if (part.targetId === id && part.text === surface) surfaceStarts.push(start);
+        start += part.text.length;
+      }
+      generated.push({ id: `target:${row.id}:${id}`, surface, surfaceStarts, sentence: parts.map(part => part.text).join(''),
+        source: { type: 'artifact', artifactId: row.id, sentenceIndex, name: artifact.title } });
+    }
+    // Keep every collected occurrence available to lookup; notebook cards collapse each story.
+    return [...contexts.filter(context => context.source.type === 'media'), ...generated,
+      ...contexts.filter(context => context.source.type === 'artifact')];
   }
 
   listVocabulary(): VocabularyEntry[] {

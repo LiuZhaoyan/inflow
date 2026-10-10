@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ArtifactVocabularySource, LearningArtifact, VocabularyEntry } from "@/listening/desktop";
 
-export function useLearningArtifacts(enabled: boolean, beforeChange: () => boolean) {
+export function useLearningArtifacts(enabled: boolean, beforeChange: () => boolean, onGenerated: () => void) {
   const [source, setSource] = useState<ArtifactVocabularySource | null>(null);
   const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
   const [selection, setSelection] = useState<{ artifact: LearningArtifact | null; source: ArtifactVocabularySource | null }>({ artifact: null, source: null });
@@ -79,6 +79,7 @@ export function useLearningArtifacts(enabled: boolean, beforeChange: () => boole
       const next = await window.inflow!.generateArtifact(selected.map(entry => entry.id), topic, id);
       setArtifacts([next, ...artifacts.filter(item => item.id !== next.id)]);
       setSelection({ artifact: next, source: null });
+      onGenerated();
       return true;
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Story generation failed. Please try again.");

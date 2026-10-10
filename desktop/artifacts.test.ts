@@ -6,6 +6,53 @@ import os from 'node:os';
 import { DesktopOperations } from './operations';
 import { generatePassage, GenerationError } from '../src/generation';
 import type { SaveVocabularyInput } from '../src/listening/desktop';
+import { DatabaseSync } from 'node:sqlite';
+
+test('historical target stories provide one context per story without rewriting collected sources', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow story contexts '));
+  const processor = async () => { throw new Error('Reading stories must not process media'); };
+  let app = new DesktopOperations(root, processor);
+  try {
+    const word = app.saveVocabulary({ language: 'en', lemma: 'walk', meaningZh: '步行' });
+    const otherSense = app.saveVocabulary({ language: 'en', lemma: 'walk', meaningZh: '散步' });
+    const story = { language: 'en', title: 'A walk', requestedModel: 'deepseek-flash',
+      createdAt: '2026-10-01T00:00:00.000Z', elapsedMs: 10,
+      targets: [{ id: word.id, lemma: word.lemma, meaningZh: word.meaningZh }], sentences: [
+        { parts: [{ text: 'It is morning.', targetId: null }], translationZh: '早上了。' },
+        { parts: [{ text: 'I ', targetId: null }, { text: 'walk', targetId: word.id }, { text: ' then ', targetId: null }, { text: 'walk', targetId: word.id }, { text: ' home.', targetId: null }], translationZh: '我走路然后走回家。' },
+        { parts: [{ text: 'We ', targetId: null }, { text: 'walk', targetId: word.id }, { text: ' again.', targetId: null }], translationZh: '我们再次走路。' },
+      ] };
+    const db = new DatabaseSync(path.join(root, 'learning.sqlite'));
+    try {
+      db.prepare('INSERT INTO artifacts VALUES (?, ?)').run('historical-story', JSON.stringify(story));
+      db.prepare('INSERT INTO artifacts VALUES (?, ?)').run('another-story', JSON.stringify({ ...story, title: 'Another walk' }));
+    } finally { db.close(); }
+    const contexts = app.listVocabulary().find(entry => entry.id === word.id)!.contexts;
+    assert.equal(contexts.length, 2);
+    assert.deepEqual(contexts[0], { id: contexts[0].id, surface: 'walk', sentence: 'I walk then walk home.', surfaceStarts: [2, 12],
+      source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 1, name: story.title } });
+    assert.deepEqual(app.listVocabulary().find(entry => entry.id === otherSense.id)!.contexts, []);
+    const collected = app.saveVocabulary({ id: word.id, language: 'en', lemma: word.lemma, meaningZh: word.meaningZh,
+      context: { surface: 'walk', surfaceStart: 3, sentence: 'We walk again.',
+        source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 2, name: story.title } } });
+    assert.deepEqual(collected.contexts, contexts);
+    const lookup = await app.lookupVocabulary({ language: 'en', lemma: 'walk', surface: 'walk', sentence: 'We walk again.', start: 3,
+      source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 2, name: story.title } }, 'lookup');
+    assert.equal(lookup.meaningZh, word.meaningZh);
+    const edited = app.saveVocabulary({ id: word.id, language: 'en', lemma: 'stroll', meaningZh: '慢走' });
+    assert.deepEqual(edited.contexts, contexts);
+    assert.deepEqual(app.openArtifact('historical-story').targets, story.targets);
+    app.close(); app = new DesktopOperations(root, processor);
+    assert.deepEqual(app.listVocabulary().find(entry => entry.id === word.id), edited);
+    app.deleteVocabulary(word.id);
+    const replacement = app.saveVocabulary({ language: 'en', lemma: 'walk', meaningZh: '步行' });
+    assert.deepEqual(replacement.contexts, []);
+    assert.deepEqual(app.openArtifact('historical-story').targets, story.targets);
+    const stored = new DatabaseSync(path.join(root, 'learning.sqlite'));
+    try { assert.equal(stored.prepare('SELECT count(*) AS count FROM artifact_vocabulary_sources').get()!.count, 0); }
+    finally { stored.close(); }
+  } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
 
 test('two artifact cycles preserve snapshots and source relationships across failure, retry and restart', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow artifacts 韩语 '));
@@ -73,11 +120,13 @@ test('two artifact cycles preserve snapshots and source relationships across fai
     mode = 'valid';
     const retry = await app.generateArtifact([friend.id], '', 'retry', 'fixture-secret');
     assert.notEqual(retry.id, second.id); assert.equal(app.listArtifacts().length, 3);
+    const afterRetry = app.listVocabulary();
+    assert.equal(afterRetry.find(entry => entry.id === friend.id)!.contexts.length, vocabulary.find(entry => entry.id === friend.id)!.contexts.length + 1);
     app.openArtifact(first.id);
     const all = app.listArtifacts();
     app.close(); app = new DesktopOperations(root, processor, async () => { throw new Error('Reopening must not call the provider'); });
     assert.deepEqual(app.listArtifacts(), all); assert.equal(app.restoreArtifact()!.id, first.id);
-    assert.deepEqual(app.listVocabulary(), vocabulary); assert.equal(app.get(media.id).segments.length, 1);
+    assert.deepEqual(app.listVocabulary(), afterRetry); assert.equal(app.get(media.id).segments.length, 1);
     assert.doesNotMatch((await readFile(path.join(root, 'learning.sqlite'))).toString(), /fixture-secret|secret-provider-body/);
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
