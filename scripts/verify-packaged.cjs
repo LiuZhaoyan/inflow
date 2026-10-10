@@ -4,14 +4,16 @@
 // environment without any development paths, and records evidence + orphan-process checks.
 // Usage: node scripts/verify-packaged.cjs <phase|suite> <runDir> [option=value ...]
 // Phases: credential models download listen reopen missing cancel cycle failures restart screenshots
-// `suite` runs the phases in dependency order and cleans only its disposable profiles after success.
+// `suite` runs the phases in dependency order and cleans only its atomically owned profiles after success.
 // Single phases support cleanup=true; failures retain profiles and evidence. Use keep=true to preserve them.
 const { spawn, spawnSync, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const disposableRoot = path.join(root, 'build', 'package-test', 'profiles');
+const packageTestRoot = path.join(root, 'build', 'package-test');
+const disposableRoot = path.join(packageTestRoot, 'profiles');
+const suiteBaseRoot = path.join(packageTestRoot, 'suites');
 const defaultMedia = path.join(root, '.scratch', 'desktop-learning', 'generated-samples', 'desktop-acceptance-GBTE8b', '韩语 sample.webm');
 const repoModels = path.join(root, '.models');
 
@@ -28,7 +30,6 @@ const phaseConfig = {
   restart:     { profile: '中文 循环 目录', seed: [], timeout: 300000, media: true },
   screenshots: { profile: '中文 循环 目录', seed: [], timeout: 60000, media: true },
 };
-const disposableProfiles = [...new Set(Object.values(phaseConfig).map(config => config.profile))];
 const suitePlan = ['credential', 'models', 'download', 'listen', 'reopen', 'missing', 'cancel', 'cycle', 'failures', 'restart', 'screenshots'];
 
 function parseOptions(values) {
@@ -90,8 +91,72 @@ function cleanupProfile(target, evidence, { profileRoot = disposableRoot, custom
   }
 }
 
-function cleanupDefaultProfiles(evidence, options = {}) {
-  return disposableProfiles.map(name => cleanupProfile(path.join(options.profileRoot || disposableRoot, name), evidence, options));
+function prepareSuiteDirectory(suiteDir) {
+  suiteDir = path.resolve(suiteDir);
+  if (suiteDir === packageTestRoot || isInside(packageTestRoot, suiteDir)) throw new Error('Suite evidence must stay outside build/package-test');
+  if (hasSymlinkComponent(suiteDir, path.parse(suiteDir).root)) throw new Error('Suite evidence path contains a symlink: ' + suiteDir);
+  let stat;
+  try { stat = fs.lstatSync(suiteDir); }
+  catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    fs.mkdirSync(suiteDir, { recursive: true });
+    stat = fs.lstatSync(suiteDir);
+  }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Suite evidence path must be a real directory: ' + suiteDir);
+  if (fs.readdirSync(suiteDir).length > 0) throw new Error('Suite evidence directory is not empty: ' + suiteDir);
+  try {
+    fs.writeFileSync(path.join(suiteDir, '.suite-owner.json'), JSON.stringify({ kind: 'inflow-packaged-suite-evidence', version: 1, createdAt: new Date().toISOString() }, null, 2), { flag: 'wx' });
+  } catch (error) {
+    throw new Error('Suite evidence directory is already in use: ' + suiteDir + ' (' + error.message + ')');
+  }
+  return suiteDir;
+}
+
+function createSuiteOwnership({ baseRoot = suiteBaseRoot, rootBoundary = root } = {}) {
+  baseRoot = path.resolve(baseRoot);
+  rootBoundary = path.resolve(rootBoundary);
+  if (baseRoot === rootBoundary || !isInside(rootBoundary, baseRoot)) throw new Error('Suite profile root must stay under the repository test root');
+  if (hasSymlinkComponent(baseRoot, rootBoundary)) throw new Error('Suite profile root contains a symlink');
+  fs.mkdirSync(baseRoot, { recursive: true });
+  if (hasSymlinkComponent(baseRoot, rootBoundary)) throw new Error('Suite profile root contains a symlink');
+
+  const suiteRoot = fs.mkdtempSync(path.join(baseRoot, 'suite-'));
+  const profileRoot = path.join(suiteRoot, 'profiles');
+  const markerPath = path.join(suiteRoot, 'owner.json');
+  const marker = { kind: 'inflow-packaged-suite', version: 1, suiteId: path.basename(suiteRoot), profileRoot };
+  fs.mkdirSync(profileRoot);
+  fs.writeFileSync(markerPath, JSON.stringify(marker, null, 2), { flag: 'wx' });
+  return { baseRoot, rootBoundary, suiteRoot, profileRoot, markerPath, marker };
+}
+
+function cleanupOwnedSuite(ownership, evidence, { dryRun = false } = {}) {
+  const target = path.resolve(ownership.suiteRoot);
+  const baseRoot = path.resolve(ownership.baseRoot);
+  evidence = path.resolve(evidence);
+  if (!isInside(baseRoot, target)) return { status: 'skipped', reason: 'suite root is outside its owner root', target };
+  if (evidence === target || isInside(target, evidence)) return { status: 'skipped', reason: 'evidence is inside suite root', target };
+  if (hasSymlinkComponent(baseRoot, ownership.rootBoundary) || hasSymlinkComponent(target, ownership.rootBoundary)) return { status: 'skipped', reason: 'suite path contains a symlink', target };
+
+  let stat;
+  try { stat = fs.lstatSync(target); }
+  catch (error) { return { status: 'failed', reason: error.message, target }; }
+  if (!stat.isDirectory() || stat.isSymbolicLink()) return { status: 'skipped', reason: 'suite root is not a real directory', target };
+
+  let marker;
+  try { marker = JSON.parse(fs.readFileSync(path.join(target, 'owner.json'), 'utf8')); }
+  catch (error) { return { status: 'skipped', reason: 'suite ownership marker is missing or invalid: ' + error.message, target }; }
+  const expectedProfileRoot = path.join(target, 'profiles');
+  if (marker.kind !== ownership.marker.kind || marker.version !== ownership.marker.version || marker.suiteId !== ownership.marker.suiteId || path.resolve(marker.profileRoot) !== path.resolve(expectedProfileRoot) || path.resolve(ownership.profileRoot) !== path.resolve(expectedProfileRoot)) {
+    return { status: 'skipped', reason: 'suite ownership marker does not match', target };
+  }
+  if (dryRun) return { status: 'planned', target };
+
+  try {
+    fs.rmSync(target, { recursive: true, force: false });
+    return { status: 'removed', target };
+  } catch (error) {
+    return { status: 'failed', reason: error.message, target };
+  }
 }
 
 function readResult(file) {
@@ -99,10 +164,12 @@ function readResult(file) {
   catch (error) { throw new Error('Missing or invalid acceptance result: ' + file + ' (' + error.message + ')'); }
 }
 
-function suiteArgs(phase, suiteDir, options, media) {
+function suiteArgs(phase, suiteDir, options, media, profileRoot) {
   const args = [__filename, phase, path.join(suiteDir, phase)];
   if (options.exe) args.push('exe=' + path.resolve(options.exe));
   args.push('media=' + media);
+  args.push('profileRoot=' + profileRoot);
+  args.push('profile=' + path.join(profileRoot, phaseConfig[phase].profile));
   if (options.topic1) args.push('topic1=' + options.topic1);
   if (options.topic2) args.push('topic2=' + options.topic2);
 
@@ -117,57 +184,79 @@ function suiteArgs(phase, suiteDir, options, media) {
   return args;
 }
 
-function writeSuiteSummary(suiteDir, summary) {
+function writeSuiteSummary(suiteDir, summary, name = 'suite.json') {
   fs.mkdirSync(suiteDir, { recursive: true });
-  fs.writeFileSync(path.join(suiteDir, 'suite.json'), JSON.stringify(summary, null, 2));
+  fs.writeFileSync(path.join(suiteDir, name), JSON.stringify(summary, null, 2));
 }
 
-function runSuite(suiteDir, options) {
+function spawnSuitePhase(args) {
+  const phaseTimeout = phaseConfig[args[1]]?.timeout;
+  const spawnOptions = {
+    cwd: root,
+    env: process.env,
+    stdio: 'inherit',
+    windowsHide: true,
+  };
+  if (phaseTimeout) spawnOptions.timeout = phaseTimeout + 60000;
+  return spawnSync(process.execPath, args, spawnOptions);
+}
+
+function runSuite(suiteDir, options = {}, { spawnPhase = spawnSuitePhase, suiteRoot = suiteBaseRoot, rootBoundary = root } = {}) {
   const started = Date.now();
   const phases = [];
+  let prepared = false;
+  let ownership;
   try {
     if (options.profile) throw new Error('The suite owns its disposable profiles; run individual phases to use profile=...');
-    if (isInside(disposableRoot, suiteDir)) throw new Error('Suite evidence must stay outside disposable profiles');
-    fs.mkdirSync(suiteDir, { recursive: true });
+    suiteDir = prepareSuiteDirectory(suiteDir);
+    prepared = true;
     const media = path.resolve(options.media || defaultMedia);
 
     if (options.dryRun === 'true') {
       const cleanup = options.keep === 'true' || options.cleanup === 'false'
-        ? []
-        : cleanupDefaultProfiles(suiteDir, { dryRun: true });
+        ? { status: 'preserved' }
+        : { status: 'planned', target: path.join(path.resolve(suiteRoot), 'suite-<unique>') };
       writeSuiteSummary(suiteDir, { suite: true, dryRun: true, phases: suitePlan, cleanup, durationMs: Date.now() - started });
       console.log('Packaged acceptance dry run: ' + suitePlan.join(' -> '));
       return 0;
     }
 
+    ownership = createSuiteOwnership({ baseRoot: suiteRoot, rootBoundary });
     for (const phase of suitePlan) {
-      const result = spawnSync(process.execPath, suiteArgs(phase, suiteDir, options, media), {
-        cwd: root,
-        env: process.env,
-        stdio: 'inherit',
-        windowsHide: true,
-      });
+      const result = spawnPhase(suiteArgs(phase, suiteDir, options, media, ownership.profileRoot));
       const passed = result.status === 0 && !result.error && !result.signal;
       phases.push({ phase, exitCode: result.status, signal: result.signal, error: result.error?.message || '', passed });
       if (!passed) {
-        const summary = { suite: true, ok: false, phases, cleanup: 'retained after failed phase', durationMs: Date.now() - started };
+        const summary = { suite: true, ok: false, phases, profileRoot: ownership.profileRoot, cleanup: { status: 'retained after failed phase' }, durationMs: Date.now() - started };
         writeSuiteSummary(suiteDir, summary);
         console.error('Packaged acceptance stopped after failed phase: ' + phase);
         return 1;
       }
     }
 
-    const cleanup = options.keep === 'true' || options.cleanup === 'false'
-      ? []
-      : cleanupDefaultProfiles(suiteDir);
-    cleanup.filter(result => result.status === 'removed').forEach(result => console.log('Removed disposable test profile: ' + result.target));
-    cleanup.filter(result => result.status === 'failed' || result.status === 'skipped').forEach(result => console.error('Cleanup ' + result.status + ': ' + result.target + (result.reason ? ' (' + result.reason + ')' : '')));
-    const cleanupFailed = cleanup.some(result => result.status === 'failed');
-    const summary = { suite: true, ok: !cleanupFailed, phases, cleanup, durationMs: Date.now() - started };
-    writeSuiteSummary(suiteDir, summary);
-    return cleanupFailed ? 1 : 0;
+    const preserve = options.keep === 'true' || options.cleanup === 'false';
+    const pendingCleanup = preserve
+      ? { status: 'preserved', target: ownership.suiteRoot }
+      : { status: 'pending', target: ownership.suiteRoot };
+    if (preserve) {
+      writeSuiteSummary(suiteDir, { suite: true, ok: true, phases, profileRoot: ownership.profileRoot, cleanup: pendingCleanup, durationMs: Date.now() - started });
+      return 0;
+    }
+    writeSuiteSummary(suiteDir, { suite: true, ok: false, phases, profileRoot: ownership.profileRoot, cleanup: pendingCleanup, durationMs: Date.now() - started }, 'suite-precleanup.json');
+
+    const cleanup = cleanupOwnedSuite(ownership, suiteDir);
+    if (cleanup.status === 'removed') console.log('Removed owned packaged-suite profiles: ' + cleanup.target);
+    else if (cleanup.status !== 'preserved') console.error('Cleanup ' + cleanup.status + ': ' + cleanup.target + (cleanup.reason ? ' (' + cleanup.reason + ')' : ''));
+    const summary = { suite: true, ok: cleanup.status === 'removed' || cleanup.status === 'preserved', phases, profileRoot: ownership.profileRoot, cleanup, durationMs: Date.now() - started };
+    try {
+      writeSuiteSummary(suiteDir, summary);
+    } catch (error) {
+      console.error('Unable to record packaged acceptance cleanup: ' + error.message);
+      return 1;
+    }
+    return summary.ok ? 0 : 1;
   } catch (error) {
-    writeSuiteSummary(suiteDir, { suite: true, ok: false, phases, error: error.message, cleanup: 'retained after orchestration error', durationMs: Date.now() - started });
+    if (prepared) writeSuiteSummary(suiteDir, { suite: true, ok: false, phases, profileRoot: ownership?.profileRoot || null, error: error.message, cleanup: { status: 'retained after orchestration error' }, durationMs: Date.now() - started });
     console.error(error.message);
     return 1;
   }
@@ -180,10 +269,12 @@ function runPhase(phase, runDir, options) {
   const driver = path.join(root, 'scripts', 'verify-packaged-driver.cjs');
   if (!fs.existsSync(exe)) { console.error('Missing packaged exe: ' + exe); return 2; }
   fs.mkdirSync(runDir, { recursive: true });
-  const profile = path.resolve(options.profile || path.join(disposableRoot, config.profile));
+  const profileRoot = path.resolve(options.profileRoot || disposableRoot);
+  if (!isInside(packageTestRoot, profileRoot)) throw new Error('Profile roots must stay under build/package-test');
+  const profile = path.resolve(options.profile || path.join(profileRoot, config.profile));
   if (isInside(profile, runDir)) throw new Error('Phase evidence must stay outside its profile');
-  if (config.fresh && options.reuse !== 'true' && !isInside(disposableRoot, profile)) throw new Error('Fresh profiles must stay under build/package-test');
-  if (isInside(disposableRoot, profile) && hasSymlinkComponent(profile)) throw new Error('Disposable profile path contains a symlink');
+  if (config.fresh && options.reuse !== 'true' && !isInside(profileRoot, profile)) throw new Error('Fresh profiles must stay under their profile root');
+  if (hasSymlinkComponent(profileRoot) || (isInside(packageTestRoot, profile) && hasSymlinkComponent(profile))) throw new Error('Profile path contains a symlink');
   fs.mkdirSync(profile, { recursive: true });
   if (config.fresh && options.reuse !== 'true') {
     fs.rmSync(profile, { recursive: true, force: true });
@@ -270,7 +361,7 @@ function runPhase(phase, runDir, options) {
     console.log('exit=' + code + ' driverOk=' + summary.driverOk + ' orphans=' + orphans + ' duration=' + Math.round(summary.durationMs / 1000) + 's');
     const passed = summary.driverOk && orphans === 0;
     if (passed && options.cleanup === 'true' && options.keep !== 'true') {
-      const cleanup = cleanupProfile(profile, runDir, { custom: Boolean(options.profile) });
+      const cleanup = cleanupProfile(profile, runDir, { profileRoot, custom: Boolean(options.profile) });
       if (cleanup.status === 'removed') console.log('Removed disposable test profile: ' + cleanup.target);
       else if (cleanup.status !== 'absent') console.error('Cleanup ' + cleanup.status + ': ' + cleanup.target + (cleanup.reason ? ' (' + cleanup.reason + ')' : ''));
     }
@@ -292,11 +383,13 @@ if (require.main === module) {
 }
 
 module.exports = {
-  cleanupDefaultProfiles,
   cleanupProfile,
-  disposableProfiles,
+  cleanupOwnedSuite,
+  createSuiteOwnership,
   isInside,
   main,
   phaseConfig,
+  runSuite,
+  suiteArgs,
   suitePlan,
 };

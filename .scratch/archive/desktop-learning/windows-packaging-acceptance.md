@@ -73,7 +73,7 @@ After building/installing, run these from the checkout. The example uses the bui
 node --env-file-if-exists=.env scripts/verify-packaged.cjs suite .scratch/desktop-learning/generated-samples/rerun-suite
 ```
 
-The `suite` entry point runs all phases in dependency order, derives restart/reopen expectations from earlier results, and removes only the named disposable profiles after every phase passes. A failed phase retains its profiles and evidence. Use `keep=true` or `cleanup=false` when retaining successful-run profiles is useful. Individual phases remain available for focused reruns:
+The `suite` entry point runs all phases in dependency order, derives restart/reopen expectations from earlier results, and uses a unique ownership-marked profile root under `build/package-test/suites/`. It removes only that suite's profiles after every phase passes. A failed or interrupted phase retains its profiles and evidence. Use `keep=true` or `cleanup=false` when retaining successful-run profiles is useful. Individual phases remain available for focused reruns:
 
 ```powershell
 node scripts/verify-packaged.cjs download .scratch/desktop-learning/generated-samples/rerun-download
