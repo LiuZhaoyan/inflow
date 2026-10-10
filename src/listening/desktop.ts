@@ -15,15 +15,15 @@ export type SavedMedia = {
   segments: (Segment & { id: string })[]; learning: LearningState;
 };
 export type VocabularyContext = {
-  id: string; surface: string; sentence: string; surfaceStart?: number;
+  id: string; surface: string; sentence: string; surfaceStart?: number; surfaceStarts?: number[];
   source:
     | { type: 'media'; mediaId: string; segmentId: string; name: string; start: number }
     | { type: 'artifact'; artifactId: string; sentenceIndex: number; name: string };
 };
 export type MediaVocabularySource = Extract<VocabularyContext['source'], { type: 'media' }>;
 export type ArtifactVocabularySource = Extract<VocabularyContext['source'], { type: 'artifact' }>;
-export type VocabularyEntry = { id: string; language: SourceLanguage; lemma: string; meaningZh: string; selected: boolean; contexts: VocabularyContext[] };
-export type SaveVocabularyInput = { id?: string; language?: SourceLanguage; lemma: string; meaningZh: string; context?: Omit<VocabularyContext, 'id'> };
+export type VocabularyEntry = { id: string; language: SourceLanguage; lemma: string; meaningZh: string; note?: string; selected: boolean; contexts: VocabularyContext[] };
+export type SaveVocabularyInput = { id?: string; language?: SourceLanguage; lemma: string; meaningZh: string; note?: string; context?: Omit<VocabularyContext, 'id' | 'surfaceStarts'> };
 export type LearningArtifact = GeneratedPassage & { id: string; language: SourceLanguage; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
 export type CredentialStatus = { configured: boolean; error?: string };
 export type ModelStatus = { whisper: boolean; translate: { 'ko-en': boolean; 'en-zh': boolean }; englishParser: boolean };
@@ -42,6 +42,7 @@ export type DesktopBridge = {
   lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup>;
   glossVocabulary(input: LookupVocabularyInput & { lemma: string }, job: string): Promise<string>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
+  deleteVocabulary(id: string): Promise<void>;
   selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;
   credentialStatus(): Promise<CredentialStatus>;
   configureCredential(key: string): Promise<CredentialStatus>;

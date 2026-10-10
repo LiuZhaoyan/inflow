@@ -97,6 +97,7 @@ async function start() {
     lookupVocabulary: (input: LookupVocabularyInput, job: string) => operations.lookupVocabulary(input, job),
     glossVocabulary: (input: LookupVocabularyInput & { lemma: string }, job: string) => operations.glossVocabulary(input, job, credential.get()),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
+    deleteVocabulary: (id: string) => operations.deleteVocabulary(id),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
     credentialStatus: () => credential.status(),
     configureCredential: (key: string) => credential.configure(key),

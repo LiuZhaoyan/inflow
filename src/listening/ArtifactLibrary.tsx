@@ -9,6 +9,7 @@ type Props = {
   learning: LearningArtifacts;
   selected: VocabularyEntry[];
   onBeforeChange: () => boolean;
+  onOpenVocabulary: (id: string) => void;
   active?: boolean;
   generationOpen?: boolean;
   onGenerationClose?: () => void;
@@ -23,7 +24,7 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 
 export default function ArtifactLibrary({
   learning,
-  selected, onBeforeChange, active = true, generationOpen = false,
+  selected, onBeforeChange, onOpenVocabulary, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate,
   credential, onOpenSettings,
 }: Props) {
@@ -71,11 +72,6 @@ export default function ArtifactLibrary({
     document.getElementById("artifact-sentence-" + index)?.scrollIntoView({ block: "center", behavior: "smooth" });
   }
 
-  function jumpToTarget(id: string) {
-    const index = artifact?.sentences.findIndex(sentence => sentence.parts.some(part => part.targetId === id)) ?? -1;
-    if (index >= 0) jump(index);
-  }
-
   function closeDialog() {
     if (dialog.current?.open) dialog.current.close();
     else onGenerationClose?.();
@@ -94,7 +90,7 @@ export default function ArtifactLibrary({
           <div className="story-hero-controls">
             <details className="story-dropdown">
               <summary aria-label={artifact.targets.length + " target words"}><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15M12 6C9 3 5 3 2 4v14c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2z"/></svg>{artifact.targets.length} target {artifact.targets.length === 1 ? "word" : "words"} ⌄</summary>
-              <div className="story-dropdown-panel">{artifact.targets.map(target => <button type="button" key={target.id} onClick={() => jumpToTarget(target.id)}><span lang={artifact.language}>{target.lemma}</span><span lang="zh">{target.meaningZh}</span></button>)}</div>
+              <div className="story-dropdown-panel">{artifact.targets.map(target => <button type="button" key={target.id} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onOpenVocabulary(target.id); }}><span lang={artifact.language}>{target.lemma}</span><span lang="zh">{target.meaningZh}</span></button>)}</div>
             </details>
             <details className="story-dropdown story-options">
               <summary aria-label="Story options">⋮</summary>
@@ -152,10 +148,7 @@ export default function ArtifactLibrary({
         <section className="story-vocabulary-panel">
           <header><h2>Target Vocabulary</h2><span>{artifact.targets.length} words</span></header>
           <div className="story-vocabulary-list">{artifact.targets.map(target => <div className="story-vocabulary-row" key={target.id}>
-            <button type="button" lang={artifact.language} onClick={() => jumpToTarget(target.id)}>{target.lemma}</button><span lang="zh">{target.meaningZh}</span>
-            <details><summary aria-label={"More actions for " + target.lemma}>…</summary><div className="story-disabled-actions">
-              <button disabled title="Available in a later update">Dictionary</button><button disabled title="Available in a later update">Pronunciation</button><button disabled title="Available in a later update">Add context</button><button disabled title="Available in a later update">Notes</button><small>Available in a later update</small>
-            </div></details>
+            <button type="button" lang={artifact.language} aria-label={`Open ${target.lemma} in vocabulary`} onClick={() => onOpenVocabulary(target.id)}>{target.lemma}</button><span lang="zh">{target.meaningZh}</span>
           </div>)}</div>
         </section>
       </aside>

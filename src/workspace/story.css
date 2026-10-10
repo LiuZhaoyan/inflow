@@ -67,16 +67,10 @@
 .story-context-list i { width: 7px; height: 7px; border-radius: 50%; background: #bc8aff; }
 .story-vocabulary-panel { display: flex; flex-direction: column; border-top: 1px solid var(--workspace-line); }
 .story-vocabulary-list { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 12px; scrollbar-color: #3d3b46 transparent; scrollbar-width: thin; }
-.story-vocabulary-row { position: relative; min-height: 40px; display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr) 28px; align-items: center; gap: 8px; margin-bottom: 4px; padding: 0 7px 0 11px; border: 1px solid #191a20; border-radius: 7px; background: #17181d; }
+.story-vocabulary-row { position: relative; min-height: 40px; display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 4px; padding: 0 7px 0 11px; border: 1px solid #191a20; border-radius: 7px; background: #17181d; }
 .story-vocabulary-row > button { min-width: 0; padding: 4px 0; border: 0; background: transparent; color: #d3adff; cursor: pointer; font-family: "Noto Serif KR", "AppleMyungjo", Batang, serif; font-size: 15px; text-align: left; overflow-wrap: anywhere; }
 .story-vocabulary-row > button:lang(en) { font-family: Georgia, "Times New Roman", serif; }
 .story-vocabulary-row > span { min-width: 0; overflow: hidden; color: #b6b2bf; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.story-vocabulary-row details { position: relative; justify-self: end; }
-.story-vocabulary-row summary { width: 25px; height: 30px; display: grid; place-items: center; color: #aaa5b6; cursor: pointer; font-size: 16px; list-style: none; }
-.story-vocabulary-row summary::-webkit-details-marker { display: none; }
-.story-disabled-actions { position: absolute; top: 27px; right: 0; z-index: 3; width: 185px; display: grid; gap: 3px; padding: 8px; border: 1px solid #383640; border-radius: 6px; background: #191a20; box-shadow: 0 8px 22px #0009; }
-.story-disabled-actions button { min-height: 31px; padding: 0 7px; border: 1px solid #2c2d34; border-radius: 4px; background: #17181d; color: #96939d; cursor: not-allowed; text-align: left; }
-.story-disabled-actions small { padding: 4px 2px 1px; color: #a49eb0; font-size: 11px; }
 .story-notice { margin: 7px 18px; color: #f2bbc4; font-size: 12px; }
 .story-reader-panel > .story-notice { margin: 0 20px 7px; }
 

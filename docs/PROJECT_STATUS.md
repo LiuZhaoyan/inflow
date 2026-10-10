@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-09
+Last verified: 2026-10-10
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -63,11 +63,15 @@ Vocabulary entries store source language, a dictionary form, contextual Chinese 
 
 Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Successful retranscription atomically replaces all segments for that material and removes their vocabulary source occurrences, including occurrences on older retained segments. Vocabulary entries, meanings, target selection and sources from other media or artifacts remain intact. Failure or cancellation preserves the previous transcript and sources. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
+The notebook now returns and highlights saved occurrence positions, retries failed loading, ignores older responses and preserves surviving selections on refresh. Committed writes use the returned entry directly and reveal it through necessary filter changes. Local system voices pronounce the dictionary form in the entry's language, with readiness, missing-voice, error and cancellation handling. Notes are optional, collapsed and compact, explicitly saved, and protect unsaved drafts. An additive SQLite note column defaults to empty and survives edits, recollection, retranscription and restart. Confirmed single-entry deletion atomically removes notes, contexts, positions and target selection while retaining media and historical Story snapshots. Contexts provide source navigation; the redundant Source card and Add context placeholder are removed.
+
 ### Generated artifacts
 
 Up to 20 selected vocabulary entries in one language can be sent to DeepSeek to generate one short passage in that language. Generation receives the selected lemma, contextual Chinese meaning, and available source sentence. Returned target IDs are structurally validated before the artifact and its language are saved. Filtering never omits selected targets from this check.
 
 Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.
+
+Story target words in the dropdown and sidebar open the corresponding Vocab entry by ID, including the correct sense through filters. Deleted targets report missing entries without recreating them or changing historical snapshots. The disabled word-action menu is removed. Mixed-language target selections preserve their checks and disable Continue.
 
 ## 4. Processing and service boundaries
 
@@ -114,6 +118,8 @@ The current frontend workspace has been implemented and locally verified. Native
 Task-specific verification records are indexed in [the task index](../.scratch/README.md). Superseded and completed delivery records live under `.scratch/archive/`; this document records only the resulting current state.
 
 English native acceptance runs in an isolated profile and a second Electron process. It covers real Whisper transcription on offline synthetic speech, real spaCy and dictionary lookup, language confirmation/default, playback, masks, protected drafts, independent filters, two Story cycles and offline restoration. Provider requests in that UI run are deterministic fixtures. Separate live English generations verified supplied contextual senses, contractions, hyphens and regular inflection; plural/irregular generation quality remains unverified, and one malformed response was rejected. See [the quality report](../.scratch/archive/english-learning/quality-report.md).
+
+[Vocabulary acceptance](../.scratch/vocab-ui/acceptance.md) passed 67 tests, lint, typecheck, desktop build, isolated native UI checks and a second-process restart. It covers load retry/stale reads, save visibility, protected notes, rollback-safe deletion, exact repeated-occurrence highlighting, Story navigation and mixed-language continuation. Controlled speech events test UI lifecycle; a separate real, muted English/Korean synthesis probe completed successfully. Audible speech quality and installed-package acceptance are unverified.
 
 ## 7. Current gaps
 

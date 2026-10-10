@@ -53,7 +53,7 @@ test('reprocessing clears source contexts while collection, distinct senses, cor
     assert.deepEqual(app.listVocabulary(), []);
 
     assert.ok(firstContext.source.type === 'media');
-    const first = app.saveVocabulary({ lemma: '걸리다'.normalize('NFD'), meaningZh: '花费时间', context: {
+    const first = app.saveVocabulary({ lemma: '걸리다'.normalize('NFD'), meaningZh: '花费时间', note: 'Personal reminder', context: {
       ...firstContext, surface: firstContext.surface.normalize('NFD'), sentence: 'untrusted sentence',
       source: { ...firstContext.source, name: 'untrusted name', start: 999 },
     } });
@@ -250,4 +250,60 @@ test('existing vocabulary rows gain language identity without losing historical 
       assert.equal(stored.prepare('SELECT COUNT(*) AS count FROM artifact_vocabulary_sources').get()!.count, 2);
     } finally { stored.close(); }
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('notes and collected positions survive edits, recollection and restart; deletion is atomic and preserves stories', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow vocabulary notes '));
+  const processor = async (mode: string) => mode === 'probe' ? { duration: 2 }
+    : { segments: [{ start: 0, end: 2, text: '배가 배에 있어요.', groups: ['배가 배에 있어요.'] }] };
+  const generator: typeof generatePassage = async input => ({ title: '배 이야기', requestedModel: 'deepseek-flash',
+    sentences: [{ parts: [{ text: '배', targetId: input.targets[0].id }], translationZh: '船' }] });
+  let app = new DesktopOperations(root, processor, generator);
+  let db: DatabaseSync | undefined;
+  try {
+    const filename = path.join(root, 'sample.wav'); await writeFile(filename, 'fixture');
+    const media = await app.transcribe((await app.importMedia(filename)).id, 'seed');
+    const context = { surface: '배', sentence: media.segments[0].text, surfaceStart: 3,
+      source: { type: 'media', mediaId: media.id, segmentId: media.segments[0].id, name: media.name, start: 0 } as const };
+    const word = app.saveVocabulary({ lemma: '배', meaningZh: '船', note: 'Remember this sense.\nNot the stomach.', context });
+    assert.deepEqual(word.contexts[0].surfaceStarts, [3]);
+    const collected = app.saveVocabulary({ lemma: word.lemma, meaningZh: word.meaningZh, context: { ...context, surfaceStart: 0 } });
+    assert.equal(collected.note, word.note);
+    assert.equal(collected.contexts.length, 1);
+    assert.deepEqual(collected.contexts[0].surfaceStarts, [0, 3]);
+    assert.equal(app.saveVocabulary({ id: word.id, lemma: word.lemma, meaningZh: '船只' }).note, word.note);
+    for (const note of ['x'.repeat(2001), 'bad\0note', 123]) {
+      assert.throws(() => app.saveVocabulary({ id: word.id, lemma: word.lemma, meaningZh: '船只', note: note as string }), /备注/);
+    }
+    const other = app.saveVocabulary({ lemma: '친구', meaningZh: '朋友' });
+    app.selectVocabulary([word.id, other.id]);
+    const story = await app.generateArtifact([word.id], '', 'story', 'fixture');
+    app.saveVocabulary({ lemma: word.lemma, meaningZh: '船只', context: { surface: '배', surfaceStart: 0, sentence: '배',
+      source: { type: 'artifact', artifactId: story.id, sentenceIndex: 0, name: story.title } } });
+    app.close(); app = new DesktopOperations(root, processor, generator);
+    const before = app.listVocabulary();
+    assert.equal(before.find(entry => entry.id === word.id)!.note, word.note);
+    assert.deepEqual(before.find(entry => entry.id === word.id)!.contexts.map(item => item.surfaceStarts), [[0, 3], [0]]);
+    db = new DatabaseSync(path.join(root, 'learning.sqlite'));
+    const positions = db.prepare('SELECT * FROM vocabulary_positions ORDER BY context_id, start').all();
+    db.exec("CREATE TRIGGER reject_word_delete BEFORE DELETE ON vocabulary BEGIN SELECT RAISE(ABORT, 'fixture delete failure'); END");
+    assert.throws(() => app.deleteVocabulary(word.id), /fixture delete failure/);
+    assert.deepEqual(app.listVocabulary(), before);
+    assert.deepEqual(db.prepare('SELECT * FROM vocabulary_positions ORDER BY context_id, start').all(), positions);
+    db.exec('DROP TRIGGER reject_word_delete');
+    assert.throws(() => app.deleteVocabulary('missing'), /不存在/);
+    assert.throws(() => app.deleteVocabulary(null as unknown as string), /编号/);
+    app.deleteVocabulary(word.id);
+    assert.deepEqual(app.listVocabulary(), before.filter(entry => entry.id !== word.id));
+    assert.equal(db.prepare('SELECT count(*) AS count FROM vocabulary_positions').get()!.count, 0);
+    assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+    assert.deepEqual(app.get(media.id), media);
+    assert.deepEqual(app.openArtifact(story.id), story);
+    db.close(); db = undefined;
+    app.close(); app = new DesktopOperations(root, processor, generator);
+    assert.deepEqual(app.openArtifact(story.id), story);
+    assert.deepEqual(app.listVocabulary(), before.filter(entry => entry.id !== word.id));
+    assert.equal(app.saveVocabulary({ id: other.id, lemma: other.lemma, meaningZh: other.meaningZh, note: 'temporary' }).note, 'temporary');
+    assert.equal(app.saveVocabulary({ id: other.id, lemma: other.lemma, meaningZh: other.meaningZh, note: '' }).note, undefined);
+  } finally { db?.close(); app.close(); await rm(root, { recursive: true, force: true }); }
 });

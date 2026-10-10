@@ -51,6 +51,9 @@ export class DesktopOperations {
     if (!(this.db.prepare('PRAGMA table_info(segments)').all() as { name: string }[]).some(column => column.name === 'active')) {
       this.db.exec('ALTER TABLE segments ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
     }
+    if (!(this.db.prepare('PRAGMA table_info(vocabulary)').all() as { name: string }[]).some(column => column.name === 'note')) {
+      this.db.exec("ALTER TABLE vocabulary ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+    }
   }
 
   private row(id: string): MediaRow {
@@ -295,20 +298,25 @@ export class DesktopOperations {
 
   private vocabulary(id: string): VocabularyEntry {
     if (typeof id !== 'string') throw new Error('词汇编号无效。');
-    const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
+    const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, note, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
     if (!entry) throw new Error('词汇不存在。');
     const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
       s.media_id AS mediaId, m.name AS name, json_extract(s.content, '$.start') AS start
       FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
-      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Omit<VocabularyContext, 'source'> & Omit<MediaVocabularySource, 'type'>)[];
+      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<MediaVocabularySource, 'type'>)[];
     const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS name,
       o.sentence_index AS sentenceIndex, o.surface, o.sentence
-      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Omit<VocabularyContext, 'source'> & Omit<ArtifactVocabularySource, 'type'>)[];
+      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<ArtifactVocabularySource, 'type'>)[];
     const contexts: VocabularyContext[] = [
       ...sources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'media' as const, ...source } })),
       ...artifactSources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'artifact' as const, ...source } })),
     ];
-    return { ...entry, selected: entry.selected === 1, contexts };
+    for (const context of contexts) {
+      const positions = this.db.prepare('SELECT start FROM vocabulary_positions WHERE context_id = ? ORDER BY start').all(context.id) as { start: number }[];
+      if (positions.length) context.surfaceStarts = positions.map(position => position.start);
+    }
+    const { note, ...details } = entry;
+    return { ...details, ...(note ? { note } : {}), selected: entry.selected === 1, contexts };
   }
 
   listVocabulary(): VocabularyEntry[] {
@@ -321,6 +329,7 @@ export class DesktopOperations {
       return value.trim().normalize('NFC');
     };
     if (!input || typeof input !== 'object') throw new Error('词汇内容无效。');
+    if (input.note !== undefined && (typeof input.note !== 'string' || input.note.length > 2000 || input.note.includes('\0'))) throw new Error('备注请控制在 2000 字以内，且不能包含空字符。');
     const language = input.language ?? (input.id ? this.vocabulary(input.id).language : 'ko');
     if (language !== 'ko' && language !== 'en') throw new Error('请选择韩语或英语词汇。');
     const rawLemma = text(input.lemma, 100), meaning = text(input.meaningZh, 300);
@@ -351,6 +360,7 @@ export class DesktopOperations {
     try {
       if (input.id !== undefined) this.db.prepare('UPDATE vocabulary SET lemma = ?, meaning = ?, language = ? WHERE id = ?').run(lemma, meaning, language, id);
       else this.db.prepare('INSERT INTO vocabulary (id, lemma, meaning, language) VALUES (?, ?, ?, ?) ON CONFLICT(language, lemma, meaning) DO NOTHING').run(id, lemma, meaning, language);
+      if (input.note !== undefined) this.db.prepare('UPDATE vocabulary SET note = ? WHERE id = ?').run(input.note, id);
       if (context?.source.type === 'media') this.db.prepare('INSERT INTO vocabulary_sources VALUES (?, ?, ?, ?, ?) ON CONFLICT(entry_id, segment_id, surface) DO NOTHING').run(randomUUID(), id, context.source.segmentId, context.surface, context.sentence);
       else if (context?.source.type === 'artifact') this.db.prepare('INSERT INTO artifact_vocabulary_sources VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(entry_id, artifact_id, sentence_index, surface) DO NOTHING').run(randomUUID(), id, context.source.artifactId, context.source.sentenceIndex, context.surface, context.sentence);
       if (context?.surfaceStart !== undefined) {
@@ -362,6 +372,20 @@ export class DesktopOperations {
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.vocabulary(id);
+  }
+
+  deleteVocabulary(id: string): void {
+    this.vocabulary(id);
+    this.db.exec('BEGIN');
+    try {
+      this.db.prepare(`DELETE FROM vocabulary_positions WHERE context_id IN (
+        SELECT id FROM vocabulary_sources WHERE entry_id = ? UNION SELECT id FROM artifact_vocabulary_sources WHERE entry_id = ?
+      )`).run(id, id);
+      this.db.prepare('DELETE FROM vocabulary_sources WHERE entry_id = ?').run(id);
+      this.db.prepare('DELETE FROM artifact_vocabulary_sources WHERE entry_id = ?').run(id);
+      this.db.prepare('DELETE FROM vocabulary WHERE id = ?').run(id);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
   selectVocabulary(ids: string[]): VocabularyEntry[] {

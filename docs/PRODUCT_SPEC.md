@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-08
+Last updated: 2026-10-10
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -99,6 +99,16 @@ A vocabulary entry should preserve:
 
 Learners can correct the dictionary form and meaning. Distinct meanings of the same source-language form remain distinguishable, while repeated encounters with the same meaning may preserve multiple source contexts. Entries in different source languages remain distinct even when their spelling matches.
 
+The notebook highlights saved occurrence positions, including multiple occurrences in one collected context. Contexts retain source identity and navigation; a separate duplicate Source card and manual Add context control are unnecessary. Legacy contexts without saved offsets use a first-match fallback until recollected.
+
+Dictionary-form pronunciation uses an installed local system voice in the entry's language. Missing voices and synthesis failures receive explicit feedback. Repeated clicks stop pronunciation; changing entries, editing or leaving Vocab also stops it. Choosing pronunciation methods in Settings is deferred.
+
+Optional personal notes belong to a single entry/sense. Notes start collapsed and expand into a compact plain-text editor with explicit Save/Cancel and a 2,000-character limit. Failed writes retain drafts; unsaved notes protect selection, filtering and navigation. Notes survive ordinary edits, recollection, retranscription and restart.
+
+Deleting a single entry requires confirmation showing its dictionary form and meaning. The entry, note, collected contexts/positions and selected-target state are removed atomically. Original media, saved artifacts and historical target snapshots remain intact. Deletion has no undo.
+
+Failed notebook loading ends with a retry action. Successful writes reveal the saved entry with only necessary filter changes and do not depend on a subsequent reload. Refresh preserves the selected entry when it remains available and ignores superseded responses.
+
 Successful retranscription removes all vocabulary source contexts from that material's old transcript, including unchanged sentences and earlier retained versions. Context removal and transcript replacement commit together; failure or cancellation preserves the previous transcript and contexts. Vocabulary entries, their meanings and target selection remain valid and unchanged. Sources from other media and generated artifacts remain intact. An entry without sources stays visible and editable, may be selected for generation, and displays an empty-source state. Collecting the same word and meaning from a new sentence reuses the existing entry and adds its new source.
 
 Vocabulary selection is an explicit learner action. Inflow does not infer mastery from play count, collection, or selection.
@@ -110,6 +120,8 @@ Media, vocabulary and saved reading lists identify source language and offer ind
 Selecting target vocabulary is sufficient to generate one short passage in the selected entries' shared source language; a topic may be optional. The first release does not require difficulty-level or passage-length controls.
 
 Each generation uses exactly one source language, determined from the full selected target set rather than the currently visible filtered list. Mixed Korean/English selections require learner correction before a provider request and preserve all existing selections.
+
+Mixed-language selections cannot Continue from target selection. Clicking a target word in the Story dropdown or sidebar opens Vocab and selects that exact entry, revealing it through view filters. Deleted entries receive missing-entry feedback while their historical stories remain readable; they are not recreated automatically.
 
 Every selected target should appear naturally in its recorded contextual meaning. Natural Korean or English inflection counts as use; exact dictionary-form spelling is not required. Supporting vocabulary should remain common and suitable for learning.
 

@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); the implementation that already exists belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -67,7 +67,9 @@ Optional follow-up: cloud Jev contextual selection from offline dictionary sense
 
 The [artifact request-ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) records a still-unfixed renderer/persistence divergence under controlled delayed replies. This is a known risk to revisit, not a completed fix or current implementation ticket.
 
-Other possible improvements remain demand-driven rather than roadmap commitments: A–B looping, revisit marks, notes, lightweight transcript/timing correction, generated audio/TTS, and additional platforms.
+Other possible improvements remain demand-driven rather than roadmap commitments: A–B looping, revisit marks, lightweight transcript/timing correction, generated-passage audio, and additional platforms. Compact optional vocabulary notes and local dictionary-form pronunciation are implemented.
+
+Future pronunciation setting: let learners choose a pronunciation method in Settings. [Vocabulary acceptance](../.scratch/vocab-ui/acceptance.md) records local system speech for dictionary forms; alternative methods and implementation timing remain undefined, and the Settings selector is outside this iteration.
 
 ## Working rules
 

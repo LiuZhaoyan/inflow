@@ -32,7 +32,7 @@ export default function StoryTargetsDialog({ entries, onClose, onConfirm }: {
         </label>)}</div>
         {mixedLanguageSelection && <p className="workspace-target-language-warning" role="status">Choose vocabulary in one source language before generating. Your current selection is preserved.</p>}
         {!entries.length && <p className="workspace-empty">Collect or add vocabulary before generating a story.</p>}
-        <footer><span>{ids.length} / 20 selected</span><button type="submit" className="workspace-generate-button" disabled={!ids.length}>Continue</button></footer>
+        <footer><span>{ids.length} / 20 selected</span><button type="submit" className="workspace-generate-button" disabled={!ids.length || mixedLanguageSelection}>Continue</button></footer>
       </fieldset>
       {error && <p className="workspace-notice" role="alert">{error}</p>}
     </form>
