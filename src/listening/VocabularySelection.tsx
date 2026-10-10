@@ -190,9 +190,18 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
       <fieldset disabled={draft.saving}>
         <label>Dictionary form<input name="lemma" lang={draft.language} value={draft.lemma} required maxLength={100} onChange={event => { const previous = current.current!; change({ lemma: event.target.value, lemmaEdited: true, candidates: [] }); if (!previous.meaningEdited) update({ ...current.current!, meaningZh: '' }); }} onBlur={() => { if (current.current?.lemmaEdited && current.current.lemma.trim()) loadLookup(current.current, current.current.lemma.trim()); }}/></label>
         <label>Chinese meaning<input name="meaningZh" lang="zh" value={draft.meaningZh} required maxLength={300} onChange={event => change({ meaningZh: event.target.value })}/></label>
-        {!!draft.candidates.length && <label>Dictionary meanings<select aria-label="Dictionary meanings" value="" onChange={event => { if (event.target.value) change({ meaningZh: event.target.value }); }}>
-          <option value="">Choose a meaning</option>{draft.candidates.map(meaning => <option key={meaning} value={meaning}>{meaning}</option>)}
-        </select></label>}
+        {!!draft.candidates.length && <div className="vocabulary-meaning-field">
+          <span id="vocabulary-meaning-label">Dictionary meanings</span>
+          <details className="vocabulary-meaning-picker" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.stopPropagation(); event.preventDefault(); event.currentTarget.querySelector('summary')?.focus(); } }}>
+            <summary aria-labelledby="vocabulary-meaning-label vocabulary-meaning-value">
+              <span id="vocabulary-meaning-value">Choose a meaning</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <div className="vocabulary-meaning-options" role="group" aria-label="Dictionary meaning suggestions">
+              {draft.candidates.map(meaning => <button key={meaning} type="button" lang="zh" onClick={event => { change({ meaningZh: meaning }); event.currentTarget.closest('details')!.open = false; }}>{meaning}</button>)}
+            </div>
+          </details>
+        </div>}
         {draft.language === 'ko' && <small title="National Institute of Korean Language">KRDict · CC BY-SA 2.0 KR</small>}
         {!draft.loading && !draft.candidates.length && <p>No offline meaning found. Enter one or request a cloud meaning.</p>}
         <button type="button" disabled={draft.cloudLoading || !draft.lemma.trim() || (draft.loading && !draft.lemmaEdited)} onClick={() => void requestGloss()}>Get contextual meaning · LLM</button>

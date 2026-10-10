@@ -51,7 +51,7 @@ async function start() {
     } catch { return new Response('Not found', { status: 404 }); }
   });
 
-  const window = new BrowserWindow({ width: 1440, height: 960, title: 'Inflow', icon: path.join(__dirname, '../icon.png'),
+  const window = new BrowserWindow({ width: 1200, height: 800, title: 'Inflow', icon: path.join(__dirname, '../icon.png'),
     titleBarStyle: 'hidden', titleBarOverlay: { color: '#0e1013', symbolColor: '#c7c4d0', height: 48 },
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   window.setMenu(null);

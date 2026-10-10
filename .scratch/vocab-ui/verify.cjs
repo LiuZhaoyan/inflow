@@ -92,7 +92,7 @@ async function run() {
   }
   const selected = () => evaluate('document.querySelector(".vocab-row[aria-pressed=true] .vocab-row-meaning")?.textContent');
   async function selectMeaning(meaning) { await click('.vocab-row', meaning); }
-  async function language(name) { await click('.vocab-language-filter summary'); await click('.vocab-language-filters button', name); }
+  async function language(name) { await click('.vocab-language-filter summary'); await click('.vocab-language-filter .inflow-dropdown-options button', name); }
   async function nav(name) { await click('.workspace-topnav button', name); }
   const note = 'Remember this sense.\nSecond line';
   window.setContentSize(1440, 900);
@@ -154,6 +154,7 @@ async function run() {
   await selectMeaning('船'); assert.equal(await selected(), '学习');
   await nav('Content'); assert.ok(await evaluate('document.querySelector("#notebook").checkVisibility()'));
   await field('.vocab-search input', '船'); assert.equal(await evaluate('document.querySelector(".vocab-search input").value'), '');
+  await language('Korean'); assert.ok(await evaluate('document.querySelector(".vocab-language-filter button[aria-current=true]").textContent.startsWith("All")'));
   failSave = true; await click('.vocab-notes-section button', 'Save note'); await wait('document.querySelector(".vocab-error")?.textContent.includes("write failure")');
   assert.equal(await evaluate('document.querySelector(".vocab-notes-section textarea").value'), note);
   failSave = false; failList = true; const beforeSaveReads = reads;
@@ -170,10 +171,11 @@ async function run() {
   await nav('Vocab'); assert.equal(await selected(), '学习');
 
   await click('.vocab-filters button', 'Media'); await language('Korean');
-  await click('.vocab-add-word'); await field('input[name=lemma]', 'visible'); await field('input[name=meaningZh]', '可见'); await field('.vocab-editor select', 'en');
+  await click('.vocab-add-word'); await field('input[name=lemma]', 'visible'); await field('input[name=meaningZh]', '可见');
+  await click('.vocab-editor .inflow-dropdown summary'); await click('.vocab-editor .inflow-dropdown-options button', 'English');
   await click('.vocab-editor button[type=submit]'); await wait('document.querySelector(".vocab-detail-heading h2")?.textContent === "visible"');
   assert.equal(await selected(), '可见'); assert.ok(await evaluate('document.querySelector(".vocab-filters button[aria-pressed=true]").textContent.startsWith("All")'));
-  assert.ok(await evaluate('document.querySelector(".vocab-language-filters button[aria-pressed=true]").textContent.startsWith("English")'));
+  assert.ok(await evaluate('document.querySelector(".vocab-language-filter button[aria-current=true]").textContent.startsWith("English")'));
   await field('.vocab-search input', 'visible'); await click('.vocab-edit'); await field('input[name=lemma]', 'renamed'); await click('.vocab-editor button[type=submit]');
   await wait('document.querySelector(".vocab-detail-heading h2")?.textContent === "renamed"'); assert.equal(await evaluate('document.querySelector(".vocab-search input").value'), '');
   await language('All'); await click('.vocab-generate'); await wait('!!document.querySelector(".workspace-target-dialog[open]")');

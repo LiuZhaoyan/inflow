@@ -42,3 +42,7 @@ Windows sandbox restrictions caused an existing relink test's rename to fail and
 - Owner visual acceptance, representative large-notebook performance and exhaustive keyboard/screen-reader evaluation are not claimed.
 - The previously recorded [Story request-ordering risk](../archive/artifact-state/architecture-and-verification.md) remains unresolved and outside this change.
 - Deletion is irreversible after confirmation; original media and saved Story snapshots are retained.
+
+## Main dropdown integration
+
+Integrated main's `0f7d903` frontend changes while preserving its shared `Dropdown` component, dropdown styles, collection meaning picker, Library/Sentence controls and 1200×800 default window. Vocabulary editing and language filtering use those dropdowns; the filter retains the unsaved-note navigation guard. Story selectors retain main's dropdown implementation alongside exact notebook-target navigation. Updated native acceptance passed again, including protected dropdown filtering and manual source-language selection; lint, typecheck and the desktop build also passed. Evidence: `../desktop-learning/generated-samples/vocab-native-UB8Hh5/`.
