@@ -1,12 +1,14 @@
 # Task Index
 
-Updated: 2026-10-10
+Updated: 2026-10-11
 
 Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
 ## Current development
 
-No active implementation ticket is tracked here. Vocabulary completion passed source-checkout acceptance; all three [tickets](vocab-ui/issues/) are resolved. Continue developing from the source checkout; installed-package verification belongs to the next release.
+No active implementation tickets. Interface internationalization and vocabulary completion passed source-checkout acceptance; installed-package verification belongs to the next release.
+
+Continue developing from the source checkout. Completed specs and tickets remain available through their acceptance records.
 
 ## Deferred quality and release checks
 
@@ -16,6 +18,7 @@ No active implementation ticket is tracked here. Vocabulary completion passed so
 
 ## Completed records
 
+- [Interface internationalization](i18n/acceptance.md): bilingual workspace, native dialogs and saved preferences; all three [tickets](i18n/issues/) resolved on `codex/i18n`.
 - [Story vocabulary synchronization](story-vocabulary/acceptance.md): collection highlights and sidebar counts refresh without changing generation snapshots.
 - [Vocabulary completion](vocab-ui/acceptance.md): implemented Q1–Q9; [baseline audit and decisions](vocab-ui/audit.md), [approved spec](vocab-ui/spec.md).
 - [Frontend visual acceptance](archive/frontend-workspace/visual-acceptance.md)

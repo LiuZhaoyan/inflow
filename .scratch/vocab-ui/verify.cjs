@@ -31,6 +31,7 @@ async function run() {
   const generator = async input => ({ title: 'A saved boat story', requestedModel: 'deepseek-flash', sentences: [{ parts: [{ text: '배가 ', targetId: input.targets[0].id }, { text: '있어요.', targetId: null }], translationZh: '有一条船。' }] });
   await app.whenReady();
   const ops = new DesktopOperations(profile, processor, generator);
+  ops.saveSettings({ interfaceLocale: 'en' });
   let seed;
   if (!restart) {
     const media = await ops.transcribe((await ops.importMedia(path.join(output, 'sample.wav'))).id, 'fixture');

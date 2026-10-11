@@ -7,6 +7,7 @@ import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
 import { runProcessor } from '../src/listening/media-server';
+import { localizedError, translate } from '../src/i18n';
 import type { ApplicationSettings, LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, ModelStatus, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
@@ -29,7 +30,7 @@ const trustedUrl = (value: string) => {
 };
 
 async function start() {
-  operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text, language) => runProcessor(mode, signal, file, text, root, language));
+  operations = new DesktopOperations(app.getPath('userData'), (mode, signal, file, text, language) => runProcessor(mode, signal, file, text, root, language), undefined, undefined, undefined, app.getLocale());
   const credential = new GenerationCredential(app.getPath('userData'));
   await credential.initialize(root);
   const renderer = path.join(root, 'build', 'renderer');
@@ -59,19 +60,25 @@ async function start() {
   window.webContents.on('will-navigate', (event, url) => { if (!trustedUrl(url)) event.preventDefault(); });
   window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 
-  const choose = async () => {
-    const result = await dialog.showOpenDialog(window, { properties: ['openFile'], filters: [{ name: 'Audio / Video', extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'webm', 'mov', 'flac', 'aac'] }] });
+  const text = (key: string) => translate(operations.getSettings().interfaceLocale, key);
+  const failure = (error: unknown) => {
+    const locale = operations.getSettings().interfaceLocale;
+    const rejected = error instanceof GenerationError && /^DeepSeek rejected the request \(HTTP (\d+)\)\. Check the generation request\.$/.exec(error.message);
+    return new Error(rejected ? translate(locale, 'host.requestRejected', { status: rejected[1] }) : localizedError(locale, error, '') || text('host.failure'));
+  };
+  const choose = async (title: string) => {
+    const result = await dialog.showOpenDialog(window, { title: text(title), properties: ['openFile'], filters: [{ name: text('host.mediaFilter'), extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'webm', 'mov', 'flac', 'aac'] }] });
     return result.canceled ? null : result.filePaths[0];
   };
   const handlers: Record<string, (...args: never[]) => unknown> = {
     list: () => operations.list(), restore: () => operations.restore(), open: (id: string) => operations.open(id),
     importMedia: async () => {
-      const file = await choose();
+      const file = await choose('host.importTitle');
       if (!file) return null;
-      const { response } = await dialog.showMessageBox(window, { type: 'question', message: '选择素材语言', detail: '请选择原文语言；释义和翻译使用中文。', buttons: ['韩语', '英语', '取消'], defaultId: operations.getImportLanguage() === 'en' ? 1 : 0, cancelId: 2 });
+      const { response } = await dialog.showMessageBox(window, { type: 'question', title: text('选择素材语言'), message: text('选择素材语言'), detail: text('请选择原文语言；释义和翻译使用中文。'), buttons: ['韩语', '英语', '取消'].map(text), defaultId: operations.getImportLanguage() === 'en' ? 1 : 0, cancelId: 2 });
       return response < 2 ? operations.importMedia(file, response === 1 ? 'en' : 'ko') : null;
     },
-    relink: async (id: string) => { operations.get(id); const file = await choose(); return file ? operations.relink(id, file) : null; },
+    relink: async (id: string) => { operations.get(id); const file = await choose('host.relinkTitle'); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (input: SentenceTranslationInput, job: string, options?: TranslationOptions) => operations.translate(input, job, credential.get(), options),
     modelStatus: () => runProcessor('models', new AbortController().signal) as Promise<ModelStatus>,
@@ -100,10 +107,10 @@ async function start() {
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),
     deleteVocabulary: (id: string) => operations.deleteVocabulary(id),
     selectVocabulary: (ids: string[]) => operations.selectVocabulary(ids),
-    credentialStatus: () => credential.status(),
+    credentialStatus: () => { const status = credential.status(); return status.error ? { ...status, error: text(status.error) } : status; },
     configureCredential: (key: string) => credential.configure(key),
     getSettings: () => operations.getSettings(),
-    saveSettings: (settings: ApplicationSettings) => operations.saveSettings(settings),
+    saveSettings: (settings: Partial<ApplicationSettings>) => operations.saveSettings(settings),
     generateArtifact: async (ids: string[], topic: string, job: string) => {
       try { return await operations.generateArtifact(ids, topic, job, credential.get()); }
       catch (error) {
@@ -123,8 +130,9 @@ async function start() {
     openArtifact: (id: string) => operations.openArtifact(id),
   };
   for (const [method, handler] of Object.entries(handlers)) ipcMain.handle(`inflow:${method}`, (event, ...args) => {
-    if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error('访问被拒绝。');
-    return handler(...args as never[]);
+    if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error(text('访问被拒绝。'));
+    try { return Promise.resolve(handler(...args as never[])).catch(error => { throw failure(error); }); }
+    catch (error) { throw failure(error); }
   });
   window.on('closed', () => app.quit());
   await window.loadURL('inflow://app/');

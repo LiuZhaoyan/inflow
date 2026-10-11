@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-10
+Last verified: 2026-10-11
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -20,7 +20,9 @@ The current frontend workspace supports media import and processing, full and se
 
 Manual video subtitle masking is implemented in this source checkout: explicit activation, one opaque rectangle, pointer/keyboard adjustment, picture-relative positioning with letterboxing, an initial adjustment pause with optional live playback, and independent per-video persistence. New video imports remain uncovered. [Mask acceptance](../.scratch/archive/video-subtitles/implementation-and-acceptance.md) records automated browser interaction, real host/SQLite tests and the desktop build; owner visual acceptance was recorded on 2026-10-09 and installed-package masking verification is deferred until the next packaged release; native maximized-window verification also remains outstanding.
 
-The top-navigation Settings modal uses the current dark workspace style, with LLM and Subtitle mask categories on one continuous surface. It replaces Story's key editor with a Settings shortcut, shares credential status with Story, and previews a global solid-color video mask before saving. The host retains encrypted credential storage and persists the color in SQLite. Save/Cancel, explicit partial-save feedback, pause without automatic resume, empty-library use, and real profile restart passed [Settings acceptance](../.scratch/archive/settings/acceptance.md). Owner visual approval was recorded on 2026-10-09; any additional installed-package verification can be done at the next packaged release.
+The top-navigation Settings modal uses the current dark workspace style, with Interface language, LLM, Subtitle mask and Processing models categories. It replaces Story's key editor with a Settings shortcut, shares credential status with Story, and previews a global solid-color video mask before saving. The host retains encrypted credential storage and persists color and interface language in SQLite. Save/Cancel, explicit partial-save feedback, pause without automatic resume, empty-library use, and real profile restart passed [Settings acceptance](../.scratch/archive/settings/acceptance.md). Owner visual approval of that Settings iteration was recorded on 2026-10-09; additional installed-package verification belongs to the next packaged release.
+
+Simplified Chinese and English interfaces now cover the workspace, libraries, Settings, accessible names, application-owned errors and native dialog options. Saved language overrides the Chinese-system/English-otherwise default; Save applies immediately, while Cancel discards the draft and failures retain it. Browser preferences use separate local storage without a desktop bridge. Source media and Korean/English learning text, Chinese assistance, notes, target snapshots, playback and masks remain unchanged by switching. See [interface internationalization acceptance](../.scratch/i18n/acceptance.md).
 
 ## 2. Runtime architecture
 
@@ -105,11 +107,11 @@ The Electron host stores learning records in SQLite. The current persisted domai
 - current sentence segments, plus latest successful sentence translations and their input context;
 - vocabulary entries and media-source occurrences;
 - generated artifacts and artifact-source vocabulary occurrences;
-- small application settings such as the current media or artifact and global video subtitle mask color.
+- small application settings such as the current media or artifact, global video subtitle mask color and interface language.
 
 Video mask settings are an optional field in the existing media learning JSON. Missing settings mean disabled; no table migration is required. The host validates bounded numeric regions, retains settings when older save requests omit them, and preserves them during successful retranscription.
 
-The global mask color uses the existing settings table and defaults to black for existing profiles. Each video's region and enabled state stay in its learning JSON. The shared DeepSeek key remains in a Windows-encrypted host file; it is not stored in the settings table or returned to the renderer. The two settings may save independently, with explicit field-level results and retries for failed changes.
+The global mask color and interface language use the existing settings table with no learning-data migration. Color defaults to black; profiles without a language use the system default. Color-only and language-only updates preserve the other preference. Each video's region and enabled state stay in its learning JSON. The shared DeepSeek key remains in a Windows-encrypted host file; it is not stored in the settings table or returned to the renderer. Settings categories may save independently, with explicit results and retries for failed changes.
 
 Large media files and local model resources are stored outside SQLite.
 
@@ -124,6 +126,8 @@ Task-specific verification records are indexed in [the task index](../.scratch/R
 English native acceptance runs in an isolated profile and a second Electron process. It covers real Whisper transcription on offline synthetic speech, real spaCy and dictionary lookup, language confirmation/default, playback, masks, protected drafts, independent filters, two Story cycles and offline restoration. Provider requests in that UI run are deterministic fixtures. Separate live English generations verified supplied contextual senses, contractions, hyphens and regular inflection; plural/irregular generation quality remains unverified, and one malformed response was rejected. See [the quality report](../.scratch/archive/english-learning/quality-report.md).
 
 [Vocabulary acceptance](../.scratch/vocab-ui/acceptance.md) passed 67 tests, lint, typecheck, desktop build, isolated native UI checks and a second-process restart. It covers load retry/stale reads, save visibility, protected notes, rollback-safe deletion, exact repeated-occurrence highlighting, Story navigation and mixed-language continuation. Controlled speech events test UI lifecycle; a separate real, muted English/Korean synthesis probe completed successfully. Audible speech quality and installed-package acceptance are unverified.
+
+[Interface internationalization acceptance](../.scratch/i18n/acceptance.md) passed 79 tests, lint, typecheck, desktop build and isolated desktop/restart/browser checks. It includes failed/partial saves, owned failure language changes, native dialog options, narrow Settings layout and unchanged learning state. Processing/provider fixtures make this source-checkout behavior evidence; installed-package and owner visual acceptance of this iteration remain unverified.
 
 ## 7. Current gaps
 

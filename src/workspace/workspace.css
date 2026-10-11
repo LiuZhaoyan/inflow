@@ -215,7 +215,8 @@
 .workspace-settings-section-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
 .workspace-settings-section-heading>span { color:var(--workspace-muted); font-size:12px; }
 .workspace-settings-dialog label { display:block; color:var(--workspace-text); font-size:13px; }
-.workspace-settings-dialog input { min-height:40px; border:1px solid var(--workspace-control-line); border-radius:5px; background:var(--workspace-bg); color:var(--workspace-text); }
+.workspace-settings-dialog input, .workspace-settings-dialog select { min-height:40px; border:1px solid var(--workspace-control-line); border-radius:5px; background:var(--workspace-bg); color:var(--workspace-text); }
+.workspace-settings-dialog select { margin-top:7px; padding:0 10px; font:inherit; }
 .workspace-settings-dialog input[type="password"] { width:100%; margin-top:7px; padding:0 10px; }
 .workspace-settings-dialog .workspace-settings-help { margin-top:8px; color:var(--workspace-muted); font-size:13px; line-height:1.55; }
 .workspace-settings-color { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
