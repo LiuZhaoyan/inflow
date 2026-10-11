@@ -39,6 +39,11 @@ function check(name, ok, detail) {
 
 // Hermetic profile and scripted dialogs must be installed before the app's own start() runs.
 app.setPath('userData', PROFILE);
+// Existing selectors deliberately exercise the English interface on every system.
+const { DesktopOperations } = require(path.join(app.getAppPath(), 'build/desktop/desktop/operations.js'));
+const localeProfile = new DesktopOperations(PROFILE, async () => null);
+localeProfile.saveSettings({ interfaceLocale: 'en' });
+localeProfile.close();
 dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [MEDIA] });
 dialog.showMessageBox = async () => ({ response: 0 });
 app.on('web-contents-created', (_event, contents) => {
