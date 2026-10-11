@@ -33,7 +33,9 @@ export type DesktopBridge = {
   list(): Promise<SavedMedia[]>;
   restore(): Promise<SavedMedia | null>;
   open(id: string): Promise<SavedMedia>;
-  importMedia(): Promise<SavedMedia | null>;
+  chooseImportMedia(): Promise<string | null>;
+  importMedia(ticket: string, language: SourceLanguage): Promise<SavedMedia>;
+  cancelImportMedia(ticket: string): Promise<void>;
   relink(id: string): Promise<SavedMedia | null>;
   transcribe(id: string, job: string): Promise<SavedMedia>;
   translate(input: SentenceTranslationInput, job: string, options?: TranslationOptions): Promise<string>;

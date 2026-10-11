@@ -41,10 +41,9 @@ async function run() {
   else assert.equal(seed.getImportLanguage(), 'en');
   seed.close();
 
-  const confirmations = [], requests = [], errors = [];
-  let cancelImport = false, chosenFile = sample, confirmedLanguage = 1;
+  const requests = [], errors = [];
+  let chosenFile = sample;
   dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [chosenFile] });
-  dialog.showMessageBox = async (_window, options) => { confirmations.push(options); return { response: cancelImport ? 2 : confirmedLanguage }; };
   app.on('browser-window-created', (_event, window) => {
     window.hide(); window.webContents.setBackgroundThrottling(false);
     window.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
@@ -121,23 +120,30 @@ async function run() {
   await wait('!!document.querySelector(".workspace-sentence-text")');
   await select('.workspace-sentence-text', '친구를');
   await wait('document.querySelector(".vocabulary-selection input[name=lemma]")?.value === "친구"');
-  assert.ok(await evaluate('[...document.querySelectorAll(".vocabulary-selection option")].some(option => option.textContent === "朋友")'));
+  assert.ok(await evaluate('[...document.querySelectorAll(".vocabulary-meaning-options button")].some(option => option.textContent === "朋友")'));
   await textButton('.vocabulary-selection button', 'Discard');
   await textButton('.workspace-topnav button', 'Library');
   await textButton('.workspace-library-footer button', 'Import media');
+  await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+  assert.deepEqual(await evaluate('[...document.querySelectorAll(".workspace-source-language-option")].map(button => button.textContent.trim())'), ['한국어', 'English']);
+  assert.ok(await evaluate('document.activeElement.matches(".workspace-source-language-dialog")'), 'no preselected language');
+  await click('.workspace-source-language-option[lang=en]');
   await wait('window.inflow.list().then(items => items.some(item => item.language === "en" && item.segments.length > 0))', 180000);
   const media = await evaluate('window.inflow.list().then(items => items.find(item => item.language === "en"))');
-  assert.equal(confirmations[0].defaultId, 0); assert.deepEqual(confirmations[0].buttons, ['Korean', 'English', 'Cancel']);
   assert.ok(media.segments.some(segment => segment.text.includes('children')), JSON.stringify(media.segments));
   await fs.writeFile(path.join(output, 'transcript.json'), JSON.stringify(media.segments, null, 2));
-  cancelImport = true;
-  assert.equal(await evaluate('window.inflow.importMedia()'), null); assert.equal(confirmations[1].defaultId, 1);
-  cancelImport = false; chosenFile = path.join(output, 'empty.wav'); confirmedLanguage = 0;
+  await textButton('.workspace-topnav button', 'Library');
+  await textButton('.workspace-library-footer button', 'Import media');
+  await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+  await click('.workspace-source-language-cancel');
+  await wait('!document.querySelector(".workspace-source-language-dialog")');
+  assert.equal((await evaluate('window.inflow.list()')).length, 2);
+  chosenFile = path.join(output, 'empty.wav');
   await fs.writeFile(chosenFile, '');
-  await assert.rejects(evaluate('window.inflow.importMedia()'));
-  confirmedLanguage = 1;
-  await assert.rejects(evaluate('window.inflow.importMedia()'));
-  assert.equal(confirmations[3].defaultId, 0);
+  for (const language of ['ko', 'en']) {
+    const ticket = await evaluate('window.inflow.chooseImportMedia()');
+    await assert.rejects(evaluate(`window.inflow.importMedia(${JSON.stringify(ticket)}, ${JSON.stringify(language)})`));
+  }
   chosenFile = sample;
   assert.equal(await evaluate('window.inflow.list().then(items => items.length)'), 2);
   await wait('!document.querySelector(".workspace-library-dialog").open');

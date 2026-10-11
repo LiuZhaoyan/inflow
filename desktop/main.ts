@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol } from 'electron';
 import { createRequire } from 'node:module';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { DesktopOperations } from './operations';
@@ -70,14 +71,30 @@ async function start() {
     const result = await dialog.showOpenDialog(window, { title: text(title), properties: ['openFile'], filters: [{ name: text('host.mediaFilter'), extensions: ['mp3', 'mp4', 'm4a', 'wav', 'ogg', 'webm', 'mov', 'flac', 'aac'] }] });
     return result.canceled ? null : result.filePaths[0];
   };
+  let pendingImport: { ticket: string; file: string } | null = null;
+  let choosingImport = false;
   const handlers: Record<string, (...args: never[]) => unknown> = {
     list: () => operations.list(), restore: () => operations.restore(), open: (id: string) => operations.open(id),
-    importMedia: async () => {
-      const file = await choose('host.importTitle');
-      if (!file) return null;
-      const { response } = await dialog.showMessageBox(window, { type: 'question', title: text('选择素材语言'), message: text('选择素材语言'), detail: text('请选择原文语言；释义和翻译使用中文。'), buttons: ['韩语', '英语', '取消'].map(text), defaultId: operations.getImportLanguage() === 'en' ? 1 : 0, cancelId: 2 });
-      return response < 2 ? operations.importMedia(file, response === 1 ? 'en' : 'ko') : null;
+    chooseImportMedia: async () => {
+      if (choosingImport) return null;
+      choosingImport = true;
+      pendingImport = null;
+      try {
+        const file = await choose('host.importTitle');
+        if (!file) return null;
+        const ticket = randomUUID();
+        pendingImport = { ticket, file };
+        return ticket;
+      } finally { choosingImport = false; }
     },
+    importMedia: (ticket: string, language: 'ko' | 'en') => {
+      if (language !== 'ko' && language !== 'en') throw new Error('Unsupported source language.');
+      if (!pendingImport || pendingImport.ticket !== ticket) throw new Error('Media import selection has expired.');
+      const { file } = pendingImport;
+      pendingImport = null;
+      return operations.importMedia(file, language);
+    },
+    cancelImportMedia: (ticket: string) => { if (pendingImport?.ticket === ticket) pendingImport = null; },
     relink: async (id: string) => { operations.get(id); const file = await choose('host.relinkTitle'); return file ? operations.relink(id, file) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (input: SentenceTranslationInput, job: string, options?: TranslationOptions) => operations.translate(input, job, credential.get(), options),

@@ -10,7 +10,7 @@ async function run() {
     await fs.mkdir(parent, { recursive: true });
     const output = await fs.mkdtemp(path.join(parent, 'i18n-native-'));
     require('node:child_process').execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'color=c=blue:s=640x360:d=6', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=6', '-c:v', 'libvpx', '-c:a', 'libvorbis', path.join(output, 'sample.webm')], { windowsHide: true });
-    for (const phase of ['initial', 'restart', 'browser']) {
+    for (const phase of ['initial', 'restart', 'browser', 'import']) {
       const env = { ...process.env, DEEPSEEK_API_KEY: '' }; delete env.ELECTRON_RUN_AS_NODE;
       await new Promise((resolve, reject) => {
         const child = require('node:child_process').spawn(require('electron'), [__filename, output, phase], { env, stdio: 'inherit', windowsHide: true });
@@ -128,6 +128,28 @@ async function run() {
       assert.deepEqual(ops.listVocabulary(), JSON.parse(await fs.readFile(path.join(output, 'expected-vocabulary.json'), 'utf8')));
       assert.deepEqual(ops.listArtifacts(), [seed.story]);
       assert.deepEqual(ops.get(seed.media.id).segments, seed.media.segments);
+    } else if (phase === 'import') {
+      await wait('document.documentElement.lang === "zh-CN" && !!document.querySelector(".workspace-topnav")');
+      const before = ops.list().length;
+      await click('.workspace-topnav nav button', '资料库');
+      await click('.workspace-library-footer button', '导入媒体');
+      await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+      assert.ok(await evaluate('document.activeElement.classList.contains("workspace-source-language-dialog")'), 'no default language selection');
+      assert.deepEqual(await evaluate('[...document.querySelectorAll(".workspace-source-language-option")].map(node => node.textContent.trim())'), ['한국어', 'English']);
+      await screenshot('source-language-chinese');
+      window.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+      window.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+      await wait('!document.querySelector(".workspace-source-language-dialog")');
+      assert.equal(ops.list().length, before, 'Escape does not import');
+      await click('.workspace-library-footer button', '导入媒体');
+      await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+      await click('.workspace-source-language-option[lang=en]');
+      await wait('window.inflow.list().then(items => items.length === 2)');
+      assert.equal(ops.list().length, before + 1, 'click immediately imports');
+      assert.ok(ops.list().some(item => item.language === 'en'), 'English import is present');
+      assert.equal(ops.getImportLanguage(), 'en');
+      assert.equal(await evaluate('!!document.querySelector(".workspace-source-language-dialog")'), false);
+      await screenshot('source-language-complete');
     } else if (phase === 'browser') {
       assert.equal(await evaluate('!!window.inflow'), false);
       await switchLanguage('en');
@@ -157,10 +179,14 @@ async function run() {
       assert.deepEqual(await snapshot(), before);
       assert.equal(await evaluate('document.querySelector(".workspace-sentence-text").lang'), 'ko');
       await screenshot('listen-chinese');
-      await evaluate('window.inflow.importMedia()');
-      assert.equal(dialogs.at(-1).message, '选择素材语言');
-      assert.ok(dialogs.at(-1).buttons.includes('韩语'));
-      assert.ok(dialogs.at(-2).filters[0].name.includes('音频'));
+      await click('.workspace-topnav nav button', '资料库');
+      await click('.workspace-library-footer button', '导入媒体');
+      await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+      assert.equal(await evaluate('document.querySelector("#source-language-title").textContent'), '选择素材语言');
+      assert.deepEqual(await evaluate('[...document.querySelectorAll(".workspace-source-language-option")].map(button => button.textContent.trim())'), ['한국어', 'English']);
+      assert.ok(dialogs.at(-1).filters[0].name.includes('音频'));
+      await click('.workspace-source-language-cancel');
+      await wait('!document.querySelector(".workspace-source-language-dialog")');
       assert.equal(ops.getImportLanguage(), 'ko');
       const invalid = await evaluate('window.inflow.saveSettings({ interfaceLocale: "ko" }).then(() => "unexpected success", failure => failure.message)');
       assert.ok(invalid.includes('简体中文'));
@@ -175,7 +201,12 @@ async function run() {
       assert.equal(await evaluate('document.querySelector("#settings-interface-language").value'), 'en');
       assert.equal(ops.getSettings().videoMaskColor, '#abcdef');
       failLocale = false; await click('.workspace-settings-dialog button[type=submit]'); await wait('document.documentElement.lang === "en" && !document.querySelector(".workspace-settings-dialog")');
-      await evaluate('window.inflow.importMedia()'); assert.equal(dialogs.at(-1).message, 'Choose source language'); assert.ok(dialogs.at(-1).buttons.includes('Korean'));
+      await click('.workspace-topnav nav button', 'Library');
+      await click('.workspace-library-footer button', 'Import media');
+      await wait('!!document.querySelector(".workspace-source-language-dialog[open]")');
+      assert.equal(await evaluate('document.querySelector("#source-language-title").textContent'), 'Choose source language');
+      assert.deepEqual(await evaluate('[...document.querySelectorAll(".workspace-source-language-option")].map(button => button.textContent.trim())'), ['한국어', 'English']);
+      await click('.workspace-source-language-cancel');
       await click('.workspace-topnav nav button', 'Library'); await click('.workspace-library-item', 'A saved walk');
       await wait('document.querySelector(".story-sentences")?.checkVisibility()');
       const storyBefore = await evaluate('document.querySelector(".story-sentences").textContent');

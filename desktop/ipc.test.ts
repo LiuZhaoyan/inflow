@@ -37,6 +37,7 @@ async function host(processor: Processor = async () => status) {
       async loadURL() { loaded(); }
     },
     protocol: { registerSchemesAsPrivileged: () => {}, handle: () => {} },
+    dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['C:/fixture/sample.wav'] }) },
     ipcMain: { handle: (channel: string, handler: Handler) => handlers.set(channel, handler) },
   };
   const mocks: Record<string, unknown> = {
@@ -45,12 +46,14 @@ async function host(processor: Processor = async () => status) {
       getSettings() { return { interfaceLocale: 'zh-CN', videoMaskColor: '#000000' }; }
       list() { calls.push('list'); return []; }
       cancel(job: string) { calls.push(`cancel:${job}`); }
+      importMedia(file: string, language: string) { calls.push(`import:${file}:${language}`); return { id: 'fixture', language }; }
     } },
     './credentials': { GenerationCredential: class { async initialize() {} } },
     './media': {}, '../src/generation': { GenerationError },
     '../src/listening/media-server': { runProcessor: processor },
     '../src/i18n': i18n,
     'node:path': path, 'node:url': {}, 'node:module': {},
+    'node:crypto': { randomUUID: () => 'import-ticket-fixture' },
   };
   const source = readFileSync(new URL('./main.ts', import.meta.url), 'utf8');
   const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } });
@@ -89,6 +92,22 @@ test('preload exposes exactly the typed, registered methods and forwards only na
     assert.equal(await bridge[method](input, 'job'), 'reply');
     assert.deepEqual(invocations.at(-1), [`inflow:${method}`, input, 'job']);
   }
+});
+
+test('language selection keeps file paths in the host, validates languages, and consumes one-time tickets', async () => {
+  const main = await host();
+  await assert.rejects(async () => main.invoke('importMedia', 'unknown', 'ko'));
+  const ticket = await main.invoke('chooseImportMedia');
+  assert.equal(ticket, 'import-ticket-fixture');
+  assert.ok(!String(ticket).includes('sample.wav'));
+  await assert.rejects(async () => main.invoke('importMedia', ticket, 'ja'));
+  assert.deepEqual(await main.invoke('importMedia', ticket, 'en'), { id: 'fixture', language: 'en' });
+  assert.deepEqual(main.calls, ['import:C:/fixture/sample.wav:en']);
+  await assert.rejects(async () => main.invoke('importMedia', ticket, 'en'));
+  const other = await main.invoke('chooseImportMedia');
+  await main.invoke('cancelImportMedia', other);
+  await assert.rejects(async () => main.invoke('importMedia', other, 'ko'));
+  assert.equal(main.calls.length, 1, 'cancelled selections never import');
 });
 
 test('every IPC handler denies foreign windows, child frames, untrusted URLs and destroyed windows', async () => {

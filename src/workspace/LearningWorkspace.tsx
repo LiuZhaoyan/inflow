@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { useLocale } from '@/i18n/context';
 import { validateSegments, type Segment } from '@/listening/processing';
 import { defaultVideoMaskColor, initialVideoMask, type VideoMask } from '@/listening/video-mask';
-import { managedMediaUrl, type ApplicationSettings, type CredentialStatus, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type VocabularyContext, type VocabularyEntry, type PlaybackMode } from '@/listening/desktop';
+import { managedMediaUrl, type ApplicationSettings, type CredentialStatus, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type VocabularyContext, type VocabularyEntry, type PlaybackMode, type SourceLanguage } from '@/listening/desktop';
 import VocabularyNotebook, { type VocabularyNotebookHandle } from '@/listening/VocabularyNotebook';
 import VocabularySelection, { type VocabularySelectionHandle } from '@/listening/VocabularySelection';
 import ArtifactLibrary from '@/listening/ArtifactLibrary';
@@ -15,6 +15,7 @@ import SentenceArea from '@/workspace/SentenceArea';
 import ContextPanel from '@/workspace/ContextPanel';
 import StoryTargetsDialog from '@/workspace/StoryTargetsDialog';
 import SettingsDialog from '@/workspace/SettingsDialog';
+import SourceLanguageDialog from '@/workspace/SourceLanguageDialog';
 import { useLearningArtifacts } from '@/workspace/useLearningArtifacts';
 import '@/workspace/workspace.css';
 
@@ -49,6 +50,10 @@ export default function LearningWorkspace() {
   const translating = useRef<AbortController | null>(null);
   const autoProcess = useRef('');
   const fileChoice = useRef(0);
+  const importTicket = useRef<string | null>(null);
+  const choosingImport = useRef(false);
+  const importing = useRef(false);
+  const [importLanguageOpen, setImportLanguageOpen] = useState(false);
   const [view, setView] = useState<'video' | 'vocab'>('video');
   const [contentKind, setContentKind] = useState<'media' | 'story'>('media');
   const [vocabularyEntries, setVocabularyEntries] = useState<VocabularyEntry[]>([]);
@@ -220,15 +225,38 @@ export default function LearningWorkspace() {
   }
 
   async function importMedia() {
-    if (!allowChange()) return;
+    if (!allowChange() || importTicket.current || choosingImport.current || importing.current) return;
     if (!window.inflow) { picker.current?.click(); return; }
+    choosingImport.current = true;
     try {
-      const next = await window.inflow.importMedia();
-      if (!next) return;
+      const ticket = await window.inflow.chooseImportMedia();
+      if (!ticket) return;
+      importTicket.current = ticket;
+      setImportLanguageOpen(true);
+    } catch (failure) { setError(failure instanceof Error ? failure.message : '导入失败，请重试。'); }
+    finally { choosingImport.current = false; }
+  }
+
+  function cancelImportLanguage() {
+    const ticket = importTicket.current;
+    importTicket.current = null;
+    setImportLanguageOpen(false);
+    if (ticket) void window.inflow?.cancelImportMedia(ticket).catch(() => {});
+  }
+
+  async function confirmImportLanguage(language: SourceLanguage) {
+    const ticket = importTicket.current;
+    if (!ticket || importing.current || !window.inflow) return;
+    importing.current = true;
+    importTicket.current = null;
+    setImportLanguageOpen(false);
+    try {
+      const next = await window.inflow.importMedia(ticket, language);
       if (!applySaved(next)) return;
       autoProcess.current = managedMediaUrl(next.id);
       setContentKind('media'); setView('video'); setLibraryOpen(false); setLibrary(await window.inflow.list());
     } catch (failure) { setError(failure instanceof Error ? failure.message : '导入失败，请重试。'); }
+    finally { importing.current = false; }
   }
 
   async function openSaved(id: string, relink = false) {
@@ -514,6 +542,7 @@ export default function LearningWorkspace() {
     </section>
     <LibraryDrawer open={libraryOpen} items={library} currentId={contentKind === 'media' ? savedMedia?.id : null} artifacts={artifacts} currentArtifactId={contentKind === 'story' ? activeArtifact?.id : null} onOpenArtifact={artifact => openStory({ type: 'artifact', artifactId: artifact.id, sentenceIndex: 0, name: artifact.title })} onClose={() => setLibraryOpen(false)} onImport={() => void importMedia()} onOpen={id => void openSaved(id)} onRelink={id => void openSaved(id, true)}/>
     <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen && !settingsOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)}/>
+    {importLanguageOpen && <SourceLanguageDialog onSelect={language => void confirmImportLanguage(language)} onCancel={cancelImportLanguage}/>}
     {targetSelectionOpen && <StoryTargetsDialog entries={vocabularyEntries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
     {settingsOpen && <SettingsDialog settings={settings} credential={credential} onSettingsChange={setSettings} onCredentialChange={setCredential} onClose={() => setSettingsOpen(false)}/>}
   </div>;

@@ -340,6 +340,8 @@ const phases = {
     check('whisper model present in profile', fs.existsSync(path.join(facts.userData, 'models', 'whisper-turbo', 'model.bin')));
     await waitForBridge();
     await runArg(clickByText, '导入媒体');
+    await wait(window, `() => !!document.querySelector('.workspace-source-language-dialog[open]')`, 'source language dialog', 30000);
+    await runArg(`() => document.querySelector('.workspace-source-language-option[lang="ko"]').click()`);
     await wait(window, busy, 'processing to start', 60000);
     const processStarted = Date.now();
     const count = await wait(window, sentences, 'sentences after transcription', 600000);
@@ -424,6 +426,8 @@ const phases = {
     const facts = mainFacts();
     await waitForBridge();
     await runArg(clickByText, '导入媒体');
+    await wait(window, `() => !!document.querySelector('.workspace-source-language-dialog[open]')`, 'source language dialog', 30000);
+    await runArg(`() => document.querySelector('.workspace-source-language-option[lang="ko"]').click()`);
     await wait(window, busy, 'processing to start', 60000);
     await new Promise(resolve => setTimeout(resolve, 10000));
     await runArg(clickByText, '取消处理');
@@ -450,6 +454,8 @@ const phases = {
     let count = restored;
     if (!restored) {
       await runArg(clickByText, '导入媒体');
+      await wait(window, `() => !!document.querySelector('.workspace-source-language-dialog[open]')`, 'source language dialog', 30000);
+      await runArg(`() => document.querySelector('.workspace-source-language-option[lang="ko"]').click()`);
       await wait(window, busy, 'processing to start', 60000);
       const started = Date.now();
       count = await wait(window, sentences, 'sentences', 600000);
