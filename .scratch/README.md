@@ -16,6 +16,7 @@ No active implementation ticket is tracked here. Vocabulary completion passed so
 
 ## Completed records
 
+- [Story vocabulary synchronization](story-vocabulary/acceptance.md): collection highlights and sidebar counts refresh without changing generation snapshots.
 - [Vocabulary completion](vocab-ui/acceptance.md): implemented Q1–Q9; [baseline audit and decisions](vocab-ui/audit.md), [approved spec](vocab-ui/spec.md).
 - [Frontend visual acceptance](archive/frontend-workspace/visual-acceptance.md)
 - [Settings acceptance](archive/settings/acceptance.md)

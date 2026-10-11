@@ -39,14 +39,29 @@ test('historical target stories provide one context per story without rewriting 
     const lookup = await app.lookupVocabulary({ language: 'en', lemma: 'walk', surface: 'walk', sentence: 'We walk again.', start: 3,
       source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 2, name: story.title } }, 'lookup');
     assert.equal(lookup.meaningZh, word.meaningZh);
+    assert.deepEqual(app.listArtifactVocabulary('historical-story').map(entry => ({ id: entry.id, contexts: entry.contexts })),
+      [{ id: word.id, contexts: [{ id: app.listArtifactVocabulary('historical-story')[0].contexts[0].id,
+        surface: 'walk', sentence: 'We walk again.', surfaceStarts: [3],
+        source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 2, name: story.title } }] }]);
+    assert.deepEqual(app.listArtifactVocabulary('another-story'), []);
+    assert.throws(() => app.listArtifactVocabulary('missing-story'));
+    for (const surfaceStart of [12, 2]) app.saveVocabulary({ language: 'en', lemma: word.lemma, meaningZh: word.meaningZh,
+      context: { surface: 'walk', surfaceStart, sentence: 'I walk then walk home.',
+        source: { type: 'artifact', artifactId: 'historical-story', sentenceIndex: 1, name: story.title } } });
+    const occurrences = app.listArtifactVocabulary('historical-story')[0].contexts;
+    assert.deepEqual(occurrences.map(context => ({ sentenceIndex: context.source.type === 'artifact' ? context.source.sentenceIndex : -1,
+      starts: context.surfaceStarts })), [{ sentenceIndex: 1, starts: [2, 12] }, { sentenceIndex: 2, starts: [3] }]);
     const edited = app.saveVocabulary({ id: word.id, language: 'en', lemma: 'stroll', meaningZh: '慢走' });
     assert.deepEqual(edited.contexts, contexts);
     assert.deepEqual(app.openArtifact('historical-story').targets, story.targets);
     app.close(); app = new DesktopOperations(root, processor);
     assert.deepEqual(app.listVocabulary().find(entry => entry.id === word.id), edited);
+    assert.equal(app.listArtifactVocabulary('historical-story')[0].lemma, 'stroll');
+    assert.deepEqual(app.listArtifactVocabulary('historical-story')[0].contexts, occurrences);
     app.deleteVocabulary(word.id);
     const replacement = app.saveVocabulary({ language: 'en', lemma: 'walk', meaningZh: '步行' });
     assert.deepEqual(replacement.contexts, []);
+    assert.deepEqual(app.listArtifactVocabulary('historical-story'), []);
     assert.deepEqual(app.openArtifact('historical-story').targets, story.targets);
     const stored = new DatabaseSync(path.join(root, 'learning.sqlite'));
     try { assert.equal(stored.prepare('SELECT count(*) AS count FROM artifact_vocabulary_sources').get()!.count, 0); }

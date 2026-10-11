@@ -297,7 +297,7 @@ export default function VocabularyNotebook({
               <span className="vocab-row-sentence" lang={entry.language}>{context ? <HighlightedSentence {...context}/> : 'No source'}</span>
             </span>
             <span className="vocab-row-source">
-              {source ? <><span className="vocab-row-thumb"><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>No source</span></span></>}
+              {source ? <><span className="vocab-row-thumb" data-kind={source.type}><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>No source</span></span></>}
             </span>
           </button>;
         })}
@@ -312,10 +312,19 @@ export default function VocabularyNotebook({
             <span className="vocab-language-badge">{selectedEntry.language === 'en' ? 'English' : 'Korean'}</span>
             <Pronunciation key={selectedEntry.id} entry={selectedEntry} active={active && !hasPendingEdit}/>
           </div>
-          <div className="vocab-detail-actions"><button className="vocab-edit" type="button" disabled={hasPendingEdit} onClick={() => editEntry(selectedEntry)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15z"/><path d="M12 20h8"/></svg>Edit
-          </button>
-          <button className="vocab-delete" type="button" disabled={hasPendingEdit} onClick={() => void remove(selectedEntry)}>Delete</button></div>
+          <div className="vocab-detail-actions">
+            <button className="vocab-edit" type="button" disabled={hasPendingEdit} title="Edit vocabulary" aria-label={`Edit ${selectedEntry.lemma}`} onClick={() => editEntry(selectedEntry)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15z"/><path d="M12 20h8"/></svg>
+            </button>
+            <details className="vocab-entry-menu" key={selectedEntry.id}>
+              <summary aria-label={`More actions for ${selectedEntry.lemma}`} aria-disabled={hasPendingEdit} title="More actions" onClick={event => { if (!beforeChange()) event.preventDefault(); }}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+              </summary>
+              <div className="vocab-entry-menu-panel">
+                <button className="vocab-delete" type="button" disabled={hasPendingEdit} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void remove(selectedEntry); }}>Delete vocabulary</button>
+              </div>
+            </details>
+          </div>
         </header>
         <section className="vocab-detail-section">
           <h3>Meaning</h3>
@@ -325,12 +334,18 @@ export default function VocabularyNotebook({
           <header className="vocab-section-heading"><div><h3>Contexts</h3><span>{selectedEntry.contexts.length}</span></div></header>
           {selectedEntry.contexts.length ? <div className="vocab-context-list">
             {selectedEntry.contexts.map(context => <article className="vocab-context-card" key={context.id}>
-              <div className="vocab-context-thumbnail"><SourceThumbnail key={thumbnailKey(context.source)} source={context.source}/></div>
+              <div className="vocab-context-thumbnail" data-kind={context.source.type}><SourceThumbnail key={thumbnailKey(context.source)} source={context.source}/></div>
               <div className="vocab-context-copy">
                 <p lang={selectedEntry.language}><HighlightedSentence {...context}/></p>
-                <span className="vocab-context-source"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={context.source.type === 'artifact' ? 'M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5' : 'M3 6h13v12H3zM16 10l5-3v10l-5-3z'}/></svg>{context.source.name} · {context.source.type === 'artifact' ? 'Story · ' + location(context.source) : location(context.source)}</span>
+                <div className="vocab-context-meta">
+                  <span className="vocab-context-source" title={context.source.name + ' · ' + (context.source.type === 'artifact' ? 'Story · ' : 'Media · ') + location(context.source)}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d={context.source.type === 'artifact' ? 'M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5' : 'M3 6h13v12H3zM16 10l5-3v10l-5-3z'}/></svg>
+                    <span className="vocab-context-position">{context.source.type === 'artifact' ? 'Story' : 'Media'} · {location(context.source)}</span>
+                    <span className="vocab-context-source-label">{context.source.name}</span>
+                  </span>
+                  <button className="vocab-open-source" type="button" aria-label={`Open ${context.source.name} at ${location(context.source)}`} onClick={() => { if (beforeChange()) onOpenSource(context.source); }}>Open <span aria-hidden="true">↗</span></button>
+                </div>
               </div>
-              <button className="vocab-open-source" type="button" aria-label={`Open ${context.source.name} at ${location(context.source)}`} onClick={() => { if (beforeChange()) onOpenSource(context.source); }}>Open <span aria-hidden="true">↗</span></button>
             </article>)}
           </div> : <p className="vocab-no-context">No source</p>}
         </section>

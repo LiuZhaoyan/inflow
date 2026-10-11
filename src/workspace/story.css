@@ -67,6 +67,9 @@
 .story-context-list i { width: 7px; height: 7px; border-radius: 50%; background: #bc8aff; }
 .story-vocabulary-panel { display: flex; flex-direction: column; border-top: 1px solid var(--workspace-line); }
 .story-vocabulary-list { flex: 1; min-height: 0; overflow: auto; padding: 0 16px 12px; scrollbar-color: #3d3b46 transparent; scrollbar-width: thin; }
+.story-collected-vocabulary > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; }
+.story-collected-vocabulary h3 { margin: 0; color: #f0edf5; font-size: 14px; font-weight: 600; }
+.story-collected-vocabulary header span { color: #aaa6b5; font-size: 12px; white-space: nowrap; }
 .story-vocabulary-row { position: relative; min-height: 40px; display: grid; grid-template-columns: minmax(90px, .7fr) minmax(0, 1fr); align-items: center; gap: 8px; margin-bottom: 4px; padding: 0 7px 0 11px; border: 1px solid #191a20; border-radius: 7px; background: #17181d; }
 .story-vocabulary-row > button { min-width: 0; padding: 4px 0; border: 0; background: transparent; color: #d3adff; cursor: pointer; font-family: "Noto Serif KR", "AppleMyungjo", Batang, serif; font-size: 15px; text-align: left; overflow-wrap: anywhere; }
 .story-vocabulary-row > button:lang(en) { font-family: Georgia, "Times New Roman", serif; }

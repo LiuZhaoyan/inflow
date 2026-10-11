@@ -73,6 +73,8 @@ Up to 20 selected vocabulary entries in one language can be sent to DeepSeek to 
 
 Saved artifacts include the passage, Chinese sentence translations, target annotations, a snapshot of the target vocabulary, creation time, elapsed generation time, requested model, and available provider metadata. Vocabulary can then be collected from artifact sentences, closing the learning loop.
 
+Story collection refreshes saved occurrence highlights and a Collected Vocabulary list with its own entry count, preserving the historical Target Vocabulary snapshot. The host returns all collected contexts for the active artifact, including repeated positions and later sentences, independently of notebook card deduplication. [Story collection verification](../.scratch/story-vocabulary/acceptance.md) covers renderer updates, host persistence and the desktop bridge.
+
 Story target words in the dropdown and sidebar open the corresponding Vocab entry by ID, including the correct sense through filters. Deleted targets report missing entries without recreating them or changing historical snapshots. The disabled word-action menu is removed. Mixed-language target selections preserve their checks and disable Continue.
 
 ## 4. Processing and service boundaries

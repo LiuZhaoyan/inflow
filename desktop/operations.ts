@@ -354,6 +354,16 @@ export class DesktopOperations {
     return (this.db.prepare('SELECT id FROM vocabulary ORDER BY rowid DESC').all() as { id: string }[]).map(entry => this.vocabulary(entry.id));
   }
 
+  listArtifactVocabulary(id: string): VocabularyEntry[] {
+    this.artifact(id);
+    const entries = this.db.prepare(`SELECT id FROM vocabulary WHERE EXISTS (
+      SELECT 1 FROM artifact_vocabulary_sources WHERE entry_id = vocabulary.id AND artifact_id = ?
+    ) ORDER BY rowid DESC`).all(id) as { id: string }[];
+    return entries.map(entry => ({ ...this.vocabulary(entry.id),
+      contexts: this.vocabularyContexts(entry.id).filter(context => context.source.type === 'artifact' &&
+        context.source.artifactId === id && !context.id.startsWith('target:')) }));
+  }
+
   saveVocabulary(input: SaveVocabularyInput): VocabularyEntry {
     const text = (value: unknown, limit: number) => {
       if (typeof value !== 'string' || !value.trim() || value.length > limit || value.includes('\0')) throw new Error('请填写有效的词典形和中文词义，选中文字也不能为空或过长。');

@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import StorySentence from "@/workspace/StorySentence";
 import { useEffect, useRef, useState } from "react";
 import "@/workspace/story.css";
 import type { CredentialStatus, LearningArtifact, SourceLanguage, VocabularyEntry } from "./desktop";
@@ -9,6 +10,8 @@ import type { LearningArtifacts } from "@/workspace/useLearningArtifacts";
 type Props = {
   learning: LearningArtifacts;
   selected: VocabularyEntry[];
+  vocabularyRevision: number;
+  vocabularyEntries: VocabularyEntry[];
   onBeforeChange: () => boolean;
   onOpenVocabulary: (id: string) => void;
   active?: boolean;
@@ -25,12 +28,16 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 
 export default function ArtifactLibrary({
   learning,
-  selected, onBeforeChange, onOpenVocabulary, active = true, generationOpen = false,
+  selected, vocabularyRevision, vocabularyEntries, onBeforeChange, onOpenVocabulary, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate,
   credential, onOpenSettings,
 }: Props) {
   const { artifacts, selection, loaded, error, busy, open, cancelGeneration } = learning;
   const { artifact, source } = selection;
+  const artifactId = artifact?.id;
+  const [collection, setCollection] = useState<{ id: string; entries: VocabularyEntry[] } | null>(null);
+  const [collectionError, setCollectionError] = useState("");
+  const collectedVocabulary = collection && collection.id === artifactId ? collection.entries : [];
   const initialSentence = Math.max(0, Math.min(source?.sentenceIndex ?? 0, Math.max(0, (artifact?.sentences.length ?? 0) - 1)));
   const [previousSelection, setPreviousSelection] = useState(selection);
   const [historyLanguage, setHistoryLanguage] = useState<"all" | SourceLanguage>("all");
@@ -39,6 +46,17 @@ export default function ArtifactLibrary({
   const [translations, setTranslations] = useState<Set<number>>(() => new Set());
   const dialog = useRef<HTMLDialogElement>(null);
   const mixedLanguageSelection = new Set(selected.map(entry => entry.language)).size > 1;
+
+  useEffect(() => {
+    if (!artifactId) return;
+    let current = true;
+    window.inflow!.listArtifactVocabulary(artifactId).then(entries => {
+      if (current) { setCollection({ id: artifactId, entries }); setCollectionError(""); }
+    }).catch(failure => {
+      if (current) setCollectionError(failure instanceof Error ? failure.message : "Collected vocabulary could not be loaded.");
+    });
+    return () => { current = false; };
+  }, [artifactId, vocabularyRevision, vocabularyEntries]);
 
   if (previousSelection !== selection) {
     setPreviousSelection(selection);
@@ -118,15 +136,14 @@ export default function ArtifactLibrary({
           <article className="story-sentences" data-artifact-id={artifact.id}>
             {artifact.sentences.map((sentence, index) => <div className="story-sentence" key={index}>
               <p className="artifact-korean" id={"artifact-sentence-" + index} data-sentence-index={index} lang={artifact.language} tabIndex={0} aria-current={activeSentence === index ? "location" : undefined} onFocus={() => { if (index !== activeSentence && onBeforeChange()) setActiveSentence(index); }} onClick={() => { if (index !== activeSentence && onBeforeChange()) setActiveSentence(index); }}>
-                {sentence.parts.map((part, n) => part.targetId
-                  ? <mark key={n} data-target-id={part.targetId} title={artifact.targets.find(target => target.id === part.targetId)?.meaningZh}>{part.text}</mark>
-                  : <span key={n}>{part.text}</span>)}
+                <StorySentence artifact={artifact} index={index} vocabulary={collectedVocabulary}/>
               </p>
               {translations.has(index) && <p className="story-translation" lang="zh">{sentence.translationZh}</p>}
             </div>)}
           </article>
         </div>
         {error && !generationOpen && <p className="story-notice" role="alert">{error}</p>}
+        {collectionError && <p className="story-notice" role="alert">{collectionError}</p>}
         <footer className="story-reader-footer">
           <button type="button" aria-label="Previous sentence" disabled={activeSentence <= 0} onClick={() => jump(activeSentence - 1)}>← &nbsp;Previous</button>
           <button type="button" aria-label={translations.has(activeSentence) ? "Hide Chinese translation" : "Show Chinese translation"} aria-pressed={translations.has(activeSentence)} onClick={() => setTranslations(current => { const next = new Set(current); if (next.has(activeSentence)) next.delete(activeSentence); else next.add(activeSentence); return next; })}>中文</button>
@@ -146,7 +163,14 @@ export default function ArtifactLibrary({
           <header><h2>Target Vocabulary</h2><span>{artifact.targets.length} words</span></header>
           <div className="story-vocabulary-list">{artifact.targets.map(target => <div className="story-vocabulary-row" key={target.id}>
             <button type="button" lang={artifact.language} aria-label={`Open ${target.lemma} in vocabulary`} onClick={() => onOpenVocabulary(target.id)}>{target.lemma}</button><span lang="zh">{target.meaningZh}</span>
-          </div>)}</div>
+          </div>)}
+            {!!collectedVocabulary.length && <section className="story-collected-vocabulary" aria-label="Collected vocabulary">
+              <header><h3>Collected Vocabulary</h3><span>{collectedVocabulary.length} {collectedVocabulary.length === 1 ? "word" : "words"}</span></header>
+              {collectedVocabulary.map(entry => <div className="story-vocabulary-row" key={entry.id}>
+                <button type="button" lang={entry.language} aria-label={`Open ${entry.lemma} in vocabulary`} onClick={() => onOpenVocabulary(entry.id)}>{entry.lemma}</button><span lang="zh">{entry.meaningZh}</span>
+              </div>)}
+            </section>}
+          </div>
         </section>
       </aside>
 

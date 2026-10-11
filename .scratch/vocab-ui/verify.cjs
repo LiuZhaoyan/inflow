@@ -110,7 +110,7 @@ async function run() {
   await wait('!!document.querySelector(".vocab-error button")');
   assert.ok(await evaluate('document.querySelector(".vocab-empty").textContent.includes("could not be loaded")'));
   failList = false; blockList = true; await click('.vocab-error button');
-  await nav('Library'); await click('.workspace-library-item', 'A saved boat story');
+  await nav('Library'); await wait('[...document.querySelectorAll(".workspace-library-item")].some(item => item.textContent.includes("A saved boat story"))'); await click('.workspace-library-item', 'A saved boat story');
   await wait('document.querySelector(".story-sentences")?.checkVisibility()'); await click('.story-vocabulary-row button');
   await wait('document.querySelector("#notebook").checkVisibility() && document.querySelectorAll(".vocab-row").length === 3');
   releaseList(); await delay(100);
@@ -119,11 +119,19 @@ async function run() {
   assert.equal(await evaluate('document.querySelector(".vocab-context-copy mark").parentElement.firstChild.textContent'), '배가 ');
   const context = seed.boat.contexts[0];
   ops.saveVocabulary({ language: 'ko', lemma: '배', meaningZh: '船', context: { ...context, surfaceStart: 0 } });
-  await nav('Library'); await click('.workspace-library-item', 'A saved boat story');
+  await nav('Library'); await wait('[...document.querySelectorAll(".workspace-library-item")].some(item => item.textContent.includes("A saved boat story"))'); await click('.workspace-library-item', 'A saved boat story');
   await wait('document.querySelector(".story-sentences")?.checkVisibility()');
   await click('.story-vocabulary-row button'); await wait('document.querySelector("#notebook").checkVisibility()');
-  assert.equal(await selected(), '船'); assert.equal(await evaluate('document.querySelectorAll(".vocab-context-copy mark").length'), 2);
+  assert.equal(await selected(), '船'); assert.equal(await evaluate('document.querySelectorAll(".vocab-context-thumbnail[data-kind=media] ~ .vocab-context-copy mark").length'), 2);
   assert.equal(await evaluate('document.querySelector(".vocab-context-copy p").textContent'), '배가 배에 있어요.');
+  assert.equal(await evaluate('document.querySelectorAll(".vocab-context-card").length'), 2);
+  assert.ok(await evaluate('[...document.querySelectorAll(".vocab-context-meta")].every(row => Math.abs(row.querySelector(".vocab-context-source").getBoundingClientRect().y - row.querySelector(".vocab-open-source").getBoundingClientRect().y) < 8)'));
+  assert.equal(await evaluate('document.querySelector(".vocab-context-position").textContent.startsWith("Media")'), true);
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".vocab-notes-section")).borderTopStyle'), 'none');
+  await fs.writeFile(path.join(output, 'contexts-wide.png'), (await window.webContents.capturePage()).toPNG());
+  window.setContentSize(1080, 720); await delay(150);
+  await fs.writeFile(path.join(output, 'contexts-narrow.png'), (await window.webContents.capturePage()).toPNG());
+  window.setContentSize(1440, 900); await delay(150);
   assert.equal(await evaluate('document.querySelector(".vocab-notes-section").open'), false);
   assert.ok(await evaluate('document.querySelector(".vocab-notes-section").getBoundingClientRect().height < 60'));
 
@@ -188,11 +196,11 @@ async function run() {
   await click('.story-dropdown:not(.story-options) summary'); await click('.story-dropdown:not(.story-options) button', '배');
   await wait('document.querySelector("#notebook").checkVisibility()'); assert.equal(await selected(), '船');
   await evaluate('window.confirmations = []; window.confirm = message => { confirmations.push(message); return false; }; void 0');
-  await click('.vocab-delete'); assert.equal(await selected(), '船');
+  await click('.vocab-entry-menu summary'); await click('.vocab-delete'); assert.equal(await selected(), '船');
   assert.ok(await evaluate('confirmations[0].includes("배") && confirmations[0].includes("船")'));
   await evaluate('window.confirm = message => { confirmations.push(message); return true; }; void 0'); failDelete = true;
-  await click('.vocab-delete'); await wait('document.querySelector(".vocab-error")?.textContent.includes("deletion failure")'); assert.equal(await selected(), '船');
-  failDelete = false; await click('.vocab-delete'); await wait('![...document.querySelectorAll(".vocab-row-meaning")].some(el => el.textContent === "船")');
+  await click('.vocab-entry-menu summary'); await click('.vocab-delete'); await wait('document.querySelector(".vocab-error")?.textContent.includes("deletion failure")'); assert.equal(await selected(), '船');
+  failDelete = false; await click('.vocab-entry-menu summary'); await click('.vocab-delete'); await wait('![...document.querySelectorAll(".vocab-row-meaning")].some(el => el.textContent === "船")');
   assert.equal(ops.listVocabulary().some(entry => entry.id === seed.boat.id), false); assert.equal(ops.listArtifacts().find(item => item.id === seed.story.id).targets[0].id, seed.boat.id); assert.equal(ops.list().length, 1);
   await nav('Content'); await click('.story-vocabulary-row button');
   await wait('document.querySelector(".workspace-notice")?.textContent.includes("no longer")');

@@ -94,6 +94,7 @@ async function start() {
     cancel: (job: string) => { modelJobs.get(job)?.abort(); operations.cancel(job); },
     saveLearning: (id: string, state: LearningStateInput) => operations.saveLearning(id, state),
     listVocabulary: () => operations.listVocabulary(),
+    listArtifactVocabulary: (id: string) => operations.listArtifactVocabulary(id),
     lookupVocabulary: (input: LookupVocabularyInput, job: string) => operations.lookupVocabulary(input, job),
     glossVocabulary: (input: LookupVocabularyInput & { lemma: string }, job: string) => operations.glossVocabulary(input, job, credential.get()),
     saveVocabulary: (input: SaveVocabularyInput) => operations.saveVocabulary(input),

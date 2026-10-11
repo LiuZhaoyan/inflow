@@ -502,7 +502,7 @@ export default function LearningWorkspace() {
       <ContextPanel segments={segments} language={savedMedia?.language ?? 'ko'} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>
     <section className="workspace-story" hidden={view !== 'video' || contentKind !== 'story'} aria-label="Story workspace">
-      {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}
+      {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} vocabularyRevision={vocabularyRevision} vocabularyEntries={vocabularyEntries} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}
     </section>
     <section className="workspace-vocab" hidden={view !== 'vocab'} aria-label="Vocab workspace">
       {desktop ? <VocabularyNotebook ref={vocabularyNotebook} refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} active={view === 'vocab'} onEntriesChange={updateVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">词汇本在 Inflow 桌面应用中可用。</p>}

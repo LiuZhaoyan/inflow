@@ -39,6 +39,7 @@ export type DesktopBridge = {
   cancel(job: string): Promise<void>;
   saveLearning(id: string, state: LearningStateInput): Promise<void>;
   listVocabulary(): Promise<VocabularyEntry[]>;
+  listArtifactVocabulary(id: string): Promise<VocabularyEntry[]>;
   lookupVocabulary(input: LookupVocabularyInput, job: string): Promise<VocabularyLookup>;
   glossVocabulary(input: LookupVocabularyInput & { lemma: string }, job: string): Promise<string>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
