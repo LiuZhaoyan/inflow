@@ -1,8 +1,8 @@
 # Interface internationalization
 
 Date: 2026-10-11
-Status: ready-for-agent
-Delivery: Specification published; implementation not started.
+Status: claimed
+Delivery: Implementation in progress on `codex/i18n`; acceptance pending.
 
 ## Problem Statement
 

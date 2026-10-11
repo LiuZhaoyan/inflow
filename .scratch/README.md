@@ -6,7 +6,7 @@ Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities
 
 ## Current development
 
-- [Interface internationalization](i18n/spec.md): `ready-for-agent`; Simplified Chinese and English interface specification published, implementation not started.
+- [Interface internationalization](i18n/spec.md): implementation in progress on `codex/i18n`; [tickets](i18n/issues/) track shared preferences, renderer interfaces and host integration.
 
 Vocabulary completion passed source-checkout acceptance; all three [tickets](vocab-ui/issues/) are resolved. Continue developing from the source checkout; installed-package verification belongs to the next release.
 
