@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useLocale } from '@/i18n/context';
 import type { SaveVocabularyInput, SourceLanguage } from './desktop';
 import { isCompleteEnglishWord } from './processing';
 
@@ -18,6 +19,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
   getContext: (element: HTMLElement) => { context: Context; language: SourceLanguage } | null;
   onOpen: () => void; onSaved: () => void;
 }) {
+  const { t, error: localize } = useLocale();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [notice, setNotice] = useState('');
   const [position, setPosition] = useState({ top: 12, left: 12, maxHeight: 300 });
@@ -184,34 +186,34 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
   }
 
   if (!active || (!draft && !notice)) return null;
-  return <div ref={popup} className="vocabulary-selection" role="dialog" aria-label="Collect a word" style={position}>
+  return <div ref={popup} className="vocabulary-selection" role="dialog" aria-label={t("Collect a word")} style={position}>
     {draft ? <form onSubmit={event => { event.preventDefault(); void save(); }}>
-      <header><strong lang={draft.language}>{draft.context.surface}</strong><button type="button" aria-label="Close word collection" disabled={draft.saving} onClick={beforeChange}>×</button></header>
+      <header><strong lang={draft.language}>{draft.context.surface}</strong><button type="button" aria-label={t("Close word collection")} disabled={draft.saving} onClick={beforeChange}>×</button></header>
       <fieldset disabled={draft.saving}>
-        <label>Dictionary form<input name="lemma" lang={draft.language} value={draft.lemma} required maxLength={100} onChange={event => { const previous = current.current!; change({ lemma: event.target.value, lemmaEdited: true, candidates: [] }); if (!previous.meaningEdited) update({ ...current.current!, meaningZh: '' }); }} onBlur={() => { if (current.current?.lemmaEdited && current.current.lemma.trim()) loadLookup(current.current, current.current.lemma.trim()); }}/></label>
-        <label>Chinese meaning<input name="meaningZh" lang="zh" value={draft.meaningZh} required maxLength={300} onChange={event => change({ meaningZh: event.target.value })}/></label>
+        <label>{t("Dictionary form")}<input name="lemma" lang={draft.language} value={draft.lemma} required maxLength={100} onChange={event => { const previous = current.current!; change({ lemma: event.target.value, lemmaEdited: true, candidates: [] }); if (!previous.meaningEdited) update({ ...current.current!, meaningZh: '' }); }} onBlur={() => { if (current.current?.lemmaEdited && current.current.lemma.trim()) loadLookup(current.current, current.current.lemma.trim()); }}/></label>
+        <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={draft.meaningZh} required maxLength={300} onChange={event => change({ meaningZh: event.target.value })}/></label>
         {!!draft.candidates.length && <div className="vocabulary-meaning-field">
-          <span id="vocabulary-meaning-label">Dictionary meanings</span>
+          <span id="vocabulary-meaning-label">{t("Dictionary meanings")}</span>
           <details className="vocabulary-meaning-picker" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.stopPropagation(); event.preventDefault(); event.currentTarget.querySelector('summary')?.focus(); } }}>
             <summary aria-labelledby="vocabulary-meaning-label vocabulary-meaning-value">
-              <span id="vocabulary-meaning-value">Choose a meaning</span>
+              <span id="vocabulary-meaning-value">{t("Choose a meaning")}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
             </summary>
-            <div className="vocabulary-meaning-options" role="group" aria-label="Dictionary meaning suggestions">
+            <div className="vocabulary-meaning-options" role="group" aria-label={t("Dictionary meaning suggestions")}>
               {draft.candidates.map(meaning => <button key={meaning} type="button" lang="zh" onClick={event => { change({ meaningZh: meaning }); event.currentTarget.closest('details')!.open = false; }}>{meaning}</button>)}
             </div>
           </details>
         </div>}
-        {draft.language === 'ko' && <small title="National Institute of Korean Language">KRDict · CC BY-SA 2.0 KR</small>}
-        {!draft.loading && !draft.candidates.length && <p>No offline meaning found. Enter one or request a cloud meaning.</p>}
-        <button type="button" disabled={draft.cloudLoading || !draft.lemma.trim() || (draft.loading && !draft.lemmaEdited)} onClick={() => void requestGloss()}>Get contextual meaning · LLM</button>
-        {draft.cloudLoading && <p role="status">Looking up meaning… <button type="button" onClick={() => { if (cloudJob.current) void window.inflow!.cancel(cloudJob.current).catch(() => {}); cloudJob.current = null; update({ ...current.current!, cloudLoading: false }); }}>Cancel lookup</button></p>}
-        {draft.suggestion && <p lang="zh">LLM suggestion: {draft.suggestion} <button type="button" onClick={() => change({ meaningZh: draft.suggestion })}>Apply suggestion</button></p>}
-        {draft.loading && <p role="status">Finding dictionary form…</p>}
-        {draft.lookupError && <p role="status">{draft.lookupError} You can enter it manually.</p>}
-        <footer><button className="workspace-primary-button" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? 'Saving…' : '+ Save vocabulary'}</button><button type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>Discard</button></footer>
+        {draft.language === 'ko' && <small title={t("National Institute of Korean Language")}>KRDict · CC BY-SA 2.0 KR</small>}
+        {!draft.loading && !draft.candidates.length && <p>{t("No offline meaning found. Enter one or request a cloud meaning.")}</p>}
+        <button type="button" disabled={draft.cloudLoading || !draft.lemma.trim() || (draft.loading && !draft.lemmaEdited)} onClick={() => void requestGloss()}>{t("Get contextual meaning · LLM")}</button>
+        {draft.cloudLoading && <p role="status">{t("Looking up meaning…")} <button type="button" onClick={() => { if (cloudJob.current) void window.inflow!.cancel(cloudJob.current).catch(() => {}); cloudJob.current = null; update({ ...current.current!, cloudLoading: false }); }}>{t("Cancel lookup")}</button></p>}
+        {draft.suggestion && <p>{t("LLM suggestion:")} <span lang="zh">{draft.suggestion}</span> <button type="button" onClick={() => change({ meaningZh: draft.suggestion })}>{t("Apply suggestion")}</button></p>}
+        {draft.loading && <p role="status">{t("Finding dictionary form…")}</p>}
+        {draft.lookupError && <p role="status">{localize(draft.lookupError, 'The operation failed. Please retry.')}  {t("You can enter it manually.")}</p>}
+        <footer><button className="workspace-primary-button" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? t("Saving…") : t("+ Save vocabulary")}</button><button type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>{t("Discard")}</button></footer>
       </fieldset>
-      {draft.error && <p role="alert">{draft.error}</p>}
-    </form> : <><p role="status">{notice}</p><button type="button" onClick={close}>Close</button></>}
+      {draft.error && <p role="alert">{localize(draft.error, 'The operation failed. Please retry.')}</p>}
+    </form> : <><p role="status">{t(notice)}</p><button type="button" onClick={close}>{t("Close")}</button></>}
   </div>;
 }
