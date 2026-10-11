@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); implemented capabilities and completed milestones belong in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -9,6 +9,8 @@ This document describes what comes next for Inflow: remaining work, ordering, an
 The Korean and English desktop learning loops, frontend visual acceptance, Settings, and personal Windows installer have reached their recorded acceptance boundaries. See [Project Status](PROJECT_STATUS.md) and [the task index](../.scratch/README.md) for current implementation and completed evidence.
 
 Next work is demand-driven quality improvement and release qualification rather than rebuilding the existing foundation.
+
+[Interface internationalization](../.scratch/i18n/spec.md) is specified and `ready-for-agent`: add Simplified Chinese and English interfaces with saved language preferences while preserving source-language learning content and Chinese assistance. Implementation and acceptance have not started.
 
 ## 1. Release qualification
 

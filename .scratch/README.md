@@ -1,12 +1,14 @@
 # Task Index
 
-Updated: 2026-10-10
+Updated: 2026-10-11
 
 Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
 ## Current development
 
-No active implementation ticket is tracked here. Vocabulary completion passed source-checkout acceptance; all three [tickets](vocab-ui/issues/) are resolved. Continue developing from the source checkout; installed-package verification belongs to the next release.
+- [Interface internationalization](i18n/spec.md): `ready-for-agent`; Simplified Chinese and English interface specification published, implementation not started.
+
+Vocabulary completion passed source-checkout acceptance; all three [tickets](vocab-ui/issues/) are resolved. Continue developing from the source checkout; installed-package verification belongs to the next release.
 
 ## Deferred quality and release checks
 
