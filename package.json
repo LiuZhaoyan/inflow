@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit --pretty false",
-    "test": "node --import tsx --test src/listening/*.test.ts src/generation/*.test.ts desktop/*.test.ts",
+    "test": "node --import tsx --test src/i18n/*.test.ts src/listening/*.test.ts src/generation/*.test.ts desktop/*.test.ts",
     "test:packaged": "node --test scripts/verify-packaged.test.cjs",
     "desktop:build": "node scripts/build-desktop.mjs",
     "desktop:start": "electron .",

@@ -9,6 +9,7 @@ await rm(stage, { recursive: true, force: true });
 await mkdir(path.join(stage, 'src', 'app'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'listening'), { recursive: true });
 await mkdir(path.join(stage, 'src', 'generation'), { recursive: true });
+await cp(path.join(root, 'src/i18n'), path.join(stage, 'src/i18n'), { recursive: true });
 await cp(path.join(root, 'src/workspace'), path.join(stage, 'src/workspace'), { recursive: true });
 await cp(path.join(root, 'public/workspace'), path.join(stage, 'public/workspace'), { recursive: true });
 await cp(path.join(root, 'src/generation/index.ts'), path.join(stage, 'src/generation/index.ts'));

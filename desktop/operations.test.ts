@@ -9,22 +9,22 @@ test('global mask color survives restart, rejects invalid input and leaves per-v
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow settings '));
   const library = path.join(root, 'library');
   const processor = async () => ({ duration: 5 });
-  let app = new DesktopOperations(library, processor);
+  let app = new DesktopOperations(library, processor, undefined, undefined, undefined, 'en');
   try {
-    assert.deepEqual(app.getSettings(), { videoMaskColor: '#000000' });
+    assert.deepEqual(app.getSettings(), { videoMaskColor: '#000000', interfaceLocale: 'en' });
     const source = path.join(root, 'sample.webm');
     await writeFile(source, 'settings media fixture');
     const first = await app.importMedia(source, 'en');
     const second = await app.importMedia(source, 'ko');
     const learning = { ...first.learning, position: 2, videoMask: { enabled: true, x: 0.1, y: 0.7, width: 0.8, height: 0.2 } };
     app.saveLearning(first.id, learning);
-    assert.deepEqual(app.saveSettings({ videoMaskColor: '#BCA4F8' }), { videoMaskColor: '#bca4f8' });
+    assert.deepEqual(app.saveSettings({ videoMaskColor: '#BCA4F8' }), { videoMaskColor: '#bca4f8', interfaceLocale: 'en' });
     for (const color of ['red', '#fff', '#00000000', 'url(example)', '', null, 123]) {
       assert.throws(() => app.saveSettings({ videoMaskColor: color as string }), /valid subtitle mask color/);
     }
-    assert.throws(() => app.saveSettings(null as unknown as { videoMaskColor: string }), /valid subtitle mask color/);
-    app.close(); app = new DesktopOperations(library, processor);
-    assert.deepEqual(app.getSettings(), { videoMaskColor: '#bca4f8' });
+    assert.throws(() => app.saveSettings(null as unknown as { videoMaskColor: string }), /host.invalidSettings/);
+    app.close(); app = new DesktopOperations(library, processor, undefined, undefined, undefined, 'en');
+    assert.deepEqual(app.getSettings(), { videoMaskColor: '#bca4f8', interfaceLocale: 'en' });
     assert.deepEqual(app.get(first.id).learning, learning);
     assert.deepEqual(app.get(second.id).learning, second.learning);
     assert.equal(app.restore()!.id, second.id);
@@ -182,5 +182,25 @@ test('video mask state is independent per material and is not accepted for audio
     assert.equal(app.open(second.id).learning.videoMask, undefined);
     assert.throws(() => app.saveLearning(audio.id, { ...audio.learning, videoMask }), /只适用于视频/);
     assert.equal(app.get(audio.id).learning.videoMask, undefined);
+  } finally { app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test('interface language persists independently of mask color and rejects invalid updates atomically', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow locale '));
+  const processor = async () => ({ duration: 5 });
+  let app = new DesktopOperations(root, processor, undefined, undefined, undefined, 'zh-TW');
+  try {
+    assert.deepEqual(app.getSettings(), { videoMaskColor: '#000000', interfaceLocale: 'zh-CN' });
+    assert.deepEqual(app.saveSettings({ interfaceLocale: 'en' }), { videoMaskColor: '#000000', interfaceLocale: 'en' });
+    assert.deepEqual(app.saveSettings({ videoMaskColor: '#112233' }), { videoMaskColor: '#112233', interfaceLocale: 'en' });
+    app.close(); app = new DesktopOperations(root, processor, undefined, undefined, undefined, 'zh-CN');
+    assert.equal(app.getSettings().interfaceLocale, 'en');
+    for (const interfaceLocale of ['ko', 'zh-TW', '', null, 4]) {
+      assert.throws(() => app.saveSettings({ interfaceLocale: interfaceLocale as 'en', videoMaskColor: '#445566' }), /host.invalidLocale/);
+      assert.deepEqual(app.getSettings(), { videoMaskColor: '#112233', interfaceLocale: 'en' });
+    }
+    assert.deepEqual(app.saveSettings({ interfaceLocale: 'zh-CN' }), { videoMaskColor: '#112233', interfaceLocale: 'zh-CN' });
+    app.close(); app = new DesktopOperations(root, processor, undefined, undefined, undefined, 'en-US');
+    assert.equal(app.getSettings().interfaceLocale, 'zh-CN');
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
