@@ -18,6 +18,6 @@ export async function POST(request: Request) {
     if (typeof result?.translation !== 'string' || !result.translation.trim()) throw new Error('未生成译文，请重试。');
     return Response.json({ translation: result.translation });
   } catch (error) {
-    return Response.json({ error: localizedError(locale, error, '翻译失败，请重试。') }, { status: 503 });
+    return Response.json({ error: localizedError(locale, error, '翻译失败，请重试。'), detail: error instanceof Error ? error.message : undefined }, { status: 503 });
   }
 }

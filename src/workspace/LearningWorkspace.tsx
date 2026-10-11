@@ -370,7 +370,7 @@ export default function LearningWorkspace() {
         const form = new FormData(); form.append('file', file);
         const response = await fetch('/api/transcribe', { method: 'POST', headers: { 'Accept-Language': locale }, body: form, signal: controller.signal });
         data = await response.json();
-        if (!response.ok) throw new Error((data as { error?: string }).error || '处理失败，请重试。');
+        if (!response.ok) { const failure = data as { detail?: string; error?: string }; throw new Error(failure.detail ?? failure.error ?? '处理失败，请重试。'); }
       }
       const result = validateSegments(data.segments);
       if (result.at(-1)!.end > length + 0.25) throw new Error('处理时间范围超出媒体长度，请重试。');
@@ -402,7 +402,7 @@ export default function LearningWorkspace() {
       }
       const response = await fetch('/api/translate', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept-Language': locale }, body: JSON.stringify({ text: segment.text }), signal: controller.signal });
       const data = await response.json();
-      if (!response.ok || typeof data.translation !== 'string' || !data.translation.trim()) throw new Error(data.error || 'Translation failed. Please retry.');
+      if (!response.ok || typeof data.translation !== 'string' || !data.translation.trim()) throw new Error(data.detail ?? data.error ?? 'Translation failed. Please retry.');
       if (!controller.signal.aborted) setTranslation(data.translation);
     } catch (failure) {
       if (!controller.signal.aborted) setTranslationError(failure instanceof Error ? failure.message : 'Translation failed. Please retry.');

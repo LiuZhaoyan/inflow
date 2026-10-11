@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const result = await runProcessor('transcribe', request.signal, input) as { segments?: unknown };
     return Response.json({ segments: validateSegments(result?.segments) });
   } catch (error) {
-    return Response.json({ error: localizedError(locale, error, '媒体处理失败，请重试。') }, { status: 503 });
+    return Response.json({ error: localizedError(locale, error, '媒体处理失败，请重试。'), detail: error instanceof Error ? error.message : undefined }, { status: 503 });
   } finally {
     if (directory) await rm(directory, { recursive: true, force: true });
   }
