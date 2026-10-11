@@ -10,7 +10,7 @@ The Korean and English desktop learning loops, frontend visual acceptance, Setti
 
 Next work is demand-driven quality improvement and release qualification rather than rebuilding the existing foundation.
 
-[Interface internationalization](../.scratch/i18n/spec.md) is specified and `ready-for-agent`: add Simplified Chinese and English interfaces with saved language preferences while preserving source-language learning content and Chinese assistance. Implementation and acceptance have not started.
+[Interface internationalization](../.scratch/i18n/spec.md) is in progress on `codex/i18n`: Simplified Chinese and English interfaces with saved language preferences while preserving source-language learning content and Chinese assistance. Source-checkout acceptance remains pending.
 
 ## 1. Release qualification
 
