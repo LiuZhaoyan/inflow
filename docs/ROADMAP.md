@@ -10,13 +10,13 @@ The Korean and English desktop learning loops, frontend visual acceptance, Setti
 
 Next work is demand-driven quality improvement and release qualification rather than rebuilding the existing foundation.
 
-[Interface internationalization](../.scratch/i18n/spec.md) is in progress on `codex/i18n`: Simplified Chinese and English interfaces with saved language preferences while preserving source-language learning content and Chinese assistance. Source-checkout acceptance remains pending.
+[Interface internationalization](../.scratch/i18n/acceptance.md) passed source-checkout acceptance on `codex/i18n`: Simplified Chinese and English interfaces with saved language preferences preserve source-language learning content and Chinese assistance.
 
 ## 1. Release qualification
 
 Before a broader packaged release:
 
-- Verify subtitle masking and Settings in the installed package, including an actual maximized window.
+- Verify subtitle masking, Settings and bilingual language switching/restoration in the installed package, including an actual maximized window.
 - Consider clean-VM installation and broader media codec compatibility tests. These were outside the completed personal-installation acceptance boundary.
 - Preserve installed-app behavior, not merely source-checkout execution, as the release acceptance boundary.
 

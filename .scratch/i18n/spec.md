@@ -1,8 +1,8 @@
 # Interface internationalization
 
 Date: 2026-10-11
-Status: claimed
-Delivery: Implementation in progress on `codex/i18n`; acceptance pending.
+Status: resolved
+Delivery: Implemented and source-checkout verified on `codex/i18n`; see [acceptance](acceptance.md).
 
 ## Problem Statement
 
@@ -97,7 +97,7 @@ The owner confirmed these test seams during specification publication: the exist
 
 ## Further Notes
 
-- Scope, locale defaults, saving semantics, browser behavior, implementation approach and external-error handling were confirmed in the i18n interview. The publication request produces this ready-for-agent specification; it does not claim that implementation or acceptance has occurred.
+- Scope, locale defaults, saving semantics, browser behavior, implementation approach and external-error handling were confirmed in the i18n interview. This specification records intended behavior; [acceptance](acceptance.md) records the delivered checks and limits.
 - Settings compatibility, untranslated host failures and build staging are the main integration risks. A label-only renderer change does not satisfy this specification.
 - Use the repository glossary for learning-domain terms. Interface language is an application preference, separate from source language and the Chinese used for contextual meanings.
-- Current runtime behavior and previous acceptance remain recorded in the project status and existing task records until implementation is delivered and verified.
+- Current runtime behavior is recorded in the project status; implementation tickets and final acceptance are resolved for this source-checkout delivery.

@@ -22,7 +22,7 @@ async function run() {
     return;
   }
 
-  const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+  const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
   const output = process.argv[2], phase = process.argv[3];
   const profile = path.join(output, phase === 'browser' ? 'browser-profile' : 'profile');
   app.setPath('userData', profile);
@@ -41,6 +41,8 @@ async function run() {
   ] });
   let seed;
   if (phase !== 'browser') {
+    protocol.registerSchemesAsPrivileged([{ scheme: 'inflow', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }]);
+    protocol.registerSchemesAsPrivileged = () => {};
     const { DesktopOperations } = require(path.join(root, 'build/desktop/desktop/operations.js'));
     ops = new DesktopOperations(profile, processor, generator);
     if (phase === 'initial') {
@@ -131,12 +133,12 @@ async function run() {
       await switchLanguage('en');
       await languageDraft('zh-CN'); await click('.workspace-settings-cancel');
       assert.equal(await evaluate('document.documentElement.lang'), 'en');
-      await evaluate('window.originalStorageSet = Storage.prototype.setItem; Storage.prototype.setItem = () => { throw new Error("Fixture browser storage failure"); }');
+      await evaluate('window.originalStorageSet = Storage.prototype.setItem; Storage.prototype.setItem = () => { throw new Error("Fixture browser storage failure"); }; void 0;');
       await languageDraft('zh-CN'); await click('.workspace-settings-dialog button[type=submit]');
       await wait('document.querySelector(".workspace-settings-dialog [role=alert]")?.textContent.includes("Fixture browser storage failure")');
       assert.equal(await evaluate('document.documentElement.lang'), 'en');
       assert.equal(await evaluate('document.querySelector("#settings-interface-language").value'), 'zh-CN');
-      await evaluate('Storage.prototype.setItem = originalStorageSet');
+      await evaluate('Storage.prototype.setItem = originalStorageSet; void 0;');
       await click('.workspace-settings-dialog button[type=submit]');
       await wait('document.documentElement.lang === "zh-CN" && !document.querySelector(".workspace-settings-dialog")');
       await new Promise(resolve => { window.webContents.once('did-finish-load', resolve); window.reload(); });
