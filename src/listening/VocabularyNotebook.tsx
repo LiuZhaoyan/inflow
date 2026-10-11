@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import { useLocale } from '@/i18n/context';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
 import SourceThumbnail from '@/workspace/SourceThumbnail';
@@ -13,6 +14,7 @@ type VocabularyDraft = {
 export type VocabularyNotebookHandle = { beforeChange: () => boolean; open: (id: string) => Promise<boolean> };
 
 function Pronunciation({ entry, active }: { entry: VocabularyEntry; active: boolean }) {
+  const { t, error: localize } = useLocale();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>(() => typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.getVoices() : []);
   const [ready, setReady] = useState(voices.length > 0);
   const [speaking, setSpeaking] = useState(false);
@@ -29,7 +31,7 @@ function Pronunciation({ entry, active }: { entry: VocabularyEntry; active: bool
       if (utterance.current) { utterance.current = null; synth.cancel(); setSpeaking(false); }
     };
   }, [active]);
-  const language = entry.language === 'en' ? 'English' : 'Korean';
+  const language = entry.language === 'en' ? t("English") : t("Korean");
   const matching = voices.filter(voice => voice.localService && voice.lang.split('-')[0] === entry.language);
   const voice = matching.find(voice => voice.default) ?? matching[0];
   function speak() {
@@ -46,12 +48,12 @@ function Pronunciation({ entry, active }: { entry: VocabularyEntry; active: bool
     };
     utterance.current = next; setError(''); setSpeaking(true); synth.speak(next);
   }
-  const unavailable = typeof window === 'undefined' || !window.speechSynthesis ? 'System pronunciation is unavailable.' : !ready ? 'Loading system voices…' : `Install a ${language} system voice to use pronunciation.`;
+  const unavailable = typeof window === 'undefined' || !window.speechSynthesis ? t('System pronunciation is unavailable.') : !ready ? t('Loading system voices…') : t('Install a {language} system voice to use pronunciation.', { language });
   return <span className="vocab-pronunciation-control">
-    <button className="vocab-pronunciation" type="button" disabled={!voice || !active} aria-pressed={speaking} title={voice ? `Read dictionary form with ${voice.name}` : unavailable} aria-label={speaking ? 'Stop pronunciation' : voice ? 'Pronounce dictionary form' : unavailable} onClick={speak}>
+    <button className="vocab-pronunciation" type="button" disabled={!voice || !active} aria-pressed={speaking} title={voice ? t('Read dictionary form with {voice}', { voice: voice.name }) : unavailable} aria-label={speaking ? t("Stop pronunciation") : voice ? t("Pronounce dictionary form") : unavailable} onClick={speak}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M17.5 6.5a9 9 0 0 1 0 11"/></svg>
     </button>
-    {error && <span className="vocab-pronunciation-error" role="alert">{error}</span>}
+    {error && <span className="vocab-pronunciation-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</span>}
     {ready && !voice && <span className="vocab-pronunciation-error" role="status">{unavailable}</span>}
   </span>;
 }
@@ -59,23 +61,24 @@ function Pronunciation({ entry, active }: { entry: VocabularyEntry; active: bool
 function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
   draft: VocabularyDraft; busy: boolean; active: boolean; onSave: (input: SaveVocabularyInput) => Promise<void>; onCancel: () => void;
 }) {
+  const { t, error: localize } = useLocale();
   const [lemma, setLemma] = useState(draft.lemma);
   const [meaning, setMeaning] = useState(draft.meaningZh);
   const [language, setLanguage] = useState<SourceLanguage>(draft.language ?? 'ko');
   const [error, setError] = useState('');
-  return <form className="vocab-editor" aria-label="Edit vocabulary" onSubmit={event => {
+  return <form className="vocab-editor" aria-label={t("Edit vocabulary")} onSubmit={event => {
     event.preventDefault(); setError('');
     void onSave({ id: draft.id, language, lemma, meaningZh: meaning })
       .catch(failure => setError(failure instanceof Error ? failure.message : 'Save failed. Please try again.'));
   }}>
-    <h2>{draft.id ? 'Edit vocabulary' : 'Add vocabulary'}</h2>
+    <h2>{draft.id ? t("Edit vocabulary") : t("Add vocabulary")}</h2>
     <fieldset disabled={busy}>
-      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? 'English' : 'Korean'}</span></p> : <label>Confirm source language<Dropdown label="Source language" value={language} options={[{ value: "ko", label: "Korean" }, { value: "en", label: "English" }]} onChange={setLanguage}/></label>}
-      <label>Dictionary form<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
-      <label>Chinese meaning<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
-      <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? 'Saving…' : 'Save vocabulary'}</button><button type="button" onClick={onCancel}>Cancel</button></div>
+      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? t("English") : t("Korean")}</span></p> : <label>{t("Confirm source language")}<Dropdown label={t("Source language")} value={language} options={[{ value: "ko", label: t("Korean") }, { value: "en", label: t("English") }]} onChange={setLanguage}/></label>}
+      <label>{t("Dictionary form")}<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
+      <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
+      <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? t("Saving…") : t("Save vocabulary")}</button><button type="button" onClick={onCancel}>{t("Cancel")}</button></div>
     </fieldset>
-    {error && <p className="vocab-error" role="alert">{error}</p>}
+    {error && <p className="vocab-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
   </form>;
 }
 
@@ -99,10 +102,6 @@ function matchesFilter(entry: VocabularyEntry, filter: Filter) {
   if (filter === 'stories') return isStory(entry);
   if (filter === 'manual') return entry.contexts.length === 0;
   return true;
-}
-
-function location(source: VocabularyContext['source']) {
-  return source.type === 'media' ? formatTime(source.start) : 'Sentence ' + (source.sentenceIndex + 1);
 }
 
 function HighlightedSentence({ sentence, surface, surfaceStarts }: VocabularyContext) {
@@ -144,6 +143,10 @@ export default function VocabularyNotebook({
   onEditingChange?: (editing: boolean) => void;
   active?: boolean;
 }) {
+  const { t, error: localize } = useLocale();
+  function location(source: VocabularyContext['source']) {
+    return source.type === 'media' ? formatTime(source.start) : t('Sentence {number}', { number: source.sentenceIndex + 1 });
+  }
   const [entries, setEntries] = useState<VocabularyEntry[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<VocabularyDraft | null>(null);
@@ -240,7 +243,7 @@ export default function VocabularyNotebook({
     } finally { setBusy(false); }
   }
   async function remove(entry: VocabularyEntry) {
-    if (!window.confirm(`Delete “${entry.lemma}” (${entry.meaningZh})?\nIts note and collected contexts will be removed. Saved stories and original media will remain. This cannot be undone.`)) return;
+    if (!window.confirm(t('Delete “{word}” ({meaning})?\nIts note and collected contexts will be removed. Saved stories and original media will remain. This cannot be undone.', { word: entry.lemma, meaning: entry.meaningZh }))) return;
     setBusy(true); setError('');
     try {
       await window.inflow!.deleteVocabulary(entry.id); requestVersion.current++;
@@ -251,112 +254,113 @@ export default function VocabularyNotebook({
   }
 
   const filters: { id: Filter; label: string }[] = [
-    { id: 'all', label: 'All' }, { id: 'media', label: 'Media' },
-    { id: 'stories', label: 'Stories' }, { id: 'manual', label: 'No source' },
+    { id: 'all', label: t("All") }, { id: 'media', label: t("Media") },
+    { id: 'stories', label: t("Stories") }, { id: 'manual', label: t("No source") },
   ];
 
-  return <section className="vocab-workspace" id="notebook" aria-label="Vocabulary notebook">
-    <section className="vocab-panel vocab-list-panel" aria-label="Vocabulary list">
+  return <section className="vocab-workspace" id="notebook" aria-label={t("Vocabulary notebook")}>
+    <section className="vocab-panel vocab-list-panel" aria-label={t("Vocabulary list")}>
       <header className="vocab-list-heading">
-        <div className="vocab-title"><h1>Vocabulary</h1><span>{entries.length} words</span></div>
+        <div className="vocab-title"><h1>{t("Vocabulary")}</h1><span>{t(entries.length === 1 ? '{count} word' : '{count} words', { count: entries.length })}</span></div>
         <div className="vocab-heading-actions">
-          <button className="vocab-add-word" type="button" disabled={hasPendingEdit || loading} onClick={addEntry}>Add manually</button>
+          <button className="vocab-add-word" type="button" disabled={hasPendingEdit || loading} onClick={addEntry}>{t("Add manually")}</button>
           <button className="vocab-generate" type="button" disabled={hasPendingEdit || loading || !entries.length} onClick={() => onGenerateStory(entries)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2Z"/><path d="m19 14 .9 3.1L23 18l-3.1.9L19 22l-.9-3.1L15 18l3.1-.9L19 14Z"/></svg>
-            Generate story
+
+            {t("Generate story")}
           </button>
         </div>
       </header>
       <div className="vocab-toolbar">
         <label className="vocab-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-          <span className="vocab-sr-only">Search vocabulary</span>
-          <input value={query} onChange={event => { if (beforeChange()) setQuery(event.target.value); }} placeholder="Search vocabulary…" type="search"/>
+          <span className="vocab-sr-only">{t("Search vocabulary")}</span>
+          <input value={query} onChange={event => { if (beforeChange()) setQuery(event.target.value); }} placeholder={t("Search vocabulary…")} type="search"/>
         </label>
-        <div className="vocab-filters" role="group" aria-label="Filter vocabulary">
+        <div className="vocab-filters" role="group" aria-label={t("Filter vocabulary")}>
           {filters.map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { if (beforeChange()) setFilter(item.id); }}>
             {item.label}<span>{counts[item.id]}</span>
           </button>)}
         </div>
-        <Dropdown label="Filter vocabulary by language" className={`vocab-language-filter${languageFilter !== 'all' ? ' is-active' : ''}`} title={languageFilter === 'all' ? 'Filter vocabulary by language' : `Language: ${languageFilter === 'en' ? 'English' : 'Korean'}`} trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>} value={languageFilter} options={[
-          { value: 'all', label: `All (${languageCounts.all})` },
-          { value: 'ko', label: `Korean (${languageCounts.ko})` },
-          { value: 'en', label: `English (${languageCounts.en})` },
+        <Dropdown label={t("Filter vocabulary by language")} className={`vocab-language-filter${languageFilter !== 'all' ? ' is-active' : ''}`} title={languageFilter === 'all' ? t("Filter vocabulary by language") : t('Language: {language}', { language: languageFilter === 'en' ? t('English') : t('Korean') })} trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16l-6 7v6l-4 2v-8Z"/></svg>} value={languageFilter} options={[
+          { value: 'all', label: t('{label} ({count})', { label: t('All'), count: languageCounts.all }) },
+          { value: 'ko', label: t('{label} ({count})', { label: t('Korean'), count: languageCounts.ko }) },
+          { value: 'en', label: t('{label} ({count})', { label: t('English'), count: languageCounts.en }) },
         ]} onChange={value => { if (beforeChange()) setLanguageFilter(value); }}/>
       </div>
-      {error && <p className="vocab-error" role="alert">{error}</p>}
-      {loadError && <p className="vocab-error" role="alert">{loadError}<button type="button" disabled={hasPendingEdit || loading} onClick={() => { setLoading(true); setReloadKey(value => value + 1); }}>Retry loading vocabulary</button></p>}
+      {error && <p className="vocab-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
+      {loadError && <p className="vocab-error" role="alert">{localize(loadError, 'The operation failed. Please retry.')}<button type="button" disabled={hasPendingEdit || loading} onClick={() => { setLoading(true); setReloadKey(value => value + 1); }}>{t("Retry loading vocabulary")}</button></p>}
       <div className="vocab-rows" aria-live="polite">
         {visibleEntries.map(entry => {
           const context = entry.contexts[0];
           const source = context?.source;
           return <button className="vocab-row" type="button" key={entry.id} aria-pressed={selectedEntry?.id === entry.id} onClick={() => { if (beforeChange()) setSelectedId(entry.id); }}>
-            <span className="vocab-row-word"><span lang={entry.language}>{entry.lemma}</span><small className="vocab-language-badge">{entry.language === 'en' ? 'English' : 'Korean'}</small></span>
+            <span className="vocab-row-word"><span lang={entry.language}>{entry.lemma}</span><small className="vocab-language-badge">{entry.language === 'en' ? t("English") : t("Korean")}</small></span>
             <span className="vocab-row-example">
               <span className="vocab-row-meaning" lang="zh">{entry.meaningZh}</span>
-              <span className="vocab-row-sentence" lang={entry.language}>{context ? <HighlightedSentence {...context}/> : 'No source'}</span>
+              <span className="vocab-row-sentence" lang={context ? entry.language : undefined}>{context ? <HighlightedSentence {...context}/> : t("No source")}</span>
             </span>
             <span className="vocab-row-source">
-              {source ? <><span className="vocab-row-thumb" data-kind={source.type}><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? 'Story · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>No source</span></span></>}
+              {source ? <><span className="vocab-row-thumb" data-kind={source.type}><SourceThumbnail key={thumbnailKey(source)} source={source}/></span><span className="vocab-row-source-copy"><span>{source.name}</span><small>{source.type === 'artifact' ? t('Story') + ' · ' + location(source) : location(source)}</small></span></> : <><span className="vocab-manual-mark">—</span><span className="vocab-row-source-copy"><span>{t("No source")}</span></span></>}
             </span>
           </button>;
         })}
-        {!visibleEntries.length && <p className="vocab-empty">{!loaded ? 'Loading vocabulary…' : loadError ? 'Vocabulary could not be loaded. Please retry.' : entries.length ? 'No vocabulary matches this view.' : 'Collect a word in Content or add one manually to get started.'}</p>}
+        {!visibleEntries.length && <p className="vocab-empty">{!loaded ? t("Loading vocabulary…") : loadError ? t("Vocabulary could not be loaded. Please retry.") : entries.length ? t("No vocabulary matches this view.") : t("Collect a word in Content or add one manually to get started.")}</p>}
       </div>
     </section>
-    <section className="vocab-panel vocab-detail-panel" aria-label="Vocabulary details">
+    <section className="vocab-panel vocab-detail-panel" aria-label={t("Vocabulary details")}>
       {draft ? <VocabularyEditor key={draft.key} draft={draft} busy={busy} active={active} onSave={save} onCancel={dismiss}/> : selectedEntry ? <>
         <header className="vocab-detail-heading">
           <div className="vocab-detail-title">
             <h2 lang={selectedEntry.language}>{selectedEntry.lemma}</h2>
-            <span className="vocab-language-badge">{selectedEntry.language === 'en' ? 'English' : 'Korean'}</span>
+            <span className="vocab-language-badge">{selectedEntry.language === 'en' ? t("English") : t("Korean")}</span>
             <Pronunciation key={selectedEntry.id} entry={selectedEntry} active={active && !hasPendingEdit}/>
           </div>
           <div className="vocab-detail-actions">
-            <button className="vocab-edit" type="button" disabled={hasPendingEdit} title="Edit vocabulary" aria-label={`Edit ${selectedEntry.lemma}`} onClick={() => editEntry(selectedEntry)}>
+            <button className="vocab-edit" type="button" disabled={hasPendingEdit} title={t("Edit vocabulary")} aria-label={t('Edit {word}', { word: selectedEntry.lemma })} onClick={() => editEntry(selectedEntry)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15z"/><path d="M12 20h8"/></svg>
             </button>
             <details className="vocab-entry-menu" key={selectedEntry.id}>
-              <summary aria-label={`More actions for ${selectedEntry.lemma}`} aria-disabled={hasPendingEdit} title="More actions" onClick={event => { if (!beforeChange()) event.preventDefault(); }}>
+              <summary aria-label={t('More actions for {word}', { word: selectedEntry.lemma })} aria-disabled={hasPendingEdit} title={t("More actions")} onClick={event => { if (!beforeChange()) event.preventDefault(); }}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
               </summary>
               <div className="vocab-entry-menu-panel">
-                <button className="vocab-delete" type="button" disabled={hasPendingEdit} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void remove(selectedEntry); }}>Delete vocabulary</button>
+                <button className="vocab-delete" type="button" disabled={hasPendingEdit} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); void remove(selectedEntry); }}>{t("Delete vocabulary")}</button>
               </div>
             </details>
           </div>
         </header>
         <section className="vocab-detail-section">
-          <h3>Meaning</h3>
+          <h3>{t("Meaning")}</h3>
           <div className="vocab-meaning-card" lang="zh">{selectedEntry.meaningZh}</div>
         </section>
         <section className="vocab-detail-section vocab-contexts-section">
-          <header className="vocab-section-heading"><div><h3>Contexts</h3><span>{selectedEntry.contexts.length}</span></div></header>
+          <header className="vocab-section-heading"><div><h3>{t("Contexts")}</h3><span>{selectedEntry.contexts.length}</span></div></header>
           {selectedEntry.contexts.length ? <div className="vocab-context-list">
             {selectedEntry.contexts.map(context => <article className="vocab-context-card" key={context.id}>
               <div className="vocab-context-thumbnail" data-kind={context.source.type}><SourceThumbnail key={thumbnailKey(context.source)} source={context.source}/></div>
               <div className="vocab-context-copy">
                 <p lang={selectedEntry.language}><HighlightedSentence {...context}/></p>
                 <div className="vocab-context-meta">
-                  <span className="vocab-context-source" title={context.source.name + ' · ' + (context.source.type === 'artifact' ? 'Story · ' : 'Media · ') + location(context.source)}>
+                  <span className="vocab-context-source" title={context.source.name + ' · ' + (context.source.type === 'artifact' ? t('Story') + ' · ' : t('Media') + ' · ') + location(context.source)}>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d={context.source.type === 'artifact' ? 'M7 3h7l4 4v14H7zM14 3v5h5M10 12h5M10 16h5' : 'M3 6h13v12H3zM16 10l5-3v10l-5-3z'}/></svg>
-                    <span className="vocab-context-position">{context.source.type === 'artifact' ? 'Story' : 'Media'} · {location(context.source)}</span>
+                    <span className="vocab-context-position">{context.source.type === 'artifact' ? t("Story") : t("Media")} · {location(context.source)}</span>
                     <span className="vocab-context-source-label">{context.source.name}</span>
                   </span>
-                  <button className="vocab-open-source" type="button" aria-label={`Open ${context.source.name} at ${location(context.source)}`} onClick={() => { if (beforeChange()) onOpenSource(context.source); }}>Open <span aria-hidden="true">↗</span></button>
+                  <button className="vocab-open-source" type="button" aria-label={t('Open {name} at {position}', { name: context.source.name, position: location(context.source) })} onClick={() => { if (beforeChange()) onOpenSource(context.source); }}>{t("Open")} <span aria-hidden="true">↗</span></button>
                 </div>
               </div>
             </article>)}
-          </div> : <p className="vocab-no-context">No source</p>}
+          </div> : <p className="vocab-no-context">{t("No source")}</p>}
         </section>
         <details className="vocab-detail-section vocab-notes-section" key={selectedEntry.id}>
-          <summary>Notes <small>{selectedEntry.note ? 'Saved' : 'Optional'}</small></summary>
+          <summary>{t("Notes")} <small>{selectedEntry.note ? t("Saved") : t("Optional")}</small></summary>
           <fieldset disabled={busy}>
-            <textarea rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => setNoteDraft({ id: selectedEntry.id, note: event.target.value })} placeholder="Add a personal note…" aria-label="Personal note"/>
-            <div className="vocab-editor-actions"><button type="button" disabled={!noteDirty} onClick={() => void save({ id: selectedEntry.id, language: selectedEntry.language, lemma: selectedEntry.lemma, meaningZh: selectedEntry.meaningZh, note: noteDraft!.note }).catch(failure => setError(failure instanceof Error ? failure.message : 'Note save failed. Please retry.'))}>{busy ? 'Saving…' : 'Save note'}</button><button type="button" onClick={() => { setNoteDraft(null); setError(''); }}>Cancel</button></div>
+            <textarea rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => setNoteDraft({ id: selectedEntry.id, note: event.target.value })} placeholder={t("Add a personal note…")} aria-label={t("Personal note")}/>
+            <div className="vocab-editor-actions"><button type="button" disabled={!noteDirty} onClick={() => void save({ id: selectedEntry.id, language: selectedEntry.language, lemma: selectedEntry.lemma, meaningZh: selectedEntry.meaningZh, note: noteDraft!.note }).catch(failure => setError(failure instanceof Error ? failure.message : 'Note save failed. Please retry.'))}>{busy ? t("Saving…") : t("Save note")}</button><button type="button" onClick={() => { setNoteDraft(null); setError(''); }}>{t("Cancel")}</button></div>
           </fieldset>
         </details>
-      </> : <p className="vocab-detail-empty">{loaded ? 'Select a word to see its details.' : 'Loading vocabulary…'}</p>}
+      </> : <p className="vocab-detail-empty">{loaded ? t("Select a word to see its details.") : t("Loading vocabulary…")}</p>}
     </section>
   </section>;
 }

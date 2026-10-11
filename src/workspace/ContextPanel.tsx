@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
+import { useLocale } from '@/i18n/context';
 import type { SourceLanguage } from '@/listening/desktop';
 import type { Segment } from '@/listening/processing';
 
@@ -21,26 +22,27 @@ export default function ContextPanel({
   showText: boolean;
   onToggleText: () => void;
 }) {
+  const { t } = useLocale();
   const activeRow = useRef<HTMLButtonElement>(null);
 
   useEffect(() => { activeRow.current?.scrollIntoView({ block: 'nearest' }); }, [index, segments.length]);
 
-  return <aside className="workspace-context-panel" aria-label="Sentence context">
+  return <aside className="workspace-context-panel" aria-label={t("Sentence context")}>
     <div className="workspace-context-heading">
-      <h2>Context</h2>
-      <span>{segments.length} {segments.length === 1 ? 'sentence' : 'sentences'}</span>
+      <h2>{t("Context")}</h2>
+      <span>{t(segments.length === 1 ? '{count} sentence' : '{count} sentences', { count: segments.length })}</span>
     </div>
     <button type="button" className="workspace-context-toggle" aria-pressed={showText} onClick={onToggleText}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>
-      {showText ? 'Hide text' : 'Show full text'}
+      {showText ? t("Hide text") : t("Show full text")}
     </button>
-    <div className="workspace-context-rows" aria-label="Sentence list">
+    <div className="workspace-context-rows" aria-label={t("Sentence list")}>
       {segments.length ? segments.map((segment, itemIndex) => <button type="button" key={`${segment.start}-${itemIndex}`}
         ref={itemIndex === index ? activeRow : undefined} className="workspace-context-row"
-        aria-current={itemIndex === index ? 'true' : undefined} aria-label={showText ? `${formatTime(segment.start)} ${segment.text}` : `Sentence at ${formatTime(segment.start)}`}
+        aria-current={itemIndex === index ? 'true' : undefined} aria-label={showText ? `${formatTime(segment.start)} ${segment.text}` : t('Sentence at {time}', { time: formatTime(segment.start) })}
         onClick={() => onSelect(itemIndex)}>
         <time>{formatTime(segment.start)}</time><span lang={showText ? language : undefined}>{showText ? segment.text : '••••••'}</span>
-      </button>) : <p className="workspace-context-empty">Your sentences will appear here after processing a media file.</p>}
+      </button>) : <p className="workspace-context-empty">{t("Your sentences will appear here after processing a media file.")}</p>}
     </div>
   </aside>;
 }
