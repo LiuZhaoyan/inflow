@@ -1,7 +1,7 @@
 # Locale foundation and preferences
 
 Type: task
-Status: ready-for-agent
+Status: resolved
 Blocked by: none
 
 Implement the shared TypeScript messages, locale resolution, renderer Context, browser-local preferences, desktop settings persistence and Settings language workflow from [the spec](../spec.md).
@@ -13,3 +13,9 @@ Use the confirmed shared-message and desktop operations test seams. Preserve col
 - Chinese system variants select Simplified Chinese; other defaults select English; saved language wins.
 - Save applies and persists; Cancel discards; failures retain the language draft.
 - Existing settings and learning data remain compatible; dictionary completeness and interpolation checks pass.
+
+## Answer
+
+Implemented shared locale messages, interpolation and external diagnostic guidance, React locale context, independent browser persistence, partial desktop settings persistence and the Settings draft workflow. The existing desktop build stages locale resources, and the test command includes the shared-message checks.
+
+Confirmed red/green checks for locale defaults, dictionary coverage/interpolation/fallback and desktop locale persistence. Five focused tests pass, including restart, rejected combined updates, color compatibility and retained per-video learning. Native/browser Settings acceptance and integrated build checks are performed by the parent implementation task. A broader operations run hit a Windows relink EPERM outside this ticket.

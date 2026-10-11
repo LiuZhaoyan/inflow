@@ -1,3 +1,4 @@
+import type { InterfaceLocale } from '../i18n';
 import type { Segment } from './processing';
 import type { VideoMask } from './video-mask';
 import type { GeneratedPassage, GenerationTarget } from '../generation';
@@ -27,7 +28,7 @@ export type SaveVocabularyInput = { id?: string; language?: SourceLanguage; lemm
 export type LearningArtifact = GeneratedPassage & { id: string; language: SourceLanguage; createdAt: string; elapsedMs: number; targets: GenerationTarget[]; topic?: string };
 export type CredentialStatus = { configured: boolean; error?: string };
 export type ModelStatus = { whisper: boolean; translate: { 'ko-en': boolean; 'en-zh': boolean }; englishParser: boolean };
-export type ApplicationSettings = { videoMaskColor: string };
+export type ApplicationSettings = { videoMaskColor: string; interfaceLocale: InterfaceLocale };
 export type DesktopBridge = {
   list(): Promise<SavedMedia[]>;
   restore(): Promise<SavedMedia | null>;
@@ -50,7 +51,7 @@ export type DesktopBridge = {
   modelStatus(): Promise<ModelStatus>;
   setupModels(job: string, components?: string[]): Promise<ModelStatus>;
   getSettings(): Promise<ApplicationSettings>;
-  saveSettings(settings: ApplicationSettings): Promise<ApplicationSettings>;
+  saveSettings(settings: Partial<ApplicationSettings>): Promise<ApplicationSettings>;
   generateArtifact(ids: string[], topic: string, job: string): Promise<LearningArtifact>;
   listArtifacts(): Promise<LearningArtifact[]>;
   restoreArtifact(): Promise<LearningArtifact | null>;

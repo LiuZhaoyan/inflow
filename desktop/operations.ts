@@ -1,3 +1,4 @@
+import { isInterfaceLocale, resolveLocale } from '../src/i18n';
 import { DatabaseSync } from 'node:sqlite';
 import { randomUUID, createHash } from 'node:crypto';
 import { mkdirSync, existsSync } from 'node:fs';
@@ -19,7 +20,7 @@ export class DesktopOperations {
   private jobs = new Map<string, AbortController>();
   private mediaDirectory: string;
 
-  constructor(directory: string, private processor: Processor, private generator = generatePassage, private translator = translateSentence, private glosser = glossVocabulary) {
+  constructor(directory: string, private processor: Processor, private generator = generatePassage, private translator = translateSentence, private glosser = glossVocabulary, private systemLocale = Intl.DateTimeFormat().resolvedOptions().locale) {
     mkdirSync(directory, { recursive: true });
     this.mediaDirectory = path.join(directory, 'media');
     mkdirSync(this.mediaDirectory, { recursive: true });
@@ -89,13 +90,19 @@ export class DesktopOperations {
 
   getSettings(): ApplicationSettings {
     const saved = this.db.prepare("SELECT value FROM settings WHERE key = 'videoMaskColor'").get();
-    return { videoMaskColor: saved ? validateVideoMaskColor(saved.value) : defaultVideoMaskColor };
+    const locale = this.db.prepare("SELECT value FROM settings WHERE key = 'interfaceLocale'").get();
+    return { videoMaskColor: saved ? validateVideoMaskColor(saved.value) : defaultVideoMaskColor, interfaceLocale: resolveLocale(locale?.value, this.systemLocale) };
   }
 
-  saveSettings(settings: ApplicationSettings): ApplicationSettings {
-    const videoMaskColor = validateVideoMaskColor(settings?.videoMaskColor);
-    this.db.prepare("INSERT INTO settings VALUES ('videoMaskColor', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(videoMaskColor);
-    return { videoMaskColor };
+  saveSettings(settings: Partial<ApplicationSettings>): ApplicationSettings {
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) throw new Error('host.invalidSettings');
+    const colorChanged = Object.hasOwn(settings, 'videoMaskColor');
+    const localeChanged = Object.hasOwn(settings, 'interfaceLocale');
+    const videoMaskColor = colorChanged ? validateVideoMaskColor(settings.videoMaskColor) : undefined;
+    if (localeChanged && !isInterfaceLocale(settings.interfaceLocale)) throw new Error('host.invalidLocale');
+    if (colorChanged) this.db.prepare("INSERT INTO settings VALUES ('videoMaskColor', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(videoMaskColor!);
+    if (localeChanged) this.db.prepare("INSERT INTO settings VALUES ('interfaceLocale', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(settings.interfaceLocale!);
+    return this.getSettings();
   }
 
   open(id: string): SavedMedia {
