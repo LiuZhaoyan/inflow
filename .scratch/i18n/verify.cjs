@@ -27,11 +27,14 @@ async function run() {
   const profile = path.join(output, phase === 'browser' ? 'browser-profile' : 'profile');
   app.setPath('userData', profile);
   const errors = [], dialogs = [];
-  let window, ops, server, failLocale = false, failKey = false;
-  const processor = async mode => mode === 'probe' ? { duration: 6 } : mode === 'transcribe'
+  let window, ops, server, failLocale = false, failKey = false, processingFailure = null;
+  const processor = async mode => {
+    if (mode === 'transcribe' && processingFailure) throw processingFailure;
+    return mode === 'probe' ? { duration: 6 } : mode === 'transcribe'
     ? { segments: [{ start: 0, end: 3, text: '배가 있어요.', groups: ['배가', ' 있어요.'] }, { start: 3, end: 6, text: '집에 가요.', groups: ['집에', ' 가요.'] }] }
     : mode === 'models' ? { whisper: true, translate: { 'ko-en': true, 'en-zh': true }, englishParser: true }
     : mode === 'translate' ? { translation: '有一条船。' } : { surface: '배', lemma: '배', language: 'ko', candidates: [], meaningZh: '船' };
+  };
   const generator = async input => ({ title: 'A saved walk', requestedModel: 'deepseek-flash', sentences: [
     { parts: [{ text: 'I ', targetId: null }, { text: 'walk', targetId: input.targets[0].id }, { text: ' home.', targetId: null }], translationZh: '我走回家。' },
     { parts: [{ text: 'Home is quiet.', targetId: null }], translationZh: '家很安静。' },
@@ -195,6 +198,21 @@ async function run() {
       window.setContentSize(1200, 800); await click('[aria-controls=settings-models-panel]');
       await wait('document.querySelector("#settings-models-panel").textContent.includes("4/4")');
       await screenshot('models-chinese'); await click('.workspace-settings-cancel');
+      await click('.workspace-topnav nav button', '资料库'); await click('.workspace-library-item', 'sample.webm');
+      await switchLanguage('en');
+      processingFailure = new Error('媒体没有音轨，请选择包含语音的音频或视频。');
+      await click('.workspace-status button');
+      await wait('document.querySelector(".workspace-notice")?.textContent.includes("no audio track")');
+      await switchLanguage('zh-CN');
+      await wait('document.querySelector(".workspace-notice")?.textContent.includes("媒体没有音轨")');
+      const { GenerationError } = require(path.join(root, 'build/desktop/src/generation/index.js'));
+      processingFailure = new GenerationError('request', 'DeepSeek rejected the request (HTTP 400). Check the generation request.');
+      await switchLanguage('en'); await click('.workspace-status button');
+      await wait('document.querySelector(".workspace-notice")?.textContent.includes("DeepSeek rejected the request (HTTP 400)")');
+      await switchLanguage('zh-CN');
+      await wait('document.querySelector(".workspace-notice")?.textContent.includes("DeepSeek 拒绝了请求（HTTP 400）")');
+      await screenshot('owned-error-chinese');
+      processingFailure = null;
       await fs.writeFile(path.join(output, 'expected-vocabulary.json'), JSON.stringify(ops.listVocabulary()));
       assert.deepEqual(ops.listArtifacts(), [seed.story]);
       assert.deepEqual(ops.get(seed.media.id).segments, seed.media.segments);
