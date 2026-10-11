@@ -4,6 +4,7 @@ import Dropdown from "@/workspace/Dropdown";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
 import SourceThumbnail from '@/workspace/SourceThumbnail';
+import SearchField from '@/workspace/SearchField';
 import '@/workspace/vocab.css';
 
 type VocabularyDraft = {
@@ -268,11 +269,7 @@ export default function VocabularyNotebook({
         </div>
       </header>
       <div className="vocab-toolbar">
-        <label className="vocab-search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
-          <span className="vocab-sr-only">Search vocabulary</span>
-          <input value={query} onChange={event => { if (beforeChange()) setQuery(event.target.value); }} placeholder="Search vocabulary…" type="search"/>
-        </label>
+        <SearchField className="vocab-search" label="Search vocabulary" value={query} onChange={value => { if (beforeChange()) setQuery(value); }} placeholder="Search vocabulary…"/>
         <div className="vocab-filters" role="group" aria-label="Filter vocabulary">
           {filters.map(item => <button type="button" key={item.id} aria-pressed={filter === item.id} onClick={() => { if (beforeChange()) setFilter(item.id); }}>
             {item.label}<span>{counts[item.id]}</span>

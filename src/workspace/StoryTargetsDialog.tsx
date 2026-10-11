@@ -17,9 +17,10 @@ export default function StoryTargetsDialog({ entries, onClose, onConfirm }: {
     const element = dialog.current;
     if (!element) return;
     element.showModal();
+    element.focus({ preventScroll: true });
   }, []);
 
-  return <dialog ref={dialog} className="workspace-target-dialog" aria-labelledby="story-target-title" onClose={onClose} onCancel={event => { if (busy) event.preventDefault(); }}>
+  return <dialog ref={dialog} tabIndex={-1} className="workspace-target-dialog" aria-labelledby="story-target-title" onClose={onClose} onCancel={event => { if (busy) event.preventDefault(); }}>
     <form onSubmit={event => {
       event.preventDefault(); setBusy(true); setError('');
       void onConfirm(ids).catch(failure => setError(failure instanceof Error ? failure.message : 'Could not select vocabulary. Please retry.')).finally(() => setBusy(false));

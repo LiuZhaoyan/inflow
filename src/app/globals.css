@@ -4,7 +4,7 @@ body { margin:0; background:var(--paper); color:var(--ink); font-family:system-u
 button,input,select { font:inherit; color:inherit; }
 button { cursor:pointer; border:0; background:transparent; -webkit-tap-highlight-color:transparent; }
 button:disabled { cursor:not-allowed; opacity:.4; }
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid #9b6900; outline-offset:4px; }
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible { outline:2px solid #bca4f8; outline-offset:2px; }
 button:hover:not(:disabled) { filter:brightness(.97); }
 p,h1 { margin:0; }
 .app-shell { min-height:100vh; }

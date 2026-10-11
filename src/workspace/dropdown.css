@@ -2,7 +2,7 @@
 .inflow-dropdown { position:relative; min-width:0; font:inherit; }
 .inflow-dropdown > summary { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:36px; padding:0 10px; border:1px solid #484251; border-radius:8px; background:#20212b; color:#eeeaf5; cursor:pointer; list-style:none; font-size:13px; }
 .inflow-dropdown > summary::-webkit-details-marker { display:none; }
-.inflow-dropdown > summary:focus-visible { outline:none; border-color:#a68cd6; }
+.workspace-shell .inflow-dropdown > summary:focus-visible { outline:none; border-color:var(--workspace-accent); box-shadow:inset 0 0 0 1px var(--workspace-accent); }
 .inflow-dropdown > summary[aria-disabled="true"] { opacity:.45; cursor:not-allowed; }
 .inflow-dropdown > summary svg { width:15px; height:15px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .inflow-dropdown[open] > summary { border-color:#786b91; }

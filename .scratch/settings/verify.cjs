@@ -193,7 +193,7 @@ async function run() {
   failKey = true; await click('.workspace-settings-dialog button[type=submit]');
   await wait('!!document.querySelector(".workspace-settings-error")');
   assert.ok(await evaluate('document.querySelector("#settings-llm-panel").checkVisibility()'));
-  assert.ok(await evaluate('document.querySelector(".workspace-settings-sidebar button:last-child").textContent.includes("Saved")'));
+  assert.ok(await evaluate('document.querySelector(".workspace-settings-sidebar button:nth-child(2)").textContent.includes("Saved")'));
   assert.equal(await savedColor(), '#117744'); assert.equal(await maskColor(), 'rgb(17, 119, 68)');
   assert.equal(await evaluate('document.querySelector("#settings-api-key").value'), 'unsaved-replacement');
   assert.ok(await evaluate('document.querySelector("#settings-subtitles-panel .workspace-settings-result").textContent.includes("Mask color saved")'));
@@ -208,16 +208,21 @@ async function run() {
   assert.equal(keyCalls, 3); assert.equal(await savedColor(), '#224466');
 
   await settings(); await screenshot('settings-llm.png');
+  assert.equal(await evaluate('document.activeElement?.classList.contains("workspace-settings-dialog")'), true);
+  await evaluate('document.querySelector("#settings-api-key").focus()');
+  assert.ok(await evaluate(`(() => { const style = getComputedStyle(document.querySelector('#settings-api-key')); return style.outlineStyle === 'none' && style.borderTopColor === 'rgb(188, 164, 248)' && style.boxShadow.includes('inset'); })()`));
+  await screenshot('settings-key-focused.png');
+  assert.ok(await evaluate(`(() => { const button = document.querySelector('.workspace-settings-sidebar button:last-child'), icon = button.querySelector('svg').getBoundingClientRect(), label = button.querySelector('span').getBoundingClientRect(); return getComputedStyle(button).flexWrap === 'nowrap' && Math.abs(icon.top + icon.height / 2 - (label.top + label.height / 2)) < 2 && label.right <= button.getBoundingClientRect().right - 5; })()`));
   assert.ok(await evaluate(`(() => { const sidebar = document.querySelector('.workspace-settings-sidebar').getBoundingClientRect(), content = document.querySelector('.workspace-settings-content').getBoundingClientRect(); return sidebar.right <= content.left && Math.abs(sidebar.top - content.top) < 1; })()`));
   // Navigate both categories with the native keyboard controls.
   await evaluate('document.querySelector(".workspace-settings-sidebar button").focus()');
   await window.webContents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
   await window.webContents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 });
-  assert.ok(await evaluate('document.activeElement.matches(".workspace-settings-sidebar button:last-child")'));
+  assert.ok(await evaluate('document.activeElement.matches(".workspace-settings-sidebar button:nth-child(2)")'));
   await window.webContents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 });
   await window.webContents.debugger.sendCommand('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
   await wait('document.querySelector("#settings-subtitles-panel").checkVisibility()');
-  assert.equal(await evaluate('document.querySelector(".workspace-settings-sidebar button:last-child").getAttribute("aria-current")'), 'page');
+  assert.equal(await evaluate('document.querySelector(".workspace-settings-sidebar button:nth-child(2)").getAttribute("aria-current")'), 'page');
   await screenshot('settings-desktop.png');
   assert.ok(await evaluate(`(() => { const dialog = document.querySelector('.workspace-settings-dialog').getBoundingClientRect(), footer = document.querySelector('.workspace-settings-dialog footer').getBoundingClientRect(); return footer.top >= dialog.top && footer.bottom <= dialog.bottom; })()`));
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".workspace-settings-dialog")).fontFamily'), await evaluate('getComputedStyle(document.querySelector(".workspace-shell")).fontFamily'));
@@ -235,6 +240,15 @@ async function run() {
   assert.ok(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
   await click('.workspace-topnav button', 'Library');
   assert.ok(await evaluate('Math.abs(document.querySelector(".workspace-library-dialog").getBoundingClientRect().top - document.querySelector(".workspace-topnav").getBoundingClientRect().bottom) < 1'));
+  assert.ok(await evaluate('document.querySelector(".workspace-library-search").classList.contains("inflow-search-field")'));
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".workspace-library-search")).borderRadius'), '10px');
+  await input('.workspace-library-search input', 'search-never-matches-123');
+  await evaluate('document.querySelector(".workspace-library-search input").focus()');
+  await delay(220);
+  assert.ok(await evaluate(`(() => { const input = document.querySelector('.workspace-library-search input'), field = document.querySelector('.workspace-library-search'), inner = getComputedStyle(input), outer = getComputedStyle(field); return document.activeElement === input && inner.outlineStyle === 'none' && inner.boxShadow === 'none' && inner.borderTopWidth === '0px' && outer.borderTopColor === 'rgb(188, 164, 248)'; })()`));
+  await wait('!!document.querySelector(".workspace-library-search .inflow-search-clear")');
+  await click('.workspace-library-search .inflow-search-clear');
+  assert.equal(await evaluate('document.querySelector(".workspace-library-search input").value'), '');
   await click('button[aria-label="Close library"]');
   window.setContentSize(900, 520); await delay(150); await settings('Subtitle mask');
   const shortContent = await evaluate(`(() => { const content = document.querySelector('.workspace-settings-content'), footer = document.querySelector('.workspace-settings-dialog footer').getBoundingClientRect(); content.scrollTop = content.scrollHeight; return { scrollHeight: content.scrollHeight, clientHeight: content.clientHeight, contentBottom: content.getBoundingClientRect().bottom, footerTop: footer.top, footerBottom: footer.bottom, viewport: innerHeight }; })()`);

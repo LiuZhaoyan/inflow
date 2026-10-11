@@ -43,6 +43,7 @@
 .story-sentence { margin: 0 0 28px; }
 .story-workspace .artifact-korean { margin: 0; color: var(--workspace-text); font-family: "Noto Serif KR", "AppleMyungjo", Batang, Georgia, serif; font-size: clamp(20px, 1.7vw, 24px); font-weight: 400; line-height: 1.9; word-break: keep-all; overflow-wrap: anywhere; }
 .story-workspace .artifact-korean:lang(en) { font-family: Georgia, "Times New Roman", serif; word-break: normal; }
+.story-workspace .artifact-korean:focus-visible { outline:none; border-radius:5px; background:var(--workspace-accent-soft); }
 .story-workspace .artifact-korean mark { border-radius: 4px; padding: 0 2px; background: var(--workspace-accent-soft); color: #d6c2ff; }
 .story-translation { margin: 9px 0 0; color: #aaa6b3; font-size: 16px; line-height: 1.65; overflow-wrap: anywhere; }
 .story-reader-footer { min-height: 63px; display: grid; grid-template-columns: 1fr auto auto 1fr; align-items: center; gap: 10px; margin: 0 20px; border-top: 1px solid #292a31; }

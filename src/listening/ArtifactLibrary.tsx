@@ -73,7 +73,10 @@ export default function ArtifactLibrary({
   useEffect(() => {
     const element = dialog.current;
     if (!element) return;
-    if (active && generationOpen && !element.open) element.showModal();
+    if (active && generationOpen && !element.open) {
+      element.showModal();
+      element.focus({ preventScroll: true });
+    }
     else if ((!active || !generationOpen) && element.open) element.close();
   }, [active, generationOpen]);
 
@@ -189,7 +192,7 @@ export default function ArtifactLibrary({
       {error && <p className="story-notice" role="alert">{error}</p>}
     </div>}
 
-    <dialog className="story-generation-dialog" ref={dialog} aria-labelledby="story-generation-title" onClose={() => onGenerationClose?.()} onCancel={event => { if (busy) { event.preventDefault(); cancelGeneration(); } }}>
+    <dialog className="story-generation-dialog" ref={dialog} tabIndex={-1} aria-labelledby="story-generation-title" onClose={() => onGenerationClose?.()} onCancel={event => { if (busy) { event.preventDefault(); cancelGeneration(); } }}>
       <div className="story-dialog-content">
         <div className="story-dialog-heading"><h2 id="story-generation-title">Generate a story</h2><button type="button" aria-label="Close generation dialog" disabled={busy} onClick={closeDialog}>×</button></div>
         <p>The story uses selected saved vocabulary and remains available for offline reading.</p>

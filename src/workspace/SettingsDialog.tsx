@@ -59,6 +59,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
     const element = dialog.current!;
     const invoker = document.activeElement;
     element.showModal();
+    element.focus({ preventScroll: true });
     return () => {
       element.close();
       if (invoker instanceof HTMLElement && invoker.isConnected) invoker.focus();
@@ -93,7 +94,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
     else onClose();
   }
 
-  return <dialog ref={dialog} className="workspace-settings-dialog" aria-labelledby="workspace-settings-title"
+  return <dialog ref={dialog} tabIndex={-1} className="workspace-settings-dialog" aria-labelledby="workspace-settings-title"
     onClose={onClose} onCancel={event => { if (busy) event.preventDefault(); }}>
     <form onSubmit={event => void save(event)}>
       <header><h2 id="workspace-settings-title">Settings</h2><button type="button" className="workspace-icon-button" aria-label="Close settings" disabled={busy} onClick={onClose}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
