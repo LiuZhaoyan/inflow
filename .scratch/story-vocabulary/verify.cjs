@@ -24,7 +24,7 @@ async function run() {
       { parts: [{ text: 'Home is quiet.', targetId: null }], translationZh: '家很安静。' },
     ] };
   let entries = [{ ...story.targets[0], language: 'en', selected: false, contexts: [] }], failSave = false;
-  for (const [method, result] of Object.entries({ restore: null, list: [], getSettings: { videoMaskColor: '#000000' },
+  for (const [method, result] of Object.entries({ restore: null, list: [], getSettings: { videoMaskColor: '#000000', interfaceLocale: 'en' },
     credentialStatus: { configured: false }, listArtifacts: [story], restoreArtifact: story, openArtifact: story, cancel: null })) {
     ipcMain.handle(`inflow:${method}`, () => result);
   }

@@ -22,6 +22,7 @@ test('bilingual messages cover identifiers and preserve interpolation values and
   assert.equal(translate('zh-CN', 'fallback.example', {}, { en: { 'fallback.example': 'Readable fallback' }, 'zh-CN': {} }), 'Readable fallback');
   assert.equal(localizedError('zh-CN', new Error('host.invalidLocale'), 'settings.saveFailed'), '请选择简体中文或英语界面。');
   assert.equal(localizedError('en', new Error('ECONNRESET'), 'settings.saveFailed'), 'The interface language could not be saved. Retry. ECONNRESET');
+  assert.equal(localizedError('en', new Error('  external diagnostic'), ''), '  external diagnostic');
 });
 
 test('IPC-owned failures follow the current interface locale while external details stay readable', () => {

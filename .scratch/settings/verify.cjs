@@ -29,6 +29,9 @@ async function run() {
   require('node:fs').mkdirSync(profile, { recursive: true });
   app.setPath('userData', profile);
   const { DesktopOperations } = require(path.join(root, 'build/desktop/desktop/operations.js'));
+  const localeProfile = new DesktopOperations(profile, async () => null);
+  localeProfile.saveSettings({ interfaceLocale: 'en' });
+  localeProfile.close();
   const errors = [];
   let keyCalls = 0, colorCalls = 0, providerCalls = 0, failKey = false, failColor = false, blockColor = false, releaseColor;
   const register = ipcMain.handle.bind(ipcMain);

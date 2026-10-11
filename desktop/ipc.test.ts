@@ -5,6 +5,8 @@ import path from 'node:path';
 import vm from 'node:vm';
 import ts from 'typescript';
 import type { ModelStatus } from '../src/listening/desktop';
+import * as i18n from '../src/i18n';
+import { GenerationError } from '../src/generation';
 
 const status: ModelStatus = { whisper: true, translate: { 'ko-en': true, 'en-zh': true }, englishParser: true };
 type Handler = (event: object, ...args: unknown[]) => unknown;
@@ -25,7 +27,7 @@ async function host(processor: Processor = async () => status) {
     session: { setPermissionRequestHandler: () => {} },
   };
   const electron = {
-    app: { isPackaged: false, getPath: () => 'test-user-data', requestSingleInstanceLock: () => true,
+    app: { isPackaged: false, getPath: () => 'test-user-data', getLocale: () => 'zh-CN', requestSingleInstanceLock: () => true,
       on: () => {}, whenReady: () => Promise.resolve(), quit: () => {} },
     BrowserWindow: class {
       webContents = contents;
@@ -40,12 +42,14 @@ async function host(processor: Processor = async () => status) {
   const mocks: Record<string, unknown> = {
     electron,
     './operations': { DesktopOperations: class {
+      getSettings() { return { interfaceLocale: 'zh-CN', videoMaskColor: '#000000' }; }
       list() { calls.push('list'); return []; }
       cancel(job: string) { calls.push(`cancel:${job}`); }
     } },
     './credentials': { GenerationCredential: class { async initialize() {} } },
-    './media': {}, '../src/generation': {},
+    './media': {}, '../src/generation': { GenerationError },
     '../src/listening/media-server': { runProcessor: processor },
+    '../src/i18n': i18n,
     'node:path': path, 'node:url': {}, 'node:module': {},
   };
   const source = readFileSync(new URL('./main.ts', import.meta.url), 'utf8');
@@ -53,7 +57,7 @@ async function host(processor: Processor = async () => status) {
   vm.runInNewContext(compiled.outputText, {
     require: (name: string) => { assert.ok(name in mocks, `Unexpected import: ${name}`); return mocks[name]; },
     exports: {}, __dirname: path.resolve('build/desktop/desktop'), __filename: path.resolve('build/desktop/desktop/main.js'),
-    process: { env: {} }, URL, AbortController, console,
+    process: { env: {} }, URL, AbortController, Error, console,
   });
   await ready;
   const event = { sender: contents, senderFrame: contents.mainFrame };
