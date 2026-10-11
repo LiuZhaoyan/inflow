@@ -88,6 +88,42 @@ test('request size is enforced on actual bytes, even without a length header', a
 import { POST as transcribe } from '../app/api/transcribe/route';
 import { POST as translate } from '../app/api/translate/route';
 
+test('API processing failures retain original diagnostic data independently of localized guidance', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow api diagnostics '));
+  const originalCwd = process.cwd();
+  const originalPython = process.env.INFLOW_PYTHON;
+  const originalWorker = process.env.INFLOW_WORKER;
+  const diagnostic = '  fixture external diagnostic: ECONNRESET';
+  try {
+    await mkdir(path.join(root, 'scripts'));
+    await writeFile(path.join(root, 'scripts', 'media_processor.py'), `console.log(JSON.stringify({ error: ${JSON.stringify(diagnostic)} }));`);
+    process.chdir(root);
+    process.env.INFLOW_PYTHON = process.execPath;
+    delete process.env.INFLOW_WORKER;
+    for (const locale of ['en', 'zh-CN']) {
+      const headers = { 'accept-language': locale };
+      const body = new FormData();
+      body.set('file', new File(['fixture'], 'sample.wav', { type: 'audio/wav' }));
+      const mediaFailure = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', headers, body }));
+      const textFailure = await translate(new Request('http://localhost/api/translate', { method: 'POST', headers, body: JSON.stringify({ text: '한국어 문장' }) }));
+      for (const response of [mediaFailure, textFailure]) {
+        assert.equal(response.status, 503);
+        const result = await response.json();
+        assert.equal(result.detail, diagnostic);
+        assert.ok(result.error.endsWith(diagnostic));
+        assert.match(result.error, locale === 'en' ? /failed\. Retry\./ : /失败，请重试。/);
+      }
+    }
+  } finally {
+    process.chdir(originalCwd);
+    if (originalPython === undefined) delete process.env.INFLOW_PYTHON;
+    else process.env.INFLOW_PYTHON = originalPython;
+    if (originalWorker === undefined) delete process.env.INFLOW_WORKER;
+    else process.env.INFLOW_WORKER = originalWorker;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('routes reject foreign origins and malformed input before inference', async () => {
   const foreign = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', headers: { origin: 'https://other.example' } }));
   assert.equal(foreign.status, 403);

@@ -21,6 +21,11 @@ export function localizedError(locale: InterfaceLocale, failure: unknown, fallba
   const detail = original.replace(/^Error invoking remote method 'inflow:[^']+': Error: /, '');
   const key = Object.hasOwn(dictionaries.en, detail) ? detail : Object.keys(dictionaries.en).find(key => dictionaries.en[key] === detail || dictionaries['zh-CN'][key] === detail);
   if (key) return translate(locale, key);
+  for (const template of [dictionaries.en['host.requestRejected'], dictionaries['zh-CN']['host.requestRejected']]) {
+    const pattern = template.split('{status}').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(\\d+)');
+    const match = new RegExp(`^${pattern}$`).exec(detail);
+    if (match) return translate(locale, 'host.requestRejected', { status: match[1] });
+  }
   const guidance = translate(locale, fallbackKey);
   if (!guidance) return detail;
   return detail && detail !== guidance ? `${guidance} ${detail}` : guidance;
