@@ -34,6 +34,7 @@ async function run() {
   const { DesktopOperations } = require(path.join(root, 'build/desktop/desktop/operations.js'));
   const seed = new DesktopOperations(profile, async mode => mode === 'probe' ? { duration: 6 } : { segments: [{ start: 0, end: 2, text: '친구를 만났어요.', groups: ['친구를', '만났어요.'] }] },
     async input => ({ title: '한국어 이야기', requestedModel: 'deepseek-flash', sentences: [{ parts: [{ text: '친구', targetId: input.targets[0].id }, { text: '를 만났어요.', targetId: null }], translationZh: '见到了朋友。' }] }));
+  seed.saveSettings({ interfaceLocale: 'en' });
   const korean = restart ? seed.list().find(item => item.language === 'ko') : await seed.transcribe((await seed.importMedia(sample, 'ko')).id, 'seed');
   const koreanWord = restart ? seed.listVocabulary().find(item => item.language === 'ko') : seed.saveVocabulary({ language: 'ko', lemma: '친구', meaningZh: '朋友' });
   if (!restart) await seed.generateArtifact([koreanWord.id], '', 'korean-story', 'fixture');
@@ -126,7 +127,7 @@ async function run() {
   await textButton('.workspace-library-footer button', 'Import media');
   await wait('window.inflow.list().then(items => items.some(item => item.language === "en" && item.segments.length > 0))', 180000);
   const media = await evaluate('window.inflow.list().then(items => items.find(item => item.language === "en"))');
-  assert.equal(confirmations[0].defaultId, 0); assert.deepEqual(confirmations[0].buttons, ['韩语', '英语', '取消']);
+  assert.equal(confirmations[0].defaultId, 0); assert.deepEqual(confirmations[0].buttons, ['Korean', 'English', 'Cancel']);
   assert.ok(media.segments.some(segment => segment.text.includes('children')), JSON.stringify(media.segments));
   await fs.writeFile(path.join(output, 'transcript.json'), JSON.stringify(media.segments, null, 2));
   cancelImport = true;

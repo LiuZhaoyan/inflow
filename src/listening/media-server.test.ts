@@ -91,11 +91,25 @@ import { POST as translate } from '../app/api/translate/route';
 test('routes reject foreign origins and malformed input before inference', async () => {
   const foreign = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', headers: { origin: 'https://other.example' } }));
   assert.equal(foreign.status, 403);
-  const malformed = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', body: 'not a media form' }));
+  const malformed = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', headers: { 'accept-language': 'zh-CN' }, body: 'not a media form' }));
   assert.equal(malformed.status, 400);
   assert.match((await malformed.json()).error, /媒体|文件/);
   const empty = await translate(new Request('http://localhost/api/translate', { method: 'POST', body: '{}' }));
   assert.equal(empty.status, 400);
+});
+
+test('browser API failures use the requested interface language without changing validation', async () => {
+  for (const [locale, originMessage, inputMessage] of [
+    ['en', 'Start processing from the current Inflow page.', 'Translation text is empty, too long, or malformed.'],
+    ['zh-CN', '请从当前 Inflow 页面发起处理。', '翻译内容为空、过长或格式不正确。'],
+  ]) {
+    const denied = await transcribe(new Request('http://localhost/api/transcribe', { method: 'POST', headers: { origin: 'https://other.example', 'accept-language': locale } }));
+    assert.equal(denied.status, 403);
+    assert.equal((await denied.json()).error, originMessage);
+    const invalid = await translate(new Request('http://localhost/api/translate', { method: 'POST', headers: { 'accept-language': locale }, body: '{}' }));
+    assert.equal(invalid.status, 400);
+    assert.equal((await invalid.json()).error, inputMessage);
+  }
 });
 
 test('origin checks use the browser-facing Host when Next normalizes the internal URL', () => {

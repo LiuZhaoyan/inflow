@@ -22,5 +22,6 @@ export function localizedError(locale: InterfaceLocale, failure: unknown, fallba
   const key = Object.hasOwn(dictionaries.en, detail) ? detail : Object.keys(dictionaries.en).find(key => dictionaries.en[key] === detail || dictionaries['zh-CN'][key] === detail);
   if (key) return translate(locale, key);
   const guidance = translate(locale, fallbackKey);
+  if (!guidance) return detail;
   return detail && detail !== guidance ? `${guidance} ${detail}` : guidance;
 }
