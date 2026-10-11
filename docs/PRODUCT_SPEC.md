@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -35,7 +35,11 @@ Generated passages are text-first learning artifacts. They preserve the target v
 - Saved learning material remains local even when a model operation uses an online provider.
 - Mobile/PWA delivery, accounts, and cross-device synchronization are outside the first-release scope.
 
-Settings opens from the top navigation as a modal in the current workspace style. A left sidebar groups the shared DeepSeek key under LLM and global video subtitle mask color under Subtitle mask; narrow windows use a horizontal category row. Switching categories preserves drafts, and the shared Save applies changes across both categories. A blank key field retains the saved key; saved keys are not displayed. Cancel discards unsaved edits. If only one field saves successfully, retain that change, identify saved/failed categories, and open the failing category for retry. Opening Settings pauses playback without seeking; closing leaves it paused for manual resumption.
+Settings opens from the top navigation as a modal in the current workspace style. A left sidebar groups interface language, the shared DeepSeek key under LLM, global video subtitle mask color under Subtitle mask, and local Processing models; narrow windows use a horizontal category row. Switching categories preserves drafts, and the shared Save applies changed preferences and credentials across categories. A blank key field retains the saved key; saved keys are not displayed. Cancel discards unsaved edits. If only some fields save successfully, retain those changes, identify saved/failed categories, and open the first failing category for retry. Opening Settings pauses playback without seeking; closing leaves it paused for manual resumption.
+
+The interface supports Simplified Chinese and English independently of source language. With no saved preference, Chinese system-language variants select Simplified Chinese; other system languages select English. A saved choice wins on later launches. Settings edits a language draft; Save applies it immediately without restarting, and Cancel keeps the current language. Desktop preferences use local SQLite settings; browser development preferences use independent browser-local storage.
+
+Navigation, controls, accessible names, status and application-owned errors, native dialog text, dates and quantity wording follow the interface language. External diagnostics retain their original text alongside localized guidance, subject to existing secret filtering. Switching preserves learning state, source media and transcripts, vocabulary notes and target selection, generated passages and historical snapshots. Contextual meanings and sentence translations remain Chinese. Korean interfaces, automatic translation of external text, language-prefixed routes and preference synchronization are outside this scope. See [the interface internationalization specification](../.scratch/i18n/spec.md).
 
 ## 4. Media and processing behavior
 
