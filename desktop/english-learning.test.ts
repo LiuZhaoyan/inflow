@@ -93,6 +93,7 @@ test('English Story supports two collection cycles and mixed targets fail before
     assert.equal(app.openArtifact(first.id).targets[0].meaningZh, '步行');
     app.selectVocabulary([friend.id]);
     const second = await app.generateArtifact([friend.id], '朋友', 'second', 'fixture');
+    app.acceptArtifact(second.id);
     assert.equal(second.language, 'en'); assert.equal(second.targets[0].sourceSentence, 'walk with friends. ');
     const all = app.listArtifacts(), notebook = app.listVocabulary();
     app.close(); app = new DesktopOperations(root, async () => { throw new Error('Offline'); }, async () => { throw new Error('Offline'); });

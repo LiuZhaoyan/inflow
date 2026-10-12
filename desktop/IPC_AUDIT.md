@@ -1,10 +1,10 @@
 # Electron IPC boundary audit
 
-Scope: `main.ts`, `preload.cjs`, `src/listening/desktop.ts`, host operations and renderer consumers. No UI, schema, dependencies, or product features changed.
+Scope: `main.ts`, `preload.cjs`, `src/listening/desktop.ts`, host operations and renderer consumers. The original boundary audit changed no UI, schema, dependencies or product features; the guarded Story acceptance addition is recorded below.
 
 ## Interface and existing protections
 
-The preload exposes 25 Promise-returning methods on `window.inflow`. Each invokes only its fixed `inflow:<method>` channel; it exposes no Electron objects, arbitrary channel access, callbacks, or subscriptions. `DesktopBridge` describes the same surface. Main checks the exact window, its main frame, and the frame URL before invoking any operation.
+The preload exposes named Promise-returning methods and one synchronous `acceptArtifact` method on `window.inflow`. Each uses only its fixed `inflow:<method>` channel; it exposes no Electron objects, arbitrary channel access, callbacks or subscriptions. `DesktopBridge` describes the same surface. Main checks the exact window, its main frame and the frame URL before invoking any operation, including synchronous acceptance.
 
 | Methods | Renderer input and host action | Validation / ownership |
 | --- | --- | --- |
@@ -17,6 +17,9 @@ The preload exposes 25 Promise-returning methods on `window.inflow`. Each invoke
 | `credentialStatus`, `configureCredential` | Optional replacement key | Only status leaves main; key length/control-character checks and Windows encryption |
 | `getSettings`, `saveSettings` | Optional video mask color | Existing color validator; host persistence |
 | `generateArtifact`, `listArtifacts`, `restoreArtifact`, `openArtifact` | Selected IDs, topic, job ID or artifact ID | Host vocabulary, bounds, same-language check, generated-result validation and translated generation errors |
+| `acceptArtifact` | Saved artifact ID; synchronously commit the current Story setting | Same window/frame/URL guard; artifact resolved in SQLite before a single selection write; localized safe errors returned through the preload |
+
+`openArtifact` is read-only and generation persists its artifact without selecting it. The renderer accepts only its latest eligible intent through `acceptArtifact`, then updates its view in the same turn. The synchronous call contains no worker/provider work, but local disk access can briefly delay the renderer. No schema migration or general channel access was added. [Native acceptance](../.scratch/story-navigation-notices/acceptance.md) covers the production bridge and before/after-commit recovery in an isolated profile.
 
 Consumers are `LearningWorkspace`, `SettingsDialog`, `useLearningArtifacts`, `VocabularyNotebook`, and `VocabularySelection`. They use the named bridge methods; cancellation uses generated job IDs. Omitted or empty setup component lists intentionally retain the worker's existing install-all behavior.
 
@@ -28,7 +31,7 @@ The window uses context isolation, sandboxing and disabled Node integration. New
 2. **The shared URL guard could throw.** Malformed navigation URLs escaped the event callback instead of being denied. Parsing now fails closed; URLs with userinfo are also rejected. Valid root query strings and fragments remain allowed. The same guard protects navigation and all IPC handlers.
 3. **Model setup could report success after cancellation.** Unlike operation jobs, setup returned a late successful worker result without checking its signal. It now rejects cancelled results and normalizes cancelled failures, retaining `finally` cleanup and ordinary worker errors.
 
-`ipc.test.ts` executes the actual main entry point and preload in isolated VM contexts with a mocked Electron host. It checks every sender guard, exposed/typed/registered API parity, forwarding and Promise results, navigation, setup validation before side effects, duplicate active jobs, cancellation and job-ID reuse after success/failure/cancellation. It does not launch a worker, download a model, access credentials or open a database.
+`ipc.test.ts` executes the actual main entry point and preload in isolated VM contexts with a mocked Electron host. It checks every sender guard, exposed/typed/registered API parity, forwarding and Promise results, synchronous acceptance/error return, navigation, setup validation before side effects, duplicate active jobs, cancellation and job-ID reuse after success/failure/cancellation. It does not launch a worker, download a model, access credentials or open a database.
 
 ## Deferred issues and remaining risks
 
@@ -36,11 +39,13 @@ The window uses context isolation, sandboxing and disabled Node integration. New
 - **Job namespace and resource scheduling (unresolved):** model setup and operation jobs use separate maps, so a repeated ID can identify both and cancellation reaches both. Local processing already has a global busy guard; cloud work and native dialogs have no general concurrency bound. Unified scheduling, quotas and request ordering require a broader lifecycle decision. Existing UUID consumers make collisions unlikely during normal use.
 - **Shutdown during untracked work (unresolved):** quit aborts tracked jobs and closes SQLite, but imports, relinks, status checks, credential writes and native dialogs are not tracked/drained. This audit does not choose between blocking quit, cancellation or completing writes. Pending asynchronous work must not be assumed to have drained.
 - **Renderer compromise (remaining trust limit):** a compromised trusted main frame can call every exposed method, including modifying learning data, replacing credentials and requesting cloud work. Sender checks do not authorize individual actions. The renderer CSP permits inline scripts; a stricter policy requires reviewing the generated Next.js output.
-- **Native runtime coverage (unverified):** the regression harness verifies application guards and registration, not Electron's actual contextBridge serialization, native dialog teardown or packaged shutdown. A Windows packaged-app smoke test remains necessary for those behaviors.
+- **Native runtime coverage (partial):** the VM regression harness verifies application guards and registration. The Story acceptance run additionally exercises production contextBridge serialization for its covered methods. Methods outside that native run, native dialog teardown and packaged shutdown remain unverified; a Windows packaged-app smoke test is still necessary.
 
 No generic error wrapper was added: existing domain messages and generation-error mapping remain intact. No new generic IPC schema duplicates the domain validators. Malformed inputs rejected by those validators retain their existing errors; this audit does not claim exhaustive fuzz coverage.
 
 ## Verification
+
+The results below belong to the original boundary audit. The [2026-10-12 Story acceptance](../.scratch/story-navigation-notices/acceptance.md) passed the current 83-test suite (including seven IPC tests), lint, typecheck, desktop build and six production-bridge native phases.
 
 - `npm test`: **47/47 passed**, including five IPC boundary regression tests.
 - `node --import tsx --test desktop/ipc.test.ts`: **5/5 passed** after the final test-harness cleanup.

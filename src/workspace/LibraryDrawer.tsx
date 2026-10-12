@@ -1,5 +1,7 @@
 "use client";
 
+import Notice from '@/workspace/Notice';
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/i18n/context';
 import type { LearningArtifact, SavedMedia, SourceLanguage } from '@/listening/desktop';
@@ -59,7 +61,7 @@ export default function LibraryDrawer({
   const languageName = (language: SourceLanguage) => language === 'en' ? t("English") : t("Korean");
 
   return <dialog ref={dialog} className="workspace-library-dialog" aria-labelledby="workspace-library-title"
-    onClose={event => { event.currentTarget.querySelector('details')?.removeAttribute('open'); onClose(); }}
+    onClose={event => { if (event.currentTarget.open) return; event.currentTarget.querySelector('details')?.removeAttribute('open'); onClose(); }}
     onCancel={event => {
       const menu = event.currentTarget.querySelector('details[open]');
       if (menu) { event.preventDefault(); menu.removeAttribute('open'); menu.querySelector('summary')?.focus(); }
@@ -86,7 +88,7 @@ export default function LibraryDrawer({
           <span className="workspace-library-info"><span className="workspace-library-title-row"><strong title={item.name}>{item.name}</strong><span className="workspace-language-badge">{languageName(item.language)}</span></span><span>{item.learning.duration > 600 ? t("Playback disabled · over 10 min") : formatTime(item.learning.duration) + ' · ' + t(item.segments.length === 1 ? '{count} sentence' : '{count} sentences', { count: item.segments.length })}</span></span>
           <svg className="workspace-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
         </button>
-        {item.missing && <div className="workspace-library-missing"><span>{t("Media file missing")}</span><button type="button" onClick={() => onRelink(item.id)}>{t("Relink")}</button></div>}
+        {item.missing && <div className="workspace-library-missing"><Notice message={t("Media file missing")}/><button type="button" onClick={() => onRelink(item.id)}>{t("Relink")}</button></div>}
       </li>)}
       {visibleArtifacts.map(artifact => <li key={artifact.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={artifact.id === currentArtifactId ? 'true' : undefined} onClick={() => onOpenArtifact?.(artifact)}>

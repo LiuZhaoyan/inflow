@@ -17,6 +17,7 @@ import StoryTargetsDialog from '@/workspace/StoryTargetsDialog';
 import SettingsDialog from '@/workspace/SettingsDialog';
 import SourceLanguageDialog from '@/workspace/SourceLanguageDialog';
 import { useLearningArtifacts } from '@/workspace/useLearningArtifacts';
+import Notice from '@/workspace/Notice';
 import '@/workspace/workspace.css';
 
 const measureStage = (column: HTMLDivElement | null) => ({
@@ -184,7 +185,7 @@ export default function LearningWorkspace() {
   const updateVocabularyEntries = useCallback((entries: VocabularyEntry[]) => {
     setVocabularyEntries(entries); setGenerationTargets(entries.filter(entry => entry.selected));
   }, []);
-  const learningArtifacts = useLearningArtifacts(desktop, allowChange, () => setVocabularyRevision(value => value + 1));
+  const learningArtifacts = useLearningArtifacts(desktop, allowChange, () => setVocabularyRevision(value => value + 1), () => { media.current?.pause(); setContentKind('story'); setView('video'); });
   const { artifacts, selection: { artifact: activeArtifact } } = learningArtifacts;
   const sentenceKey = savedMedia?.segments[index]?.id ?? String(index);
   const maskedGroups = masks[sentenceKey] ?? [];
@@ -215,7 +216,7 @@ export default function LearningWorkspace() {
     if (!videoMaskEditing) media.current?.pause();
     setVideoMaskEditing(value => !value);
   }
-  function showVocab() { if (allowChange()) { media.current?.pause(); setView('vocab'); } }
+  function showVocab() { if (allowChange()) { learningArtifacts.cancelNavigation(); media.current?.pause(); setView('vocab'); } }
 
   function openSettings() {
     if (!allowChange()) return;
@@ -226,6 +227,7 @@ export default function LearningWorkspace() {
 
   async function importMedia() {
     if (!allowChange() || importTicket.current || choosingImport.current || importing.current) return;
+    learningArtifacts.cancelNavigation();
     if (!window.inflow) { picker.current?.click(); return; }
     choosingImport.current = true;
     try {
@@ -261,6 +263,7 @@ export default function LearningWorkspace() {
 
   async function openSaved(id: string, relink = false) {
     if (!allowChange()) return;
+    learningArtifacts.cancelNavigation();
     if (!relink && id === savedMedia?.id) { setContentKind('media'); setView('video'); setLibraryOpen(false); return; }
     try {
       const next = relink ? await window.inflow!.relink(id) : await window.inflow!.open(id);
@@ -281,6 +284,7 @@ export default function LearningWorkspace() {
 
   async function chooseFile(next: File | undefined) {
     if (!next || !allowChange()) return;
+    learningArtifacts.cancelNavigation();
     const choice = ++fileChoice.current;
     if (!next.size || next.size > 50 * 1024 * 1024 || (!/^(audio|video)\//.test(next.type) && !/\.(mp3|mp4|wav|m4a|ogg|webm|mov|flac|aac)$/i.test(next.name))) {
       setError('请选择 50 MB 以内的音频或视频文件。'); return;
@@ -328,6 +332,7 @@ export default function LearningWorkspace() {
 
   async function openVocabularySource(source: MediaVocabularySource) {
     if (!allowChange()) return;
+    learningArtifacts.cancelNavigation();
     try {
       const saved = await window.inflow!.open(source.mediaId);
       const next = saved.segments.findIndex(item => item.id === source.segmentId);
@@ -341,7 +346,7 @@ export default function LearningWorkspace() {
 
   function openStory(source: ArtifactVocabularySource) {
     if (!learningArtifacts.openSource(source)) return;
-    media.current?.pause(); setContentKind('story'); setView('video'); setLibraryOpen(false);
+    media.current?.pause(); setLibraryOpen(false);
   }
 
   function openEntrySource(source: VocabularyContext['source']) {
@@ -351,6 +356,7 @@ export default function LearningWorkspace() {
 
   async function openVocabularyEntry(id: string) {
     if (!allowChange()) return;
+    learningArtifacts.cancelNavigation();
     try {
       if (!await vocabularyNotebook.current?.open(id)) return;
       media.current?.pause(); setView('vocab'); setError('');
@@ -489,9 +495,14 @@ export default function LearningWorkspace() {
   </div>;
 
   return <div className="workspace-shell">
-    <TopNav activeView={view} libraryOpen={libraryOpen} settingsOpen={settingsOpen} onOpenSettings={openSettings} onOpenLibrary={() => { if (allowChange()) setLibraryOpen(true); }} onShowVideo={() => { if (allowChange()) setView('video'); }} onShowVocab={showVocab}/>
+    <TopNav activeView={view} libraryOpen={libraryOpen} settingsOpen={settingsOpen} onOpenSettings={openSettings} onOpenLibrary={() => { if (allowChange()) setLibraryOpen(true); }} onShowVideo={() => { if (allowChange()) { if (view !== 'video') learningArtifacts.cancelNavigation(); setView('video'); } }} onShowVocab={showVocab}/>
     <input className="file-input" ref={picker} type="file" accept="audio/*,video/*,.m4a,.mp3,.mp4,.wav,.webm,.ogg,.flac,.aac,.mov" aria-label={t("选择音频或视频")} onChange={event => { void chooseFile(event.target.files?.[0]); event.target.value = ''; }}/>
-    {error && <p className="notice workspace-notice" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
+    <div className="app-notice-stack">
+    {learningArtifacts.opening && <Notice message={t('Opening story…')} placement="floating" tone="status"/>}
+    {error && <Notice message={localize(error, 'The operation failed. Please retry.')} placement="floating" onDismiss={() => setError('')}/>}
+    {learningArtifacts.error && !generationOpen && <Notice message={localize(learningArtifacts.error, 'The operation failed. Please retry.')} placement="floating" onDismiss={() => learningArtifacts.setError('')}/>}
+    {learningArtifacts.notice && <Notice key={learningArtifacts.notice.id} message={t(learningArtifacts.notice.message)} placement="floating" tone="status" transient onDismiss={() => learningArtifacts.setNotice(null)}/>}
+    </div>
     <main className="workspace-content-grid" ref={contentGrid} style={{ '--workspace-context-width': contextWidth === undefined ? undefined : `${contextWidth}px` } as CSSProperties} hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column" ref={mainColumn} style={{ '--workspace-stage-height': stageHeight === undefined ? undefined : `${stageHeight}px`, '--workspace-video-ratio': videoRatio } as CSSProperties}>
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
@@ -538,10 +549,10 @@ export default function LearningWorkspace() {
       {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} vocabularyRevision={vocabularyRevision} vocabularyEntries={vocabularyEntries} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}
     </section>
     <section className="workspace-vocab" hidden={view !== 'vocab'} aria-label={t("Vocab workspace")}>
-      {desktop ? <VocabularyNotebook ref={vocabularyNotebook} refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} active={view === 'vocab'} onEntriesChange={updateVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">{t("词汇本在 Inflow 桌面应用中可用。")}</p>}
+      {desktop ? <VocabularyNotebook ref={vocabularyNotebook} refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} onDirty={() => learningArtifacts.cancelNavigation(true)} active={view === 'vocab'} onEntriesChange={updateVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">{t("词汇本在 Inflow 桌面应用中可用。")}</p>}
     </section>
     <LibraryDrawer open={libraryOpen} items={library} currentId={contentKind === 'media' ? savedMedia?.id : null} artifacts={artifacts} currentArtifactId={contentKind === 'story' ? activeArtifact?.id : null} onOpenArtifact={artifact => openStory({ type: 'artifact', artifactId: artifact.id, sentenceIndex: 0, name: artifact.title })} onClose={() => setLibraryOpen(false)} onImport={() => void importMedia()} onOpen={id => void openSaved(id)} onRelink={id => void openSaved(id, true)}/>
-    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen && !settingsOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)}/>
+    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen && !settingsOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)} onDirty={() => learningArtifacts.cancelNavigation(true)}/>
     {importLanguageOpen && <SourceLanguageDialog onSelect={language => void confirmImportLanguage(language)} onCancel={cancelImportLanguage}/>}
     {targetSelectionOpen && <StoryTargetsDialog entries={vocabularyEntries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
     {settingsOpen && <SettingsDialog settings={settings} credential={credential} onSettingsChange={setSettings} onCredentialChange={setCredential} onClose={() => setSettingsOpen(false)}/>}

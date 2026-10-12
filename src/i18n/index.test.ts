@@ -11,6 +11,13 @@ test('interface preference overrides system language and Chinese variants share 
 });
 import { dictionaries, translate, localizedError } from './index';
 
+test('notice diagnostics retain failure details while filtering common credential formats', () => {
+  const failure = 'ECONNRESET Authorization: Bearer fixture-secret api_key="fixture-key" sk-1234567890abcdef';
+  const text = localizedError('en', failure, 'The operation failed. Please retry.');
+  assert.match(text, /ECONNRESET/);
+  assert.doesNotMatch(text, /fixture-secret|fixture-key|sk-1234567890abcdef/);
+});
+
 test('bilingual messages cover identifiers and preserve interpolation values and external diagnostics', () => {
   assert.deepEqual(Object.keys(dictionaries['zh-CN']).sort(), Object.keys(dictionaries.en).sort());
   for (const key of Object.keys(dictionaries.en)) {

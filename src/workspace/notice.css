@@ -1,0 +1,17 @@
+.workspace-shell .app-notice {
+  display:flex; align-items:center; gap:8px; box-sizing:border-box;
+  width:fit-content; max-width:min(370px,100%); height:44px; min-width:0;
+  padding:0 8px 0 12px; margin:8px 0; border:1px solid #98627f; border-radius:9px;
+  background:#392832; color:#f1c9df; font-size:13px; line-height:1;
+}
+.workspace-shell .app-notice-floating { position:fixed; top:68px; right:16px; z-index:100; max-width:min(370px,calc(100vw - 32px)); }
+.workspace-shell .app-notice-stack { position:fixed; top:68px; right:16px; z-index:100; display:flex; flex-direction:column; align-items:flex-end; max-width:calc(100vw - 32px); }
+.workspace-shell .app-notice-stack .app-notice-floating { position:static; }
+.workspace-shell .app-notice-success { background:#253a33; border-color:#638f7a; color:#c7ead8; }
+.workspace-shell .app-notice-icon { flex:none; display:grid; place-items:center; width:18px; height:18px; border:1px solid currentColor; border-radius:50%; }
+.workspace-shell .app-notice button { color:inherit; background:transparent; border:0; padding:0; margin:0; font:inherit; }
+.workspace-shell .app-notice .app-notice-message { display:block; flex:1; min-width:0; min-height:32px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }
+.workspace-shell .app-notice .app-notice-close { flex:none; width:32px; height:32px; font-size:20px; }
+.workspace-shell .app-notice-details { box-sizing:border-box; width:min(480px,calc(100vw - 32px)); max-height:60dvh; overflow:auto; padding:16px; border:1px solid #98627f; border-radius:9px; background:#392832; color:#f1c9df; font-size:14px; line-height:1.6; }
+.workspace-shell .app-notice-details p { margin:0; white-space:pre-wrap; overflow-wrap:anywhere; color:inherit; font-size:inherit; }
+.workspace-shell .app-notice-details button { float:right; width:32px; height:32px; font-size:20px; }

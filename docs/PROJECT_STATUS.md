@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-11
+Last verified: 2026-10-12
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -38,7 +38,9 @@ SQLite        Python worker        DeepSeek API
 
 Electron loads a static Next.js export. Managed media is served through the custom `inflow://` protocol with byte-range support for seeking and sentence playback. No local HTTP server is required by the desktop runtime.
 
-LearningWorkspace owns Learning artifact state through useLearningArtifacts, which handles restoration, source/history opening, generation and cancellation behind shared snapshots and commands. ArtifactLibrary no longer owns host orchestration or paired shared-state updates; it retains sentence selection, translation visibility, filtering, topic and scrolling. Library selection and vocabulary collection consume the same accepted artifact. [Flow ownership and verification](../.scratch/archive/artifact-state/architecture-and-verification.md) covers native restoration, opening, draft protection, generation failure/retry and provenance. The [ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) remains a bounded negative result in ordinary scripted use, with renderer/persistence divergence under controlled reply delays; this refactor preserves that behavior.
+LearningWorkspace owns learning artifact state through useLearningArtifacts, which handles restoration, Library/history/source opening, generation and cancellation behind shared snapshots and commands. ArtifactLibrary retains sentence selection, translation visibility, filtering, topic and scrolling. Candidate reads do not persist selection. The latest eligible intent commits through a guarded synchronous host operation before updating the view, preserving the accepted Story during loading and on failed reads or writes. Real vocabulary drafts and view departure permanently cancel pending navigation; immediate save/discard does not revive it. Successful generation remains saved even when its automatic switch is canceled. The existing SQLite schema is unchanged. [Navigation acceptance](../.scratch/story-navigation-notices/acceptance.md) resolves the historical controlled delayed-reply divergence and verifies recovery before and after the durable commit. The short synchronous SQLite acceptance can briefly delay the renderer on slow storage.
+
+Application-owned errors now share compact pink-on-purple notices across Listen, Story, Vocabulary, Library and Settings. Contextual errors remain inline with validation/retry controls; general errors, loading and cancellations float upper-right. Notices truncate to one line within 370px × 44px, expose sanitized full details through a keyboard-accessible popover, support dismissal and bilingual presentation, and expire transient feedback after five seconds. Actionable errors persist.
 
 ## 3. Implemented learning domains
 
@@ -128,6 +130,8 @@ English native acceptance runs in an isolated profile and a second Electron proc
 [Vocabulary acceptance](../.scratch/vocab-ui/acceptance.md) passed 67 tests, lint, typecheck, desktop build, isolated native UI checks and a second-process restart. It covers load retry/stale reads, save visibility, protected notes, rollback-safe deletion, exact repeated-occurrence highlighting, Story navigation and mixed-language continuation. Controlled speech events test UI lifecycle; a separate real, muted English/Korean synthesis probe completed successfully. Audible speech quality and installed-package acceptance are unverified.
 
 [Interface internationalization acceptance](../.scratch/i18n/acceptance.md) passed 79 tests, lint, typecheck, desktop build and isolated desktop/restart/browser checks. It includes failed/partial saves, owned failure language changes, native dialog options, narrow Settings layout and unchanged learning state. Processing/provider fixtures make this source-checkout behavior evidence; installed-package and owner visual acceptance of this iteration remain unverified.
+
+[Story navigation and notices acceptance](../.scratch/story-navigation-notices/acceptance.md) passed 83 tests, lint, typecheck, desktop build and six isolated native-process phases. Controlled delayed replies, dirty drafts, generation retention, injected commit failure, bilingual narrow notices and before/after-commit recovery passed. Screenshot capture was unavailable; computed layout and native keyboard checks passed. Installed-package, screen-reader and owner visual acceptance remain unverified.
 
 ## 7. Current gaps
 

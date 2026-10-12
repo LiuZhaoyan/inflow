@@ -18,7 +18,10 @@ export function translate(locale: InterfaceLocale, key: string, values: MessageV
 }
 export function localizedError(locale: InterfaceLocale, failure: unknown, fallbackKey: string): string {
   const original = failure instanceof Error ? failure.message : typeof failure === 'string' ? failure : '';
-  const detail = original.replace(/^Error invoking remote method 'inflow:[^']+': Error: /, '');
+  const detail = original.replace(/^Error invoking remote method 'inflow:[^']+': Error: /, '')
+    .replace(/\bBearer\s+[^\s,;"']+/gi, 'Bearer [redacted]')
+    .replace(/\bsk-[\w-]{8,}/g, '[redacted]')
+    .replace(/((?:api[_-]?key|access[_-]?token|secret|password)["']?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;&]+)/gi, '$1[redacted]');
   const key = Object.hasOwn(dictionaries.en, detail) ? detail : Object.keys(dictionaries.en).find(key => dictionaries.en[key] === detail || dictionaries['zh-CN'][key] === detail);
   if (key) return translate(locale, key);
   for (const template of [dictionaries.en['host.requestRejected'], dictionaries['zh-CN']['host.requestRejected']]) {

@@ -1,4 +1,11 @@
 const messages: Record<string, readonly [string, string]> = {
+  'Save or cancel the current vocabulary draft before continuing.': ['Save or cancel the current vocabulary draft before continuing.', '请先保存或取消当前词汇草稿。'],
+  'Story navigation canceled. Your unsaved vocabulary draft is preserved.': ['Story navigation canceled. Your unsaved vocabulary draft is preserved.', '已取消短文切换，未保存的词汇草稿已保留。'],
+  'Opening story…': ['Opening story…', '正在打开短文…'],
+  'View notice details': ['View notice details', '查看通知详情'],
+  'Dismiss notice': ['Dismiss notice', '关闭通知'],
+  'Notice details': ['Notice details', '通知详情'],
+  'Close notice details': ['Close notice details', '关闭通知详情'],
   'app.description': ['Import Korean or English media, practice sentence listening and meaning groups, and view Chinese translations.', '导入韩语或英语影音，按句精听、揭晓意群并查看中文译文。'],
   'Workspace': ['Workspace', '工作区'],
   'Application': ['Application', '应用'],

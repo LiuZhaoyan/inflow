@@ -15,6 +15,7 @@ type Processor = (mode: string, signal: AbortSignal, file?: string, components?:
 // Execute the real entry point without starting Electron, workers, or a database.
 async function host(processor: Processor = async () => status) {
   const handlers = new Map<string, Handler>();
+  const syncHandlers = new Map<string, Handler>();
   const navigation = new Map<string, (event: { preventDefault(): void }, url: string) => void>();
   const calls: string[] = [];
   let destroyed = false;
@@ -38,13 +39,14 @@ async function host(processor: Processor = async () => status) {
     },
     protocol: { registerSchemesAsPrivileged: () => {}, handle: () => {} },
     dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['C:/fixture/sample.wav'] }) },
-    ipcMain: { handle: (channel: string, handler: Handler) => handlers.set(channel, handler) },
+    ipcMain: { handle: (channel: string, handler: Handler) => handlers.set(channel, handler), on: (channel: string, handler: Handler) => syncHandlers.set(channel, handler) },
   };
   const mocks: Record<string, unknown> = {
     electron,
     './operations': { DesktopOperations: class {
       getSettings() { return { interfaceLocale: 'zh-CN', videoMaskColor: '#000000' }; }
       list() { calls.push('list'); return []; }
+      acceptArtifact(id: string) { calls.push(`accept:${id}`); if (id === 'failure') throw new Error('Fixture commit failure'); return { id }; }
       cancel(job: string) { calls.push(`cancel:${job}`); }
       importMedia(file: string, language: string) { calls.push(`import:${file}:${language}`); return { id: 'fixture', language }; }
     } },
@@ -64,7 +66,7 @@ async function host(processor: Processor = async () => status) {
   });
   await ready;
   const event = { sender: contents, senderFrame: contents.mainFrame };
-  return { handlers, navigation, calls, contents, event, destroy: () => { destroyed = true; },
+  return { handlers, syncHandlers, navigation, calls, contents, event, destroy: () => { destroyed = true; },
     invoke: (method: string, ...args: unknown[]) => handlers.get(`inflow:${method}`)!(event, ...args) };
 }
 
@@ -77,7 +79,8 @@ test('preload exposes exactly the typed, registered methods and forwards only na
       assert.equal(name, 'electron');
       return {
         contextBridge: { exposeInMainWorld: (name: string, value: typeof bridge) => { assert.equal(name, 'inflow'); bridge = value; } },
-        ipcRenderer: { invoke: (...args: unknown[]) => { invocations.push(args); return Promise.resolve('reply'); } },
+        ipcRenderer: { invoke: (...args: unknown[]) => { invocations.push(args); return Promise.resolve('reply'); },
+          sendSync: (...args: unknown[]) => { invocations.push(args); return { artifact: 'reply' }; } },
       };
     },
   });
@@ -86,12 +89,36 @@ test('preload exposes exactly the typed, registered methods and forwards only na
   assert.ok(declaration && ts.isTypeAliasDeclaration(declaration) && ts.isTypeLiteralNode(declaration.type));
   const methods = declaration.type.members.map(member => member.name!.getText(types)).sort();
   assert.deepEqual(Object.keys(bridge).sort(), methods);
-  assert.deepEqual([...main.handlers.keys()].sort(), methods.map(method => `inflow:${method}`).sort());
+  assert.deepEqual([...main.handlers.keys(), ...main.syncHandlers.keys()].sort(), methods.map(method => `inflow:${method}`).sort());
   for (const method of methods) {
     const input = { value: method };
     assert.equal(await bridge[method](input, 'job'), 'reply');
-    assert.deepEqual(invocations.at(-1), [`inflow:${method}`, input, 'job']);
+    assert.deepEqual(invocations.at(-1), method === 'acceptArtifact' ? [`inflow:${method}`, input] : [`inflow:${method}`, input, 'job']);
   }
+});
+
+test('synchronous Story acceptance rejects untrusted senders and returns commit failures without accepting', async () => {
+  const main = await host();
+  const handler = main.syncHandlers.get('inflow:acceptArtifact')!;
+  function accept(event: object, id = 'story') {
+    const request = { ...event, returnValue: undefined as unknown };
+    handler(request, id);
+    return request.returnValue;
+  }
+  for (const event of [{ ...main.event, sender: {} }, { ...main.event, senderFrame: null }, { ...main.event, senderFrame: { url: 'inflow://app/' } }]) {
+    assert.match((accept(event) as { error: string }).error, /访问被拒绝/);
+  }
+  for (const url of ['invalid url', 'https://app/', 'inflow://other/', 'inflow://app/media/id', 'inflow://user:password@app/']) {
+    main.contents.mainFrame.url = url;
+    assert.match((accept(main.event) as { error: string }).error, /访问被拒绝/);
+  }
+  main.contents.mainFrame.url = 'inflow://app/';
+  assert.deepEqual(main.calls, []);
+  assert.equal((accept(main.event) as { artifact: { id: string } }).artifact.id, 'story');
+  assert.match((accept(main.event, 'failure') as { error: string }).error, /Fixture commit failure/);
+  main.destroy();
+  assert.match((accept(main.event) as { error: string }).error, /访问被拒绝/);
+  assert.deepEqual(main.calls, ['accept:story', 'accept:failure']);
 });
 
 test('language selection keeps file paths in the host, validates languages, and consumes one-time tickets', async () => {

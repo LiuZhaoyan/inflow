@@ -8,6 +8,31 @@ import { generatePassage, GenerationError } from '../src/generation';
 import type { SaveVocabularyInput } from '../src/listening/desktop';
 import { DatabaseSync } from 'node:sqlite';
 
+test('reading a candidate never changes the accepted Story, including after a failed selection commit', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow story navigation '));
+  const processor = async () => { throw new Error('Story navigation must not process media'); };
+  let app = new DesktopOperations(root, processor);
+  const db = new DatabaseSync(path.join(root, 'learning.sqlite'));
+  try {
+    for (const id of ['a', 'b']) db.prepare('INSERT INTO artifacts VALUES (?, ?)').run(id, JSON.stringify({ title: id, targets: [], sentences: [] }));
+    assert.equal(app.openArtifact('a').id, 'a');
+    assert.equal(app.restoreArtifact(), null);
+    app.acceptArtifact('a');
+    assert.equal(app.openArtifact('b').id, 'b');
+    assert.equal(app.restoreArtifact()!.id, 'a');
+    db.exec("CREATE TRIGGER reject_selection BEFORE UPDATE ON settings WHEN NEW.key = 'artifact' BEGIN SELECT RAISE(ABORT, 'Fixture selection failure'); END");
+    assert.throws(() => app.acceptArtifact('b'), /Fixture selection failure/);
+    assert.throws(() => app.acceptArtifact('missing'));
+    assert.equal(app.restoreArtifact()!.id, 'a');
+    app.close(); app = new DesktopOperations(root, processor);
+    assert.equal(app.restoreArtifact()!.id, 'a');
+    db.exec('DROP TRIGGER reject_selection');
+    app.acceptArtifact('b');
+    app.close(); app = new DesktopOperations(root, processor);
+    assert.equal(app.restoreArtifact()!.id, 'b');
+  } finally { db.close(); app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('historical target stories provide one context per story without rewriting collected sources', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow story contexts '));
   const processor = async () => { throw new Error('Reading stories must not process media'); };
@@ -101,6 +126,8 @@ test('two artifact cycles preserve snapshots and source relationships across fai
       source: { type: 'media', mediaId: media.id, segmentId: media.segments[0].id, name: media.name, start: media.segments[0].start } } });
     app.selectVocabulary([walk.id]);
     const first = await app.generateArtifact([walk.id], '', 'first', 'fixture-secret');
+    assert.equal(app.restoreArtifact(), null, 'Saved generation does not accept navigation');
+    app.acceptArtifact(first.id);
     assert.equal(first.sentences[0].parts[1].text, '걸었어요.');
     assert.equal(first.sentences[0].parts[1].targetId, walk.id);
     assert.equal(first.targets[0].sourceSentence, media.segments[0].text);
@@ -117,6 +144,8 @@ test('two artifact cycles preserve snapshots and source relationships across fai
     assert.equal(app.openArtifact(first.id).targets[0].meaningZh, '走路');
     app.selectVocabulary([friend.id]);
     const second = await app.generateArtifact([friend.id], '朋友的一天', 'second', 'fixture-secret');
+    assert.equal(app.restoreArtifact()!.id, first.id, 'Generation preserves the last accepted Story');
+    app.acceptArtifact(second.id);
     assert.notEqual(first.id, second.id); assert.equal(second.topic, '朋友的一天');
     assert.equal(second.targets[0].sourceSentence, friend.contexts[0].sentence);
     const saved = app.listArtifacts(), vocabulary = app.listVocabulary();
@@ -137,7 +166,7 @@ test('two artifact cycles preserve snapshots and source relationships across fai
     assert.notEqual(retry.id, second.id); assert.equal(app.listArtifacts().length, 3);
     const afterRetry = app.listVocabulary();
     assert.equal(afterRetry.find(entry => entry.id === friend.id)!.contexts.length, vocabulary.find(entry => entry.id === friend.id)!.contexts.length + 1);
-    app.openArtifact(first.id);
+    app.acceptArtifact(first.id);
     const all = app.listArtifacts();
     app.close(); app = new DesktopOperations(root, processor, async () => { throw new Error('Reopening must not call the provider'); });
     assert.deepEqual(app.listArtifacts(), all); assert.equal(app.restoreArtifact()!.id, first.id);

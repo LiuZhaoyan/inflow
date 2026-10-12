@@ -1,5 +1,7 @@
 "use client";
 
+import Notice from '@/workspace/Notice';
+
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { ApplicationSettings, CredentialStatus, ModelStatus } from '@/listening/desktop';
 import { initialVideoMask } from '@/listening/video-mask';
@@ -145,7 +147,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           </select>
           <p id="settings-language-help" className="workspace-settings-help">{t('settings.languageSaveHelp')}</p>
           {languageResult && <p className="workspace-settings-result" role="status">{t(languageResult)}</p>}
-          {languageError && <p id="settings-language-error" className="workspace-settings-error" role="alert">{error(languageError, 'settings.saveFailed')}</p>}
+          {languageError && <Notice id="settings-language-error" message={error(languageError, 'settings.saveFailed')} onDismiss={() => setLanguageError('')}/>}
         </section>
         <section id="settings-llm-panel" hidden={category !== 'llm'} aria-labelledby="settings-key-heading">
           <div className="workspace-settings-section-heading"><h3 id="settings-key-heading">{t('settings.llm')}</h3><span>{t(credential.configured ? 'settings.configured' : 'settings.notConfigured')}</span></div>
@@ -154,9 +156,9 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           <input id="settings-api-key" type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} disabled={!host}
             aria-describedby={`settings-key-help${keyError ? ' settings-key-error' : ''}`} aria-invalid={!!keyError} onChange={event => { setKey(event.currentTarget.value); setKeyResult(''); setKeyError(''); }}/>
           <p id="settings-key-help" className="workspace-settings-help">{t('settings.keyHelp')}</p>
-          {credential.error && <p className="workspace-settings-error" role="alert">{error(credential.error, 'settings.keyFailed')}</p>}
+          {credential.error && <Notice message={error(credential.error, 'settings.keyFailed')}/>}
           {keyResult && <p className="workspace-settings-result" role="status">{t(keyResult)}</p>}
-          {keyError && <p id="settings-key-error" className="workspace-settings-error" role="alert">{error(keyError, 'settings.keyFailed')}</p>}
+          {keyError && <Notice id="settings-key-error" message={error(keyError, 'settings.keyFailed')} onDismiss={() => setKeyError('')}/>}
         </section>
         <section id="settings-subtitles-panel" hidden={category !== 'subtitles'} aria-labelledby="settings-mask-heading">
           <div className="workspace-settings-section-heading"><h3 id="settings-mask-heading">{t('settings.maskHeading')}</h3><span>{t('settings.allVideos')}</span></div>
@@ -173,7 +175,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           </figure>
           <p id="settings-mask-help" className="workspace-settings-help">{t('settings.maskHelp')}</p>
           {colorResult && <p className="workspace-settings-result" role="status">{t(colorResult)}</p>}
-          {colorError && <p id="settings-mask-error" className="workspace-settings-error" role="alert">{error(colorError, 'settings.maskFailed')}</p>}
+          {colorError && <Notice id="settings-mask-error" message={error(colorError, 'settings.maskFailed')} onDismiss={() => setColorError('')}/>}
         </section>
         {host && <section id="settings-models-panel" hidden={category !== 'models'} aria-labelledby="settings-models-heading">
           <div className="workspace-settings-section-heading"><h3 id="settings-models-heading">{t('settings.models')}</h3><span>{models ? t('settings.modelsInstalled', { count: [models.whisper, ...Object.values(models.translate), models.englishParser].filter(Boolean).length }) : t('settings.checking')}</span></div>
@@ -195,7 +197,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
               : <button type="button" className="workspace-primary-button" onClick={() => void downloadModels()}>{t('settings.download')}</button>}
           </div>}
           {models && [models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <p className="workspace-settings-result" role="status">{t('settings.allModels')}</p>}
-          {modelsError && <p className="workspace-settings-error" role="alert">{error(modelsError, 'settings.modelsDownloadFailed')}</p>}
+          {modelsError && <Notice message={error(modelsError, 'settings.modelsDownloadFailed')} onDismiss={() => setModelsError('')}/>}
         </section>}
         </fieldset>
       </div>

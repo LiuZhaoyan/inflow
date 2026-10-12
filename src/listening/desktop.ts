@@ -58,6 +58,7 @@ export type DesktopBridge = {
   listArtifacts(): Promise<LearningArtifact[]>;
   restoreArtifact(): Promise<LearningArtifact | null>;
   openArtifact(id: string): Promise<LearningArtifact>;
+  acceptArtifact(id: string): LearningArtifact;
 };
 
 declare global { interface Window { inflow?: DesktopBridge } }

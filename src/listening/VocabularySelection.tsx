@@ -1,5 +1,7 @@
 "use client";
 
+import Notice from '@/workspace/Notice';
+
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useLocale } from '@/i18n/context';
 import type { SaveVocabularyInput, SourceLanguage } from './desktop';
@@ -14,10 +16,11 @@ type Draft = {
 };
 export type VocabularySelectionHandle = { beforeChange: () => boolean };
 
-export default function VocabularySelection({ ref, active, getContext, onOpen, onSaved }: {
+export default function VocabularySelection({ ref, active, getContext, onOpen, onSaved, onDirty }: {
   ref: Ref<VocabularySelectionHandle>; active: boolean;
   getContext: (element: HTMLElement) => { context: Context; language: SourceLanguage } | null;
   onOpen: () => void; onSaved: () => void;
+  onDirty: () => void;
 }) {
   const { t, error: localize } = useLocale();
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -128,7 +131,9 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
   function change(fields: Partial<Draft>) {
     const latest = current.current;
     if (!latest) return;
-    update({ ...latest, ...fields, edited: true, revision: latest.revision + 1, suggestion: '', error: '',
+    const changed = (fields.lemma !== undefined && fields.lemma !== latest.lemma) || (fields.meaningZh !== undefined && fields.meaningZh !== latest.meaningZh);
+    if (changed) onDirty();
+    update({ ...latest, ...fields, edited: latest.edited || changed, revision: latest.revision + 1, suggestion: '', error: '',
       ...(fields.meaningZh !== undefined ? { meaningEdited: true } : {}) });
   }
 
@@ -165,7 +170,10 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
       if (latest?.key !== entry.key || cloudJob.current !== job) return;
       if (latest.lemma !== entry.lemma) { update({ ...latest, cloudLoading: false }); return; }
       if (latest.revision !== entry.revision) update({ ...latest, cloudLoading: false, suggestion: meaning });
-      else update({ ...latest, cloudLoading: false, meaningZh: meaning, meaningEdited: true, edited: true, revision: latest.revision + 1 });
+      else {
+        if (meaning !== latest.meaningZh) onDirty();
+        update({ ...latest, cloudLoading: false, meaningZh: meaning, meaningEdited: true, edited: latest.edited || meaning !== latest.meaningZh, revision: latest.revision + 1 });
+      }
     } catch (failure) {
       const latest = current.current;
       if (latest?.key === entry.key && cloudJob.current === job) update({ ...latest, cloudLoading: false, error: failure instanceof Error ? failure.message : 'Cloud lookup failed. You can keep editing.' });
@@ -210,10 +218,10 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
         {draft.cloudLoading && <p role="status">{t("Looking up meaning…")} <button type="button" onClick={() => { if (cloudJob.current) void window.inflow!.cancel(cloudJob.current).catch(() => {}); cloudJob.current = null; update({ ...current.current!, cloudLoading: false }); }}>{t("Cancel lookup")}</button></p>}
         {draft.suggestion && <p>{t("LLM suggestion:")} <span lang="zh">{draft.suggestion}</span> <button type="button" onClick={() => change({ meaningZh: draft.suggestion })}>{t("Apply suggestion")}</button></p>}
         {draft.loading && <p role="status">{t("Finding dictionary form…")}</p>}
-        {draft.lookupError && <p role="status">{localize(draft.lookupError, 'The operation failed. Please retry.')}  {t("You can enter it manually.")}</p>}
+        {draft.lookupError && <><Notice message={localize(draft.lookupError, 'The operation failed. Please retry.')}/><p>{t("You can enter it manually.")}</p></>}
         <footer><button className="workspace-primary-button" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? t("Saving…") : t("+ Save vocabulary")}</button><button type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>{t("Discard")}</button></footer>
       </fieldset>
-      {draft.error && <p role="alert">{localize(draft.error, 'The operation failed. Please retry.')}</p>}
-    </form> : <><p role="status">{t(notice)}</p><button type="button" onClick={close}>{t("Close")}</button></>}
+      {draft.error && <Notice message={localize(draft.error, 'The operation failed. Please retry.')} onDismiss={() => update({ ...current.current!, error: '' })}/>}
+    </form> : <Notice message={t(notice)} tone="status" transient onDismiss={close}/>}
   </div>;
 }

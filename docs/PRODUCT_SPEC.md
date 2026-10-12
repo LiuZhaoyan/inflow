@@ -1,6 +1,6 @@
 # Inflow Product Specification
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 This document defines what Inflow should be: its product behavior, scope, and boundaries. Current implementation status belongs in [PROJECT_STATUS.md](PROJECT_STATUS.md); future implementation work belongs in [ROADMAP.md](ROADMAP.md).
 
@@ -40,6 +40,8 @@ Settings opens from the top navigation as a modal in the current workspace style
 The interface supports Simplified Chinese and English independently of source language. With no saved preference, Chinese system-language variants select Simplified Chinese; other system languages select English. A saved choice wins on later launches. Settings edits a language draft; Save applies it immediately without restarting, and Cancel keeps the current language. Desktop preferences use local SQLite settings; browser development preferences use independent browser-local storage.
 
 Navigation, controls, accessible names, status and application-owned errors, native dialog text, dates and quantity wording follow the interface language. External diagnostics retain their original text alongside localized guidance, subject to existing secret filtering. Switching preserves learning state, source media and transcripts, vocabulary notes and target selection, generated passages and historical snapshots. Contextual meanings and sentence translations remain Chinese. Korean interfaces, automatic translation of external text, language-prefixed routes and preference synchronization are outside this scope. See [the interface internationalization specification](../.scratch/i18n/spec.md).
+
+Application-owned errors and notices share a compact pink-on-purple, single-line treatment with an icon and dismiss action, up to approximately 370px wide and 44px high. Truncated text opens full sanitized details with keyboard access. Field-specific errors remain inline with their remedies; general failures and navigation cancellations float upper-right. Transient feedback expires after about five seconds; actionable errors remain until resolved or dismissed. Interface language controls owned notice text.
 
 ## 4. Media and processing behavior
 
@@ -118,6 +120,8 @@ Vocabulary selection is an explicit learner action. Inflow does not infer master
 Media, vocabulary and saved reading lists identify source language and offer independent All/Korean/English filters, initially set to All. Filtering changes visible results without changing stored material or selected target vocabulary.
 
 ## 7. Generated learning artifacts
+
+Library, Story history, vocabulary sources and generation follow the latest valid Story navigation intent. Loading preserves the accepted view; candidate reads alone never change the saved selection. Failed reads or selection commits retain the accepted Story without automatic retry. Real unsaved vocabulary changes or leaving Story permanently cancel pending navigation, including after immediate save/discard, and preserve the draft. Opening an unedited editor does not cancel. A successful generated passage and its snapshots remain saved even when its automatic switch is canceled. Restart restores the last durable selection, including a commit completed before a crash and before the new Story was painted. See [the navigation and notices specification](../.scratch/story-navigation-notices/spec.md).
 
 Selecting target vocabulary is sufficient to generate one short passage in the selected entries' shared source language; a topic may be optional. The first release does not require difficulty-level or passage-length controls.
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Notice from '@/workspace/Notice';
+
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/i18n/context';
 import type { VocabularyEntry } from '@/listening/desktop';
@@ -33,11 +35,11 @@ export default function StoryTargetsDialog({ entries, onClose, onConfirm }: {
           <input type="checkbox" checked={ids.includes(entry.id)} disabled={!ids.includes(entry.id) && ids.length >= 20} onChange={event => setIds(previous => event.target.checked ? [...previous, entry.id] : previous.filter(id => id !== entry.id))}/>
           <span className="workspace-target-word"><strong lang={entry.language}>{entry.lemma}</strong><small className="workspace-language-badge">{languageName(entry.language)}</small></span><span lang="zh">{entry.meaningZh}</span>
         </label>)}</div>
-        {mixedLanguageSelection && <p className="workspace-target-language-warning" role="status">{t("Choose vocabulary in one source language before generating. Your current selection is preserved.")}</p>}
+        {mixedLanguageSelection && <Notice tone="status" message={t("Choose vocabulary in one source language before generating. Your current selection is preserved.")}/>}
         {!entries.length && <p className="workspace-empty">{t("Collect or add vocabulary before generating a story.")}</p>}
         <footer><span>{t('{count} / 20 selected', { count: ids.length })}</span><button type="submit" className="workspace-generate-button" disabled={!ids.length || mixedLanguageSelection}>{t("Continue")}</button></footer>
       </fieldset>
-      {error && <p className="workspace-notice" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
+      {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
     </form>
   </dialog>;
 }

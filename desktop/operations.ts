@@ -466,6 +466,10 @@ export class DesktopOperations {
   }
 
   openArtifact(id: string): LearningArtifact {
+    return this.artifact(id);
+  }
+
+  acceptArtifact(id: string): LearningArtifact {
     const artifact = this.artifact(id);
     this.db.prepare("INSERT INTO settings VALUES ('artifact', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
     return artifact;
@@ -495,7 +499,6 @@ export class DesktopOperations {
     this.db.exec('BEGIN');
     try {
       this.db.prepare('INSERT INTO artifacts VALUES (?, ?)').run(id, JSON.stringify(content));
-      this.db.prepare("INSERT INTO settings VALUES ('artifact', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
     return this.artifact(id);

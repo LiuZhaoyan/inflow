@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import Notice from '@/workspace/Notice';
 import { useLocale } from '@/i18n/context';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
@@ -54,13 +55,14 @@ function Pronunciation({ entry, active }: { entry: VocabularyEntry; active: bool
     <button className="vocab-pronunciation" type="button" disabled={!voice || !active} aria-pressed={speaking} title={voice ? t('Read dictionary form with {voice}', { voice: voice.name }) : unavailable} aria-label={speaking ? t("Stop pronunciation") : voice ? t("Pronounce dictionary form") : unavailable} onClick={speak}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a5 5 0 0 1 0 6M17.5 6.5a9 9 0 0 1 0 11"/></svg>
     </button>
-    {error && <span className="vocab-pronunciation-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</span>}
-    {ready && !voice && <span className="vocab-pronunciation-error" role="status">{unavailable}</span>}
+    {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
+    {ready && !voice && <Notice message={unavailable} tone="status"/>}
   </span>;
 }
 
-function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
+function VocabularyEditor({ draft, busy, active, onSave, onCancel, onDirty }: {
   draft: VocabularyDraft; busy: boolean; active: boolean; onSave: (input: SaveVocabularyInput) => Promise<void>; onCancel: () => void;
+  onDirty: () => void;
 }) {
   const { t, error: localize } = useLocale();
   const [lemma, setLemma] = useState(draft.lemma);
@@ -74,12 +76,12 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel }: {
   }}>
     <h2>{draft.id ? t("Edit vocabulary") : t("Add vocabulary")}</h2>
     <fieldset disabled={busy}>
-      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? t("English") : t("Korean")}</span></p> : <label>{t("Confirm source language")}<Dropdown label={t("Source language")} value={language} options={[{ value: "ko", label: t("Korean") }, { value: "en", label: t("English") }]} onChange={setLanguage}/></label>}
-      <label>{t("Dictionary form")}<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => setLemma(event.target.value)}/></label>
-      <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => setMeaning(event.target.value)}/></label>
+      {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? t("English") : t("Korean")}</span></p> : <label>{t("Confirm source language")}<Dropdown label={t("Source language")} value={language} options={[{ value: "ko", label: t("Korean") }, { value: "en", label: t("English") }]} onChange={value => { if (value !== language) onDirty(); setLanguage(value); }}/></label>}
+      <label>{t("Dictionary form")}<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => { if (event.target.value !== lemma) onDirty(); setLemma(event.target.value); }}/></label>
+      <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => { if (event.target.value !== meaning) onDirty(); setMeaning(event.target.value); }}/></label>
       <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? t("Saving…") : t("Save vocabulary")}</button><button type="button" onClick={onCancel}>{t("Cancel")}</button></div>
     </fieldset>
-    {error && <p className="vocab-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
+    {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
   </form>;
 }
 
@@ -134,7 +136,7 @@ function thumbnailKey(source: VocabularyContext['source']) {
 
 export default function VocabularyNotebook({
   refreshKey, onOpenSource, onGenerateStory, onEntriesChange,
-  onEditingChange, active = true, ref,
+  onEditingChange, onDirty, active = true, ref,
 }: {
   ref?: Ref<VocabularyNotebookHandle>;
   refreshKey: number;
@@ -142,6 +144,7 @@ export default function VocabularyNotebook({
   onGenerateStory: (entries: VocabularyEntry[]) => void;
   onEntriesChange?: (entries: VocabularyEntry[]) => void;
   onEditingChange?: (editing: boolean) => void;
+  onDirty: () => void;
   active?: boolean;
 }) {
   const { t, error: localize } = useLocale();
@@ -162,6 +165,7 @@ export default function VocabularyNotebook({
   const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const requestVersion = useRef(0);
+  const editorDirty = useRef(false);
   const draft = editing;
   const noteDirty = Boolean(noteDraft && noteDraft.note !== (entries.find(entry => entry.id === noteDraft.id)?.note ?? ''));
   const hasPendingEdit = Boolean(draft) || busy || noteDirty;
@@ -201,7 +205,9 @@ export default function VocabularyNotebook({
   };
 
   function beforeChange() {
+    if (editorDirty.current) { setError('Save or cancel the current vocabulary draft before continuing.'); return false; }
     if (noteDirty || busy) { setError(noteDirty ? 'Save or cancel the current note before continuing.' : 'Saving vocabulary…'); return false; }
+    if (draft) setEditing(null);
     setNoteDraft(null); return true;
   }
   function reveal(entry: VocabularyEntry) {
@@ -227,7 +233,7 @@ export default function VocabularyNotebook({
     } finally { if (version === requestVersion.current) setLoading(false); }
   }
   useImperativeHandle(ref, () => ({ beforeChange, open }));
-  function dismiss() { setEditing(null); setNoteDraft(null); }
+  function dismiss() { editorDirty.current = false; setEditing(null); setNoteDraft(null); }
   function editEntry(entry: VocabularyEntry) {
     setEditing({ key: crypto.randomUUID(), id: entry.id, language: entry.language, lemma: entry.lemma, meaningZh: entry.meaningZh });
   }
@@ -285,8 +291,8 @@ export default function VocabularyNotebook({
           { value: 'en', label: t('{label} ({count})', { label: t('English'), count: languageCounts.en }) },
         ]} onChange={value => { if (beforeChange()) setLanguageFilter(value); }}/>
       </div>
-      {error && <p className="vocab-error" role="alert">{localize(error, 'The operation failed. Please retry.')}</p>}
-      {loadError && <p className="vocab-error" role="alert">{localize(loadError, 'The operation failed. Please retry.')}<button type="button" disabled={hasPendingEdit || loading} onClick={() => { setLoading(true); setReloadKey(value => value + 1); }}>{t("Retry loading vocabulary")}</button></p>}
+      {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
+      {loadError && <><Notice message={localize(loadError, 'The operation failed. Please retry.')}/><button type="button" disabled={hasPendingEdit || loading} onClick={() => { setLoading(true); setReloadKey(value => value + 1); }}>{t("Retry loading vocabulary")}</button></>}
       <div className="vocab-rows" aria-live="polite">
         {visibleEntries.map(entry => {
           const context = entry.contexts[0];
@@ -306,7 +312,7 @@ export default function VocabularyNotebook({
       </div>
     </section>
     <section className="vocab-panel vocab-detail-panel" aria-label={t("Vocabulary details")}>
-      {draft ? <VocabularyEditor key={draft.key} draft={draft} busy={busy} active={active} onSave={save} onCancel={dismiss}/> : selectedEntry ? <>
+      {draft ? <VocabularyEditor key={draft.key} draft={draft} busy={busy} active={active} onSave={save} onCancel={dismiss} onDirty={() => { editorDirty.current = true; onDirty(); }}/> : selectedEntry ? <>
         <header className="vocab-detail-heading">
           <div className="vocab-detail-title">
             <h2 lang={selectedEntry.language}>{selectedEntry.lemma}</h2>
@@ -353,7 +359,7 @@ export default function VocabularyNotebook({
         <details className="vocab-detail-section vocab-notes-section" key={selectedEntry.id}>
           <summary>{t("Notes")} <small>{selectedEntry.note ? t("Saved") : t("Optional")}</small></summary>
           <fieldset disabled={busy}>
-            <textarea rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => setNoteDraft({ id: selectedEntry.id, note: event.target.value })} placeholder={t("Add a personal note…")} aria-label={t("Personal note")}/>
+            <textarea rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => { if (event.target.value !== (selectedEntry.note ?? '')) onDirty(); setNoteDraft({ id: selectedEntry.id, note: event.target.value }); }} placeholder={t("Add a personal note…")} aria-label={t("Personal note")}/>
             <div className="vocab-editor-actions"><button type="button" disabled={!noteDirty} onClick={() => void save({ id: selectedEntry.id, language: selectedEntry.language, lemma: selectedEntry.lemma, meaningZh: selectedEntry.meaningZh, note: noteDraft!.note }).catch(failure => setError(failure instanceof Error ? failure.message : 'Note save failed. Please retry.'))}>{busy ? t("Saving…") : t("Save note")}</button><button type="button" onClick={() => { setNoteDraft(null); setError(''); }}>{t("Cancel")}</button></div>
           </fieldset>
         </details>

@@ -1,5 +1,7 @@
 "use client";
 
+import Notice from '@/workspace/Notice';
+
 import Dropdown from "@/workspace/Dropdown";
 import { useLocale } from '@/i18n/context';
 import type { Ref } from 'react';
@@ -98,7 +100,7 @@ export default function SentenceArea({
     {translationOpen && <section className="workspace-translation" aria-label={t("Current sentence translation")} aria-live="polite">
       {translation && <p lang="zh">{translation}</p>}
       {translationBusy && <p role="status">{t("Preparing translation…")} <button type="button" onClick={onCancelTranslation}>{t("Cancel")}</button></p>}
-      {translationError && <p role="alert">{localize(translationError, 'The operation failed. Please retry.')}</p>}
+      {translationError && <Notice message={localize(translationError, 'The operation failed. Please retry.')}/>}
       {!translationBusy && <div className="workspace-translation-actions">
         <button type="button" onClick={() => onTranslate({ refresh: true })}>{translation ? t("Translate again") : t("Retry translation")}</button>
         {translationError && <button type="button" onClick={() => onTranslate({ local: true })}>{t("Use local reference translation")}</button>}

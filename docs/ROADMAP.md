@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); implemented capabilities and completed milestones belong in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -17,6 +17,7 @@ Next work is demand-driven quality improvement and release qualification rather 
 Before a broader packaged release:
 
 - Verify subtitle masking, Settings and bilingual language switching/restoration in the installed package, including an actual maximized window.
+- Verify latest-intent Story navigation, draft cancellation, generated-passage retention and shared notices in the installed package; obtain owner visual and screen-reader acceptance. [Source-checkout acceptance](../.scratch/story-navigation-notices/acceptance.md) passed; screenshot capture was unavailable in that environment.
 - Consider clean-VM installation and broader media codec compatibility tests. These were outside the completed personal-installation acceptance boundary.
 - Preserve installed-app behavior, not merely source-checkout execution, as the release acceptance boundary.
 
@@ -47,9 +48,9 @@ The persisted Segment model remains sentence-level, without individual word time
 
 Do not expand it merely because Whisper has finer alignment internally. First establish a concrete need such as word highlighting, word-level seeking, or transcript/timing correction. If confirmed, define migration and provenance behavior before persisting alignment.
 
-## 4. Known architectural risk
+## 4. Artifact navigation release follow-up
 
-The [artifact request-ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) documents renderer/persistence divergence under controlled delayed replies. This remains unfixed and should be revisited when relevant work touches artifact state or request ordering.
+The historical [request-ordering investigation](../.scratch/archive/artifact-state/architecture-and-verification.md) is resolved in the [source checkout](../.scratch/story-navigation-notices/acceptance.md). Candidate reads and durable acceptance are separate; controlled ordering and crash recovery passed. Installed-package confirmation remains in release qualification above. Observe the brief synchronous SQLite acceptance on real storage before considering any broader coordination mechanism.
 
 ## 5. Deferred product opportunities
 

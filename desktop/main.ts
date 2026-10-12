@@ -151,6 +151,13 @@ async function start() {
     try { return Promise.resolve(handler(...args as never[])).catch(error => { throw failure(error); }); }
     catch (error) { throw failure(error); }
   });
+  // A synchronous selection commit keeps eligibility, durable acceptance and UI update in one renderer turn.
+  ipcMain.on('inflow:acceptArtifact', (event, id: string) => {
+    try {
+      if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error(text('访问被拒绝。'));
+      event.returnValue = { artifact: operations.acceptArtifact(id) };
+    } catch (error) { event.returnValue = { error: failure(error).message }; }
+  });
   window.on('closed', () => app.quit());
   await window.loadURL('inflow://app/');
 }

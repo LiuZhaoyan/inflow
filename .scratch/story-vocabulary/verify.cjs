@@ -29,6 +29,7 @@ async function run() {
     ipcMain.handle(`inflow:${method}`, () => result);
   }
   ipcMain.handle('inflow:listVocabulary', () => entries);
+  ipcMain.on('inflow:acceptArtifact', event => { event.returnValue = { artifact:story }; });
   ipcMain.handle('inflow:listArtifactVocabulary', () => entries.filter(entry => entry.contexts.length));
   ipcMain.handle('inflow:lookupVocabulary', (_event, input) => ({ surface: input.surface, language: 'en', lemma: input.surface.toLowerCase(), candidates: [], meaningZh: '家' }));
   ipcMain.handle('inflow:saveVocabulary', (_event, input) => {
