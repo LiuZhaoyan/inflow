@@ -16,10 +16,10 @@ type Draft = {
 };
 export type VocabularySelectionHandle = { beforeChange: () => boolean };
 
-export default function VocabularySelection({ ref, active, getContext, onOpen, onSaved, onDirty }: {
+export default function VocabularySelection({ ref, active, getContext, onOpen, onSave, onDirty }: {
   ref: Ref<VocabularySelectionHandle>; active: boolean;
   getContext: (element: HTMLElement) => { context: Context; language: SourceLanguage } | null;
-  onOpen: () => void; onSaved: () => void;
+  onOpen: () => void; onSave: (input: SaveVocabularyInput) => Promise<unknown>;
   onDirty: () => void;
 }) {
   const { t, error: localize } = useLocale();
@@ -185,8 +185,8 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
     if (!entry || entry.saving || (entry.loading && !entry.lemmaEdited)) return;
     update({ ...entry, saving: true, error: '' });
     try {
-      await window.inflow!.saveVocabulary({ lemma: entry.lemma, meaningZh: entry.meaningZh, language: entry.language, context: { ...entry.context, surfaceStart: entry.start } });
-      close(); window.getSelection()?.removeAllRanges(); onSaved();
+      await onSave({ lemma: entry.lemma, meaningZh: entry.meaningZh, language: entry.language, context: { ...entry.context, surfaceStart: entry.start } });
+      close(); window.getSelection()?.removeAllRanges();
     } catch (failure) {
       const latest = current.current;
       if (latest?.key === entry.key) update({ ...latest, saving: false, error: failure instanceof Error ? failure.message : 'Save failed. Please try again.' });

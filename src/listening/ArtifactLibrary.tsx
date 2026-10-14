@@ -12,7 +12,6 @@ import type { LearningArtifacts } from "@/workspace/useLearningArtifacts";
 type Props = {
   learning: LearningArtifacts;
   selected: VocabularyEntry[];
-  vocabularyRevision: number;
   vocabularyEntries: VocabularyEntry[];
   onBeforeChange: () => boolean;
   onOpenVocabulary: (id: string) => void;
@@ -30,7 +29,7 @@ function textOf(sentence: LearningArtifact["sentences"][number]) {
 
 export default function ArtifactLibrary({
   learning,
-  selected, vocabularyRevision, vocabularyEntries, onBeforeChange, onOpenVocabulary, active = true, generationOpen = false,
+  selected, vocabularyEntries, onBeforeChange, onOpenVocabulary, active = true, generationOpen = false,
   onGenerationClose, onRequestGenerate,
   credential, onOpenSettings,
 }: Props) {
@@ -59,7 +58,7 @@ export default function ArtifactLibrary({
       if (current) setCollectionError(failure instanceof Error ? failure.message : "Collected vocabulary could not be loaded.");
     });
     return () => { current = false; };
-  }, [artifactId, vocabularyRevision, vocabularyEntries]);
+  }, [artifactId, vocabularyEntries]);
 
   if (previousSelection !== selection) {
     setPreviousSelection(selection);

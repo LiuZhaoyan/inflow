@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { useLocale } from '@/i18n/context';
 import { validateSegments, type Segment } from '@/listening/processing';
 import { defaultVideoMaskColor, initialVideoMask, type VideoMask } from '@/listening/video-mask';
-import { managedMediaUrl, type ApplicationSettings, type CredentialStatus, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type VocabularyContext, type VocabularyEntry, type PlaybackMode, type SourceLanguage } from '@/listening/desktop';
+import { managedMediaUrl, type ApplicationSettings, type CredentialStatus, type SavedMedia, type MediaVocabularySource, type ArtifactVocabularySource, type VocabularyContext, type PlaybackMode, type SourceLanguage } from '@/listening/desktop';
 import VocabularyNotebook, { type VocabularyNotebookHandle } from '@/listening/VocabularyNotebook';
 import VocabularySelection, { type VocabularySelectionHandle } from '@/listening/VocabularySelection';
 import ArtifactLibrary from '@/listening/ArtifactLibrary';
@@ -17,6 +17,7 @@ import StoryTargetsDialog from '@/workspace/StoryTargetsDialog';
 import SettingsDialog from '@/workspace/SettingsDialog';
 import SourceLanguageDialog from '@/workspace/SourceLanguageDialog';
 import { useLearningArtifacts } from '@/workspace/useLearningArtifacts';
+import { useVocabulary } from '@/workspace/useVocabulary';
 import Notice from '@/workspace/Notice';
 import '@/workspace/workspace.css';
 
@@ -57,8 +58,6 @@ export default function LearningWorkspace() {
   const [importLanguageOpen, setImportLanguageOpen] = useState(false);
   const [view, setView] = useState<'video' | 'vocab'>('video');
   const [contentKind, setContentKind] = useState<'media' | 'story'>('media');
-  const [vocabularyEntries, setVocabularyEntries] = useState<VocabularyEntry[]>([]);
-  const [generationTargets, setGenerationTargets] = useState<VocabularyEntry[]>([]);
   const [targetSelectionOpen, setTargetSelectionOpen] = useState(false);
   const [generationOpen, setGenerationOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -67,6 +66,8 @@ export default function LearningWorkspace() {
   const [credential, setCredential] = useState<CredentialStatus>({ configured: false });
   const [showContext, setShowContext] = useState(false);
   const [desktop, setDesktop] = useState(false);
+  const vocabulary = useVocabulary(desktop);
+  const generationTargets = vocabulary.entries.filter(entry => entry.selected);
   const [library, setLibrary] = useState<SavedMedia[]>([]);
   const [savedMedia, setSavedMedia] = useState<SavedMedia | null>(null);
   const [file, setFile] = useState<File | { name: string; type: string } | null>(null);
@@ -88,7 +89,6 @@ export default function LearningWorkspace() {
   const [error, setError] = useState('');
   const vocabularySelection = useRef<VocabularySelectionHandle>(null);
   const vocabularyNotebook = useRef<VocabularyNotebookHandle>(null);
-  const [vocabularyRevision, setVocabularyRevision] = useState(0);
   const [editing, setEditing] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
   const [translation, setTranslation] = useState('');
@@ -182,10 +182,7 @@ export default function LearningWorkspace() {
   }, [playing, syncPlayback]);
 
   const allowChange = useCallback(() => vocabularySelection.current?.beforeChange() !== false && vocabularyNotebook.current?.beforeChange() !== false, []);
-  const updateVocabularyEntries = useCallback((entries: VocabularyEntry[]) => {
-    setVocabularyEntries(entries); setGenerationTargets(entries.filter(entry => entry.selected));
-  }, []);
-  const learningArtifacts = useLearningArtifacts(desktop, allowChange, () => setVocabularyRevision(value => value + 1), () => { media.current?.pause(); setContentKind('story'); setView('video'); });
+  const learningArtifacts = useLearningArtifacts(desktop, allowChange, vocabulary.refresh, () => { media.current?.pause(); setContentKind('story'); setView('video'); });
   const { artifacts, selection: { artifact: activeArtifact } } = learningArtifacts;
   const sentenceKey = savedMedia?.segments[index]?.id ?? String(index);
   const maskedGroups = masks[sentenceKey] ?? [];
@@ -367,16 +364,15 @@ export default function LearningWorkspace() {
     if (!allowChange()) return;
     if (editing) { showVocab(); setError('请先保存或取消当前词汇草稿。'); return; }
     try {
-      const entries = await window.inflow!.listVocabulary();
+      await vocabulary.reload();
       if (!allowChange()) return;
-      setVocabularyEntries(entries); setTargetSelectionOpen(true);
+      setTargetSelectionOpen(true);
     }
     catch (failure) { setError(failure instanceof Error ? failure.message : '词汇读取失败，请重试。'); }
   }
 
   async function confirmStoryTargets(ids: string[]) {
-    const entries = await window.inflow!.selectVocabulary(ids);
-    setVocabularyEntries(entries); setGenerationTargets(entries.filter(entry => ids.includes(entry.id)));
+    await vocabulary.select(ids);
     setTargetSelectionOpen(false); media.current?.pause(); setContentKind('story'); setView('video'); setGenerationOpen(true);
   }
 
@@ -413,7 +409,7 @@ export default function LearningWorkspace() {
       setSegments(result); setIndex(Math.max(0, result.findLastIndex(item => item.start <= time))); setPosition(time); setMasks(processedMedia?.learning.masks ?? {}); resetSentence();
       if (processedMedia) {
         setSavedMedia(processedMedia);
-        setVocabularyRevision(value => value + 1);
+        vocabulary.refresh();
         const items = await window.inflow!.list();
         if (!controller.signal.aborted) setLibrary(items);
       }
@@ -546,15 +542,15 @@ export default function LearningWorkspace() {
       <ContextPanel segments={segments} language={savedMedia?.language ?? 'ko'} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
     </main>
     <section className="workspace-story" hidden={view !== 'video' || contentKind !== 'story'} aria-label={t("Story workspace")}>
-      {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} vocabularyRevision={vocabularyRevision} vocabularyEntries={vocabularyEntries} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}
+      {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} vocabularyEntries={vocabulary.entries} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}
     </section>
     <section className="workspace-vocab" hidden={view !== 'vocab'} aria-label={t("Vocab workspace")}>
-      {desktop ? <VocabularyNotebook ref={vocabularyNotebook} refreshKey={vocabularyRevision} onOpenSource={openEntrySource} onEditingChange={setEditing} onDirty={() => learningArtifacts.cancelNavigation(true)} active={view === 'vocab'} onEntriesChange={updateVocabularyEntries} onGenerateStory={requestStory}/> : <p className="workspace-empty">{t("词汇本在 Inflow 桌面应用中可用。")}</p>}
+      {desktop ? <VocabularyNotebook ref={vocabularyNotebook} vocabulary={vocabulary} onOpenSource={openEntrySource} onEditingChange={setEditing} onDirty={() => learningArtifacts.cancelNavigation(true)} active={view === 'vocab'} onGenerateStory={requestStory}/> : <p className="workspace-empty">{t("词汇本在 Inflow 桌面应用中可用。")}</p>}
     </section>
     <LibraryDrawer open={libraryOpen} items={library} currentId={contentKind === 'media' ? savedMedia?.id : null} artifacts={artifacts} currentArtifactId={contentKind === 'story' ? activeArtifact?.id : null} onOpenArtifact={artifact => openStory({ type: 'artifact', artifactId: artifact.id, sentenceIndex: 0, name: artifact.title })} onClose={() => setLibraryOpen(false)} onImport={() => void importMedia()} onOpen={id => void openSaved(id)} onRelink={id => void openSaved(id, true)}/>
-    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen && !settingsOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSaved={() => setVocabularyRevision(value => value + 1)} onDirty={() => learningArtifacts.cancelNavigation(true)}/>
+    <VocabularySelection ref={vocabularySelection} active={desktop && view === 'video' && (contentKind !== 'media' || !maskEditing) && !busy && !editing && !generationOpen && !libraryOpen && !targetSelectionOpen && !settingsOpen} getContext={selectionContext} onOpen={() => media.current?.pause()} onSave={vocabulary.save} onDirty={() => learningArtifacts.cancelNavigation(true)}/>
     {importLanguageOpen && <SourceLanguageDialog onSelect={language => void confirmImportLanguage(language)} onCancel={cancelImportLanguage}/>}
-    {targetSelectionOpen && <StoryTargetsDialog entries={vocabularyEntries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
+    {targetSelectionOpen && <StoryTargetsDialog entries={vocabulary.entries} onClose={() => setTargetSelectionOpen(false)} onConfirm={confirmStoryTargets}/>}
     {settingsOpen && <SettingsDialog settings={settings} credential={credential} onSettingsChange={setSettings} onCredentialChange={setCredential} onClose={() => setSettingsOpen(false)}/>}
   </div>;
 }

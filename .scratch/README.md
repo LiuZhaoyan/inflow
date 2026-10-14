@@ -1,6 +1,6 @@
 # Task Index
 
-Updated: 2026-10-12
+Updated: 2026-10-14
 
 Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
@@ -20,6 +20,7 @@ Continue developing from the source checkout. Completed specs and tickets remain
 
 ## Completed records
 
+- [Vocabulary state ownership](vocabulary-state/acceptance.md): one Workspace owner for mutable vocabulary, derived generation targets, preserved drafts and reliable refresh after interrupted reads.
 - [Story navigation and unified notices](story-navigation-notices/acceptance.md): latest-intent durable selection, preserved drafts/generation, shared bilingual compact notices and isolated crash recovery.
 - [Interface internationalization](i18n/acceptance.md): bilingual workspace, native dialogs and saved preferences; all three [tickets](i18n/issues/) resolved on `codex/i18n`.
 - [Story vocabulary synchronization](story-vocabulary/acceptance.md): collection highlights and sidebar counts refresh without changing generation snapshots.

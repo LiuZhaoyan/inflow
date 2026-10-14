@@ -7,6 +7,7 @@ import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'reac
 import type { SaveVocabularyInput, SourceLanguage, VocabularyContext, VocabularyEntry } from './desktop';
 import SourceThumbnail from '@/workspace/SourceThumbnail';
 import SearchField from '@/workspace/SearchField';
+import type { VocabularyState } from '@/workspace/useVocabulary';
 import '@/workspace/vocab.css';
 
 type VocabularyDraft = {
@@ -135,14 +136,13 @@ function thumbnailKey(source: VocabularyContext['source']) {
 }
 
 export default function VocabularyNotebook({
-  refreshKey, onOpenSource, onGenerateStory, onEntriesChange,
+  vocabulary, onOpenSource, onGenerateStory,
   onEditingChange, onDirty, active = true, ref,
 }: {
   ref?: Ref<VocabularyNotebookHandle>;
-  refreshKey: number;
+  vocabulary: VocabularyState;
   onOpenSource: (source: VocabularyContext['source']) => void;
-  onGenerateStory: (entries: VocabularyEntry[]) => void;
-  onEntriesChange?: (entries: VocabularyEntry[]) => void;
+  onGenerateStory: () => void;
   onEditingChange?: (editing: boolean) => void;
   onDirty: () => void;
   active?: boolean;
@@ -151,37 +151,21 @@ export default function VocabularyNotebook({
   function location(source: VocabularyContext['source']) {
     return source.type === 'media' ? formatTime(source.start) : t('Sentence {number}', { number: source.sentenceIndex + 1 });
   }
-  const [entries, setEntries] = useState<VocabularyEntry[]>([]);
+  const { entries, loaded, loading, loadError } = vocabulary;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  if (selectedId === null && entries.length) setSelectedId(entries[0].id);
   const [editing, setEditing] = useState<VocabularyDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [loadError, setLoadError] = useState('');
-  const [loaded, setLoaded] = useState(false);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [languageFilter, setLanguageFilter] = useState<LanguageFilter>('all');
   const [noteDraft, setNoteDraft] = useState<{ id: string; note: string } | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const requestVersion = useRef(0);
+  const openRequest = useRef(0);
   const editorDirty = useRef(false);
   const draft = editing;
   const noteDirty = Boolean(noteDraft && noteDraft.note !== (entries.find(entry => entry.id === noteDraft.id)?.note ?? ''));
   const hasPendingEdit = Boolean(draft) || busy || noteDirty;
-
-  useEffect(() => {
-    let current = true;
-    const version = ++requestVersion.current;
-    window.inflow!.listVocabulary().then(result => {
-      if (!current || version !== requestVersion.current) return;
-      setEntries(result); setSelectedId(previous => result.some(entry => entry.id === previous) ? previous : result[0]?.id ?? null);
-      setLoaded(true); setLoading(false); setLoadError(''); onEntriesChange?.(result);
-    }).catch(failure => {
-      if (current && version === requestVersion.current) { setLoaded(true); setLoading(false); setLoadError(failure instanceof Error ? failure.message : 'Could not load vocabulary.'); }
-    });
-    return () => { current = false; };
-  }, [onEntriesChange, refreshKey, reloadKey]);
 
   useEffect(() => { onEditingChange?.(hasPendingEdit); }, [hasPendingEdit, onEditingChange]);
   useEffect(() => {
@@ -218,19 +202,13 @@ export default function VocabularyNotebook({
   }
   async function open(id: string) {
     if (!beforeChange()) return false;
-    const version = ++requestVersion.current;
-    try {
-      const next = await window.inflow!.listVocabulary();
-      if (version !== requestVersion.current || !beforeChange()) return false;
-      setEntries(next); setLoaded(true); setLoadError(''); onEntriesChange?.(next);
-      const entry = next.find(item => item.id === id);
-      if (!entry) throw new Error('This word is no longer in your vocabulary notebook. Its saved story is still available.');
-      setError(''); reveal(entry);
-      return true;
-    } catch (failure) {
-      if (version === requestVersion.current) setLoaded(true);
-      throw failure;
-    } finally { if (version === requestVersion.current) setLoading(false); }
+    const request = ++openRequest.current;
+    const next = await vocabulary.reload();
+    if (request !== openRequest.current || !beforeChange()) return false;
+    const entry = next.find(item => item.id === id);
+    if (!entry) throw new Error('This word is no longer in your vocabulary notebook. Its saved story is still available.');
+    setError(''); reveal(entry);
+    return true;
   }
   useImperativeHandle(ref, () => ({ beforeChange, open }));
   function dismiss() { editorDirty.current = false; setEditing(null); setNoteDraft(null); }
@@ -243,19 +221,17 @@ export default function VocabularyNotebook({
   async function save(input: SaveVocabularyInput) {
     setBusy(true); setError('');
     try {
-      const saved = await window.inflow!.saveVocabulary(input);
-      requestVersion.current++;
-      const next = entries.some(entry => entry.id === saved.id) ? entries.map(entry => entry.id === saved.id ? saved : entry) : [saved, ...entries];
-      setEntries(next); reveal(saved); setLoaded(true); setLoading(false); setLoadError(''); onEntriesChange?.(next); dismiss();
+      const saved = await vocabulary.save(input);
+      openRequest.current++;
+      reveal(saved); dismiss();
     } finally { setBusy(false); }
   }
   async function remove(entry: VocabularyEntry) {
     if (!window.confirm(t('Delete “{word}” ({meaning})?\nIts note and collected contexts will be removed. Saved stories and original media will remain. This cannot be undone.', { word: entry.lemma, meaning: entry.meaningZh }))) return;
     setBusy(true); setError('');
     try {
-      await window.inflow!.deleteVocabulary(entry.id); requestVersion.current++;
-      const next = entries.filter(item => item.id !== entry.id);
-      setEntries(next); setSelectedId(next[0]?.id ?? null); onEntriesChange?.(next); setNoteDraft(null);
+      await vocabulary.remove(entry.id); openRequest.current++;
+      setSelectedId(null); setNoteDraft(null);
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Deletion failed. Please try again.'); }
     finally { setBusy(false); }
   }
@@ -271,7 +247,7 @@ export default function VocabularyNotebook({
         <div className="vocab-title"><h1>{t("Vocabulary")}</h1><span>{t(entries.length === 1 ? '{count} word' : '{count} words', { count: entries.length })}</span></div>
         <div className="vocab-heading-actions">
           <button className="vocab-add-word" type="button" disabled={hasPendingEdit || loading} onClick={addEntry}>{t("Add manually")}</button>
-          <button className="vocab-generate" type="button" disabled={hasPendingEdit || loading || !entries.length} onClick={() => onGenerateStory(entries)}>
+          <button className="vocab-generate" type="button" disabled={hasPendingEdit || loading || !entries.length} onClick={onGenerateStory}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2Z"/><path d="m19 14 .9 3.1L23 18l-3.1.9L19 22l-.9-3.1L15 18l3.1-.9L19 14Z"/></svg>
 
             {t("Generate story")}
@@ -292,7 +268,7 @@ export default function VocabularyNotebook({
         ]} onChange={value => { if (beforeChange()) setLanguageFilter(value); }}/>
       </div>
       {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
-      {loadError && <><Notice message={localize(loadError, 'The operation failed. Please retry.')}/><button type="button" disabled={hasPendingEdit || loading} onClick={() => { setLoading(true); setReloadKey(value => value + 1); }}>{t("Retry loading vocabulary")}</button></>}
+      {loadError && <><Notice message={localize(loadError, 'The operation failed. Please retry.')}/><button type="button" disabled={hasPendingEdit || loading} onClick={vocabulary.refresh}>{t("Retry loading vocabulary")}</button></>}
       <div className="vocab-rows" aria-live="polite">
         {visibleEntries.map(entry => {
           const context = entry.contexts[0];

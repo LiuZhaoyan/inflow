@@ -1,6 +1,6 @@
 # Inflow Project Status
 
-Last verified: 2026-10-12
+Last verified: 2026-10-14
 
 This document is the canonical snapshot of what Inflow implements now. Product intent and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); future work belongs in [ROADMAP.md](ROADMAP.md). Task-level specs, tickets, research, and acceptance evidence remain under `.scratch/`.
 
@@ -68,6 +68,8 @@ Vocabulary entries store source language, a dictionary form, contextual Chinese 
 Entries are unique by source language plus lemma and meaning, so distinct senses remain separate while repeated encounters with the same sense can accumulate source contexts. Successful retranscription atomically replaces all segments for that material and removes their vocabulary source occurrences, including occurrences on older retained segments. Vocabulary entries, meanings, target selection and sources from other media or artifacts remain intact. Failure or cancellation preserves the previous transcript and sources. Legacy material and vocabulary gain Korean language metadata while retaining existing IDs, selection state, and source references.
 
 The notebook now returns and highlights saved occurrence positions, retries failed loading, ignores older responses and preserves surviving selections on refresh. Committed writes use the returned entry directly and reveal it through necessary filter changes. Local system voices pronounce the dictionary form in the entry's language, with readiness, missing-voice, error and cancellation handling. Notes are optional, collapsed and compact, explicitly saved, and protect unsaved drafts. An additive SQLite note column defaults to empty and survives edits, recollection, retranscription and restart. Confirmed single-entry deletion atomically removes notes, contexts, positions and target selection while retaining media and historical Story snapshots. Contexts provide source navigation; the redundant Source card and Add context placeholder are removed.
+
+Mutable renderer vocabulary now has one Workspace-owned hook. Notebook consumes that list while retaining its filters, selection and drafts; generation targets derive from the same list. Saves and collection merge returned entries into the current list, and deletion and target selection update that owner directly. Reads wait for pending short writes and retry snapshots interrupted by later writes, retaining generated Contexts and retranscription source cleanup without overwriting saved notes. Refresh failures preserve existing data and expose retry. Long generation/transcription jobs remain independent of vocabulary editing. Story retains its artifact-specific collected-position query and historical target snapshots. [Vocabulary ownership acceptance](../.scratch/vocabulary-state/acceptance.md) records source-checkout native regression evidence; packaged verification remains a release check.
 
 ### Generated artifacts
 
