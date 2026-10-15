@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import useDismissibleMenu from "./useDismissibleMenu";
 import "./dropdown.css";
 
 export type DropdownOption<T extends string = string> = { value: T; label: string; disabled?: boolean };
@@ -21,15 +22,8 @@ type Props<T extends string> = {
 export default function Dropdown<T extends string>({
   label, value, options, onChange, placeholder, className = "", disabled = false, direction = "down", trigger, title,
 }: Props<T>) {
-  const ref = useRef<HTMLDetailsElement>(null);
+  const ref = useDismissibleMenu();
   const selected = options.find(option => option.value === value);
-  useEffect(() => {
-    const close = (event: PointerEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) ref.current.open = false;
-    };
-    document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
-  }, []);
 
   return <details ref={ref} className={["inflow-dropdown", className].filter(Boolean).join(" ")} data-direction={direction} onKeyDown={event => { if (event.key === "Escape" && ref.current?.open) { event.preventDefault(); event.stopPropagation(); ref.current.open = false; ref.current.querySelector("summary")?.focus(); } }}>
     <summary aria-label={label} title={title} aria-disabled={disabled} onClick={event => { if (disabled) event.preventDefault(); }}>

@@ -22,6 +22,8 @@
 }
 .workspace-shell button { cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background-color .16s ease,border-color .16s ease,color .16s ease,box-shadow .16s ease; }
 .workspace-shell button:disabled { cursor:not-allowed; opacity:.42; }
+.workspace-shell :where(summary,select,input[type="checkbox"]) { cursor:pointer; }
+.workspace-shell :where([aria-disabled="true"],select:disabled,input:disabled) { cursor:not-allowed; }
 /* One focus treatment per control: no outer outline stacked over an existing border. */
 .workspace-shell :is(button,summary):focus-visible {
   outline:2px solid var(--workspace-accent);
@@ -235,11 +237,14 @@
 .workspace-settings-dialog footer { display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; }
 .workspace-settings-cancel { min-height:44px; padding:0 18px; border:1px solid var(--workspace-control-line); border-radius:10px; background:var(--workspace-raised); color:var(--workspace-text); font-size:14px; }
 .workspace-settings-models { display:flex; flex-direction:column; gap:8px; margin:12px 0 0; padding:0; list-style:none; }
-.workspace-settings-models li { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--workspace-line); border-radius:8px; background:var(--workspace-raised); font-size:13px; }
-.workspace-settings-models li>span { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; flex:none; border-radius:50%; background:var(--workspace-bg); color:var(--workspace-muted); }
-.workspace-settings-models li[data-state='ready']>span { color:var(--workspace-accent); }
-.workspace-settings-models li[data-state='missing']>span { color:#f2bbc4; }
-.workspace-settings-models li>small { margin-left:auto; color:var(--workspace-muted); }
+.workspace-settings-models>li { border:1px solid var(--workspace-line); border-radius:8px; background:var(--workspace-raised); font-size:13px; }
+.workspace-settings-models summary { padding:12px 14px; border-radius:8px; color:var(--workspace-text); font-weight:550; }
+.workspace-settings-model-items { display:flex; flex-direction:column; gap:8px; margin:0; padding:0 14px 12px 28px; list-style:none; }
+.workspace-settings-model-items li { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:8px 0; }
+.workspace-settings-model-items li>span { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; flex:none; border-radius:50%; background:var(--workspace-bg); color:var(--workspace-muted); }
+.workspace-settings-model-items li[data-state='ready']>span { color:var(--workspace-accent); }
+.workspace-settings-model-items li[data-state='missing']>span { color:#f2bbc4; }
+.workspace-settings-model-items li>small { margin-left:auto; color:var(--workspace-muted); }
 .workspace-settings-models-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
 .workspace-settings-models-actions span { color:var(--workspace-muted); font-size:13px; }
 
@@ -277,9 +282,9 @@
 .workspace-generate-button { min-height:44px; padding:10px 20px; border:1px solid var(--workspace-accent); border-radius:10px; background:var(--workspace-accent); color:var(--workspace-accent-ink); font-weight:600; }
 
 @media(hover:hover) {
-  .workspace-shell button:hover:not(:disabled) { filter:none; }
-  .workspace-topnav nav button:hover,.workspace-context-row:hover,.workspace-library-item:hover { background:var(--workspace-raised); }
-  .workspace-mask-toggle:hover:not(:disabled),.workspace-mask-group:hover,.workspace-sentence-tools>button:hover:not(:disabled),.workspace-mode-switch button:hover { border-bottom-color:var(--workspace-accent); color:var(--workspace-text); }
+  .workspace-shell :is(button,summary):hover:not(:disabled):not([aria-disabled="true"]) { filter:brightness(1.15); }
+  .workspace-topnav nav button:hover:not(:disabled),.workspace-context-row:hover:not(:disabled),.workspace-library-item:hover:not(:disabled) { background:var(--workspace-raised); }
+  .workspace-mask-toggle:hover:not(:disabled),.workspace-mask-group:hover:not(:disabled),.workspace-sentence-tools>button:hover:not(:disabled),.workspace-mode-switch button:hover:not(:disabled) { border-bottom-color:var(--workspace-accent); color:var(--workspace-text); }
   .workspace-mask-group.is-masked:hover { border-bottom-color:transparent; }
   .workspace-mask-group.is-masked:hover .workspace-mask-text::after { background:var(--workspace-text); }
   .workspace-sentence-transport>button:not(.workspace-play-button):hover:not(:disabled) { color:var(--workspace-text); }

@@ -182,13 +182,20 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           <p className="workspace-settings-description">{t('settings.modelsDescription')}</p>
           <ul className="workspace-settings-models">
             {[
-              { label: t('settings.whisper'), ok: models?.whisper },
-              { label: t('settings.koEn'), ok: models?.translate['ko-en'] },
-              { label: t('settings.enZh'), ok: models?.translate['en-zh'] },
-              { label: t('settings.parser'), ok: models?.englishParser },
-            ].map(item => <li key={item.label} data-state={item.ok === undefined ? 'checking' : item.ok ? 'ready' : 'missing'}>
-              <span aria-hidden="true">{item.ok === undefined ? '…' : item.ok ? '✓' : '—'}</span>{item.label}
-              <small>{t(item.ok === undefined ? 'settings.checking' : item.ok ? 'settings.installed' : 'settings.notInstalled')}</small>
+              { label: t('settings.speechRecognition'), items: [{ label: t('settings.whisper'), ok: models?.whisper }] },
+              { label: t('settings.translation'), items: [
+                { label: t('settings.koEn'), ok: models?.translate['ko-en'] },
+                { label: t('settings.enZh'), ok: models?.translate['en-zh'] },
+              ] },
+              { label: t('settings.wordAnalysis'), items: [{ label: t('settings.parser'), ok: models?.englishParser }] },
+            ].map(group => <li key={group.label}>
+              <details>
+                <summary>{group.label}</summary>
+                <ul className="workspace-settings-model-items">{group.items.map(item => <li key={item.label} data-state={item.ok === undefined ? 'checking' : item.ok ? 'ready' : 'missing'}>
+                  <span aria-hidden="true">{item.ok === undefined ? '…' : item.ok ? '✓' : '—'}</span>{item.label}
+                  <small>{t(item.ok === undefined ? 'settings.checking' : item.ok ? 'settings.installed' : 'settings.notInstalled')}</small>
+                </li>)}</ul>
+              </details>
             </li>)}
           </ul>
           {models && ![models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <div className="workspace-settings-models-actions">

@@ -1,6 +1,7 @@
 "use client";
 
 import Notice from '@/workspace/Notice';
+import useDismissibleMenu from '@/workspace/useDismissibleMenu';
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useLocale } from '@/i18n/context';
@@ -28,6 +29,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
   const [position, setPosition] = useState({ top: 12, left: 12, maxHeight: 300 });
   const current = useRef<Draft | null>(null);
   const popup = useRef<HTMLDivElement>(null);
+  const meaningMenu = useDismissibleMenu();
   const lookupJob = useRef<string | null>(null);
   const cloudJob = useRef<string | null>(null);
 
@@ -202,7 +204,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
         <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={draft.meaningZh} required maxLength={300} onChange={event => change({ meaningZh: event.target.value })}/></label>
         {!!draft.candidates.length && <div className="vocabulary-meaning-field">
           <span id="vocabulary-meaning-label">{t("Dictionary meanings")}</span>
-          <details className="vocabulary-meaning-picker" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.stopPropagation(); event.preventDefault(); event.currentTarget.querySelector('summary')?.focus(); } }}>
+          <details ref={meaningMenu} className="vocabulary-meaning-picker" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.stopPropagation(); event.preventDefault(); event.currentTarget.querySelector('summary')?.focus(); } }}>
             <summary aria-labelledby="vocabulary-meaning-label vocabulary-meaning-value">
               <span id="vocabulary-meaning-value">{t("Choose a meaning")}</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>

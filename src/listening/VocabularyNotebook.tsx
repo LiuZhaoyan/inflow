@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import useDismissibleMenu from "@/workspace/useDismissibleMenu";
 import Notice from '@/workspace/Notice';
 import { useLocale } from '@/i18n/context';
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
@@ -163,6 +164,7 @@ export default function VocabularyNotebook({
   const [noteDraft, setNoteDraft] = useState<{ id: string; note: string } | null>(null);
   const openRequest = useRef(0);
   const editorDirty = useRef(false);
+  const entryMenu = useDismissibleMenu();
   const draft = editing;
   const noteDirty = Boolean(noteDraft && noteDraft.note !== (entries.find(entry => entry.id === noteDraft.id)?.note ?? ''));
   const hasPendingEdit = Boolean(draft) || busy || noteDirty;
@@ -299,7 +301,7 @@ export default function VocabularyNotebook({
             <button className="vocab-edit" type="button" disabled={hasPendingEdit} title={t("Edit vocabulary")} aria-label={t('Edit {word}', { word: selectedEntry.lemma })} onClick={() => editEntry(selectedEntry)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15z"/><path d="M12 20h8"/></svg>
             </button>
-            <details className="vocab-entry-menu" key={selectedEntry.id}>
+            <details ref={entryMenu} className="vocab-entry-menu" key={selectedEntry.id}>
               <summary aria-label={t('More actions for {word}', { word: selectedEntry.lemma })} aria-disabled={hasPendingEdit} title={t("More actions")} onClick={event => { if (!beforeChange()) event.preventDefault(); }}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
               </summary>

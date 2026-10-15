@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import useDismissibleMenu from "@/workspace/useDismissibleMenu";
 import Notice from "@/workspace/Notice";
 import { useLocale } from '@/i18n/context';
 import StorySentence from "@/workspace/StorySentence";
@@ -47,6 +48,8 @@ export default function ArtifactLibrary({
   const [activeSentence, setActiveSentence] = useState(initialSentence);
   const [translations, setTranslations] = useState<Set<number>>(() => new Set());
   const dialog = useRef<HTMLDialogElement>(null);
+  const storyOptions = useDismissibleMenu();
+  const storyTargets = useDismissibleMenu();
   const mixedLanguageSelection = new Set(selected.map(entry => entry.language)).size > 1;
 
   useEffect(() => {
@@ -111,14 +114,13 @@ export default function ArtifactLibrary({
       <section className="story-reader-panel">
         <header className="story-hero">
           <div className="story-hero-controls">
-            <details className="story-dropdown">
+            <details ref={storyTargets} className="story-dropdown">
               <summary aria-label={t(artifact.targets.length === 1 ? '{count} target word' : '{count} target words', { count: artifact.targets.length })}><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v15M12 6C9 3 5 3 2 4v14c4-1 7-1 10 2 3-3 6-3 10-2V4c-3-1-7-1-10 2z"/></svg>{t(artifact.targets.length === 1 ? '{count} target word' : '{count} target words', { count: artifact.targets.length })} ⌄</summary>
               <div className="story-dropdown-panel">{artifact.targets.map(target => <button type="button" key={target.id} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onOpenVocabulary(target.id); }}><span lang={artifact.language}>{target.lemma}</span><span lang="zh">{target.meaningZh}</span></button>)}</div>
             </details>
-            <details className="story-dropdown story-options">
+            <details ref={storyOptions} className="story-dropdown story-options">
               <summary aria-label={t("Story options")}>⋮</summary>
               <div className="story-dropdown-panel">
-                {onRequestGenerate && <button type="button" onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); onRequestGenerate(); }}>{t("Generate a story")}</button>}
                   {!!artifacts.length && <>
                     <label>{t("Filter saved stories")}
                       <Dropdown label={t("Filter saved stories")} value={historyLanguage} options={[{ value: "all", label: t("All") }, { value: "ko", label: t("Korean") }, { value: "en", label: t("English") }]} onChange={setHistoryLanguage}/>
@@ -156,10 +158,10 @@ export default function ArtifactLibrary({
       </section>
 
       <aside className="story-sidebar">
-        <section className="story-context-panel">
-          <header><h2>{t("Context")}</h2><span>{t(artifact.sentences.length === 1 ? '{count} sentence' : '{count} sentences', { count: artifact.sentences.length })}</span></header>
-          <div className="story-context-list">{artifact.sentences.map((sentence, index) => <button type="button" key={index} aria-current={activeSentence === index ? "location" : undefined} onClick={() => jump(index)}>
-            <span>{String(index + 1).padStart(2, "0")}</span><span lang={artifact.language}>{textOf(sentence)}</span>{activeSentence === index && <i aria-hidden="true" />}
+        <section className="story-context-panel workspace-context-panel">
+          <header className="workspace-context-heading"><h2>{t("Context")}</h2><span>{t(artifact.sentences.length === 1 ? '{count} sentence' : '{count} sentences', { count: artifact.sentences.length })}</span></header>
+          <div className="story-context-list workspace-context-rows">{artifact.sentences.map((sentence, index) => <button type="button" className="workspace-context-row" key={index} aria-current={activeSentence === index ? "true" : undefined} onClick={() => jump(index)}>
+            <time>{String(index + 1).padStart(2, "0")}</time><span lang={artifact.language}>{textOf(sentence)}</span>
           </button>)}</div>
         </section>
         <section className="story-vocabulary-panel">
