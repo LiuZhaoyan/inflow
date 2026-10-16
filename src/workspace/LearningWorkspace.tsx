@@ -13,6 +13,7 @@ import LibraryDrawer from '@/workspace/LibraryDrawer';
 import VideoStage from '@/workspace/VideoStage';
 import SentenceArea from '@/workspace/SentenceArea';
 import ContextPanel from '@/workspace/ContextPanel';
+import ContextSidebar from '@/workspace/ContextSidebar';
 import StoryTargetsDialog from '@/workspace/StoryTargetsDialog';
 import SettingsDialog from '@/workspace/SettingsDialog';
 import SourceLanguageDialog from '@/workspace/SourceLanguageDialog';
@@ -25,10 +26,6 @@ const measureStage = (column: HTMLDivElement | null) => ({
   height: column?.querySelector<HTMLElement>('.workspace-video-stage')?.clientHeight ?? 180,
   max: Math.min(720, Math.max(140, (column?.clientHeight ?? 600) - 260)),
 });
-const measureContext = (grid: HTMLElement | null) => ({
-  width: grid?.querySelector<HTMLElement>('.workspace-context-panel')?.clientWidth ?? 280,
-  max: Math.min(480, Math.max(240, (grid?.clientWidth ?? 1000) - 520)),
-});
 const defaultVideoRatio = 16 / 9;
 
 export default function LearningWorkspace() {
@@ -40,10 +37,6 @@ export default function LearningWorkspace() {
   const picker = useRef<HTMLInputElement>(null);
   const transcript = useRef<HTMLParagraphElement>(null);
   const mainColumn = useRef<HTMLDivElement>(null);
-  const contentGrid = useRef<HTMLElement>(null);
-  const contextDrag = useRef<{ id: number; x: number; width: number } | null>(null);
-  const [contextWidth, setContextWidth] = useState<number>();
-  const [contextSize, setContextSize] = useState({ width: 280, max: 480 });
   const stageDrag = useRef<{ id: number; y: number; height: number } | null>(null);
   const [stageHeight, setStageHeight] = useState<number>();
   const [stageSize, setStageSize] = useState({ height: 180, max: 180 });
@@ -100,20 +93,15 @@ export default function LearningWorkspace() {
   useEffect(() => {
     const column = mainColumn.current;
     const stage = column?.querySelector<HTMLElement>('.workspace-video-stage');
-    const grid = contentGrid.current;
-    const context = grid?.querySelector<HTMLElement>('.workspace-context-panel');
-    if (!column || !stage || !grid || !context) return;
+    if (!column || !stage) return;
     const observer = new ResizeObserver(() => {
       if (!column.clientHeight) return;
       setStageSize(measureStage(column));
-      if (grid.clientWidth > 860) setContextSize(measureContext(grid));
     });
     observer.observe(column); observer.observe(stage);
-    observer.observe(grid); observer.observe(context);
     return () => observer.disconnect();
   }, []);
   const resizeStage = (height: number) => setStageHeight(Math.max(140, Math.min(measureStage(mainColumn.current).max, height)));
-  const resizeContext = (width: number) => setContextWidth(Math.max(240, Math.min(measureContext(contentGrid.current).max, width)));
   const resetSentence = useCallback(() => {
     if (vocabularySelection.current?.beforeChange() === false) return;
     setMaskEditing(false); setTranslationOpen(false); setTranslation(''); setTranslationError(''); setTranslationBusy(false);
@@ -499,7 +487,7 @@ export default function LearningWorkspace() {
     {learningArtifacts.error && !generationOpen && <Notice message={localize(learningArtifacts.error, 'The operation failed. Please retry.')} placement="floating" onDismiss={() => learningArtifacts.setError('')}/>}
     {learningArtifacts.notice && <Notice key={learningArtifacts.notice.id} message={t(learningArtifacts.notice.message)} placement="floating" tone="status" transient onDismiss={() => learningArtifacts.setNotice(null)}/>}
     </div>
-    <main className="workspace-content-grid" ref={contentGrid} style={{ '--workspace-context-width': contextWidth === undefined ? undefined : `${contextWidth}px` } as CSSProperties} hidden={view !== 'video' || contentKind !== 'media'}>
+    <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column" ref={mainColumn} style={{ '--workspace-stage-height': stageHeight === undefined ? undefined : `${stageHeight}px`, '--workspace-video-ratio': videoRatio } as CSSProperties}>
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
         {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>{t("导入媒体")}</button>}
@@ -522,24 +510,7 @@ export default function LearningWorkspace() {
           }}/>
         <SentenceArea segment={segment} index={index} total={segments.length} language={savedMedia?.language ?? 'ko'} mode={mode} onModeChange={next => { if (next === 'sentence') select(index); else setMode('full'); }} canPlay={canPlay} playing={playing} onPlayPause={() => void play()} onPrevious={() => select(index - 1)} onNext={() => select(index + 1)} maskedGroups={maskedGroups} maskEditing={maskEditing} onToggleMaskEditing={toggleMaskEditing} onToggleGroup={toggleGroup} transcriptRef={transcript} rate={rate} onRateChange={next => { setRate(next); if (media.current) media.current.playbackRate = next; }} loop={loop} onLoopChange={setLoop} translationOpen={translationOpen} translation={translation} translationBusy={translationBusy} translationError={translationError} onToggleTranslation={toggleTranslation} onTranslate={options => void requestTranslation(options)} onCancelTranslation={() => { translating.current?.abort(); setTranslationBusy(false); }}/>
       </div>
-      <div className="workspace-context-divider" role="separator" tabIndex={0} aria-label={t("Resize Context panel")} aria-orientation="vertical" aria-valuemin={240} aria-valuemax={contextSize.max} aria-valuenow={contextSize.width}
-        onPointerDown={event => {
-          if (event.button !== 0) return;
-          event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
-          contextDrag.current = { id: event.pointerId, x: event.clientX, width: measureContext(contentGrid.current).width };
-        }}
-        onPointerMove={event => {
-          const drag = contextDrag.current;
-          if (drag?.id === event.pointerId) resizeContext(drag.width + drag.x - event.clientX);
-        }}
-        onPointerUp={() => { contextDrag.current = null; }} onPointerCancel={() => { contextDrag.current = null; }} onLostPointerCapture={() => { contextDrag.current = null; }}
-        onKeyDown={event => {
-          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-          event.preventDefault();
-          const current = measureContext(contentGrid.current);
-          resizeContext(event.key === 'Home' ? 240 : event.key === 'End' ? current.max : current.width + (event.key === 'ArrowLeft' ? 1 : -1) * (event.shiftKey ? 40 : 10));
-        }}/>
-      <ContextPanel segments={segments} language={savedMedia?.language ?? 'ko'} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/>
+      <ContextSidebar><ContextPanel segments={segments} language={savedMedia?.language ?? 'ko'} index={index} onSelect={select} showText={showContext} onToggleText={() => setShowContext(value => !value)}/></ContextSidebar>
     </main>
     <section className="workspace-story" hidden={view !== 'video' || contentKind !== 'story'} aria-label={t("Story workspace")}>
       {desktop && <ArtifactLibrary learning={learningArtifacts} selected={generationTargets} vocabularyEntries={vocabulary.entries} credential={credential} onOpenSettings={openSettings} onBeforeChange={allowChange} onOpenVocabulary={id => void openVocabularyEntry(id)} active={view === 'video' && contentKind === 'story'} generationOpen={generationOpen} onGenerationClose={() => setGenerationOpen(false)} onRequestGenerate={() => requestStory()}/>}

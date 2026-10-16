@@ -1,6 +1,7 @@
 "use client";
 
 import Dropdown from "@/workspace/Dropdown";
+import ContextSidebar from "@/workspace/ContextSidebar";
 import useDismissibleMenu from "@/workspace/useDismissibleMenu";
 import Notice from "@/workspace/Notice";
 import { useLocale } from '@/i18n/context';
@@ -157,7 +158,7 @@ export default function ArtifactLibrary({
         </footer>
       </section>
 
-      <aside className="story-sidebar">
+      <ContextSidebar><aside className="story-sidebar">
         <section className="story-context-panel workspace-context-panel">
           <header className="workspace-context-heading"><h2>{t("Context")}</h2><span>{t(artifact.sentences.length === 1 ? '{count} sentence' : '{count} sentences', { count: artifact.sentences.length })}</span></header>
           <div className="story-context-list workspace-context-rows">{artifact.sentences.map((sentence, index) => <button type="button" className="workspace-context-row" key={index} aria-current={activeSentence === index ? "true" : undefined} onClick={() => jump(index)}>
@@ -177,7 +178,7 @@ export default function ArtifactLibrary({
             </section>}
           </div>
         </section>
-      </aside>
+      </aside></ContextSidebar>
 
     </main> : <div className="story-empty-state">
       <h1>{loaded ? t("Choose a story") : t("Restoring your library…")}</h1>

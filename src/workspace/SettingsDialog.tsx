@@ -1,5 +1,6 @@
 "use client";
 
+import Dropdown from "@/workspace/Dropdown";
 import Notice from '@/workspace/Notice';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -141,10 +142,9 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           <div className="workspace-settings-section-heading"><h3 id="settings-language-heading">{t('settings.language')}</h3></div>
           <p className="workspace-settings-description">{t('settings.languageHelp')}</p>
           <label htmlFor="settings-interface-language">{t('settings.language')}</label>
-          <select id="settings-interface-language" value={language} aria-describedby={`settings-language-help${languageError ? ' settings-language-error' : ''}`} aria-invalid={!!languageError}
-            onChange={event => { setLanguage(event.currentTarget.value as InterfaceLocale); setLanguageError(''); setLanguageResult(''); }}>
-            <option value="zh-CN" lang="zh-CN">简体中文</option><option value="en" lang="en">English</option>
-          </select>
+          <Dropdown<InterfaceLocale> label={t('settings.language')} className="workspace-settings-language-dropdown" value={language}
+            options={[{ value: 'zh-CN', label: '简体中文' }, { value: 'en', label: 'English' }]}
+            onChange={value => { setLanguage(value); setLanguageError(''); setLanguageResult(''); }}/>
           <p id="settings-language-help" className="workspace-settings-help">{t('settings.languageSaveHelp')}</p>
           {languageResult && <p className="workspace-settings-result" role="status">{t(languageResult)}</p>}
           {languageError && <Notice id="settings-language-error" message={error(languageError, 'settings.saveFailed')} onDismiss={() => setLanguageError('')}/>}

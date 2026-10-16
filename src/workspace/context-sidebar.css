@@ -1,0 +1,8 @@
+.workspace-context-sidebar { position:relative; display:grid; grid-template-columns:9px minmax(0,1fr); width:clamp(240px,var(--workspace-context-width,clamp(280px,24vw,340px)),min(480px,calc(100vw - 520px))); min-height:0; background:var(--workspace-panel); }
+.workspace-context-sidebar-body { min-width:0; min-height:0; }
+.workspace-context-sidebar.is-collapsed { width:9px; grid-template-columns:9px; }
+.workspace-context-sidebar.is-resizing .workspace-context-divider:focus-visible { outline:none; }
+@media(max-width:900px) {
+  .workspace-context-sidebar { width:100%; }
+  .workspace-context-sidebar.is-collapsed { min-height:44px; justify-self:end; }
+}
