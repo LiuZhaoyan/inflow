@@ -1,0 +1,110 @@
+/* Inflow visual foundation.
+   The authoritative semantic tokens and shared control primitives for every
+   workspace surface. Surfaces consume these roles instead of declaring their own
+   palette, radii, control sizes or type sizes. See docs/FRONTEND_GUIDE.md. */
+
+.workspace-shell {
+  /* Surfaces, from the page background up to menus and overlays. */
+  --workspace-bg: #101216;
+  --workspace-panel: #171a20;
+  --workspace-raised: #20242d;
+  --workspace-overlay: #1b1c24;
+  --workspace-sunken: #0c0e12;
+
+  /* Lines and text roles. */
+  --workspace-line: #30353f;
+  --workspace-line-soft: #24252c;
+  --workspace-control-line: #535b6b;
+  --workspace-text: #edf0f5;
+  --workspace-muted: #a5adba;
+  --workspace-faint: #7f8794;
+
+  /* Purple accent family. */
+  --workspace-accent: #bca4f8;
+  --workspace-accent-hover: #cbb7ff;
+  --workspace-accent-soft: #282337;
+  --workspace-accent-line: #685780;
+  --workspace-accent-ink: #20172f;
+
+  /* Language badge, shared by every list row and source label. */
+  --workspace-badge-bg: #211d28;
+  --workspace-badge-line: #3e374b;
+  --workspace-badge-text: #c8b4e8;
+
+  /* Feedback surfaces. */
+  --workspace-danger-bg: #392832;
+  --workspace-danger-line: #98627f;
+  --workspace-danger-text: #f2bbc4;
+  --workspace-success-bg: #253a33;
+  --workspace-success-line: #638f7a;
+  --workspace-success-text: #c7ead8;
+  --workspace-backdrop: #05070bab;
+
+  /* Corners. */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-pill: 999px;
+
+  /* Control heights. */
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 44px;
+
+  /* Spacing steps for padding, gaps and margins. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Type roles. Reading text and display sizes stay fluid where layout requires it. */
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 28px;
+  --text-reading: clamp(26px, 2.4vw, 36px);
+  --weight-normal: 400;
+  --weight-medium: 550;
+  --weight-semibold: 600;
+  --weight-bold: 650;
+
+  /* Depth and focus. */
+  --shadow-overlay: 0 12px 28px #0008;
+  --shadow-dialog: 0 24px 80px #0008;
+  --focus-ring: 2px solid var(--workspace-accent);
+}
+
+/* Shared button roles: primary fills with the accent, secondary sits on a raised
+   surface, ghost is an inline accent action. One role per visual job. */
+.workspace-button { display:inline-flex; align-items:center; justify-content:center; gap:var(--space-2); min-height:var(--control-lg); padding:0 var(--space-5); border:1px solid transparent; border-radius:var(--radius-lg); background:transparent; color:var(--workspace-text); font-size:var(--text-base); font-weight:var(--weight-medium); white-space:nowrap; }
+.workspace-button svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.7; }
+.workspace-button--primary { border-color:var(--workspace-accent); background:var(--workspace-accent); color:var(--workspace-accent-ink); font-weight:var(--weight-semibold); }
+.workspace-button--secondary { border-color:var(--workspace-control-line); background:var(--workspace-raised); }
+.workspace-button--ghost { min-height:var(--control-md); padding:0 var(--space-2); color:var(--workspace-accent); }
+.workspace-button--danger { color:var(--workspace-danger-text); }
+@media(hover:hover) {
+  .workspace-button--primary:hover:not(:disabled) { border-color:var(--workspace-accent-hover); background:var(--workspace-accent-hover); box-shadow:0 4px 20px #bca4f82a; }
+  .workspace-button--secondary:hover:not(:disabled) { border-color:var(--workspace-faint); }
+  .workspace-button--ghost:hover:not(:disabled) { color:var(--workspace-text); text-decoration:underline; text-underline-offset:3px; }
+}
+
+/* Shared form field: text inputs, selects and textareas. */
+.workspace-field { width:100%; min-height:var(--control-md); padding:0 var(--space-3); border:1px solid var(--workspace-control-line); border-radius:var(--radius-md); background:var(--workspace-sunken); color:var(--workspace-text); font:inherit; font-size:var(--text-base); }
+.workspace-field::placeholder { color:var(--workspace-faint); opacity:1; }
+textarea.workspace-field { min-height:76px; padding:var(--space-2) var(--space-3); resize:vertical; }
+
+/* Shared square icon button. */
+.workspace-icon-button { width:var(--control-sm); height:var(--control-sm); display:grid; place-items:center; flex:none; padding:0; border:1px solid var(--workspace-control-line); border-radius:var(--radius-md); background:var(--workspace-raised); color:var(--workspace-muted); }
+.workspace-icon-button svg { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-linecap:round; stroke-linejoin:round; stroke-width:1.6; }

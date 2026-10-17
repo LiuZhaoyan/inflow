@@ -1,6 +1,6 @@
 # Inflow Roadmap
 
-Last updated: 2026-10-12
+Last updated: 2026-10-17
 
 This document describes what comes next for Inflow: remaining work, ordering, and dependencies. Product behavior and scope belong in [PRODUCT_SPEC.md](PRODUCT_SPEC.md); implemented capabilities and completed milestones belong in [PROJECT_STATUS.md](PROJECT_STATUS.md).
 
@@ -9,6 +9,8 @@ This document describes what comes next for Inflow: remaining work, ordering, an
 The Korean and English desktop learning loops, frontend visual acceptance, Settings, and personal Windows installer have reached their recorded acceptance boundaries. See [Project Status](PROJECT_STATUS.md) and [the task index](../.scratch/README.md) for current implementation and completed evidence.
 
 Next work is demand-driven quality improvement and release qualification rather than rebuilding the existing foundation.
+
+The [frontend visual system effort](../.scratch/frontend-design-system/spec.md) has an initial shared-token and control-style implementation and a component maintenance guide. Next, validate Listen, the vocabulary list and Settings at the exact agreed desktop window sizes and obtain owner visual approval before migrating the remaining surfaces. The reviewed temporary captures used larger dimensions than their filenames claimed, so they do not establish window-size acceptance.
 
 [Interface internationalization](../.scratch/i18n/acceptance.md) passed source-checkout acceptance on `codex/i18n`: Simplified Chinese and English interfaces with saved language preferences preserve source-language learning content and Chinese assistance.
 

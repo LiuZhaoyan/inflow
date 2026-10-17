@@ -1,12 +1,14 @@
 # Task Index
 
-Updated: 2026-10-14
+Updated: 2026-10-17
 
 Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
 ## Current development
 
-No implementation ticket is currently open in this index. [Story navigation consistency and unified notices](story-navigation-notices/acceptance.md) passed source-checkout acceptance; its [implementation task](story-navigation-notices/issues/01-implement-navigation-and-notices.md) is resolved.
+[Frontend visual system and component consistency](frontend-design-system/spec.md) has an initial shared-token and control-style implementation across Listen, the vocabulary notebook and Settings, with related shared consumers updated. Owner visual approval and acceptance at the exact agreed window sizes remain pending before wider migration. Temporary screenshots, fixture bridge and capture script were removed at the owner's request; the specification records the size mismatch found during review. No child implementation tickets have been created.
+
+[Story navigation consistency and unified notices](story-navigation-notices/acceptance.md) passed source-checkout acceptance; its [implementation task](story-navigation-notices/issues/01-implement-navigation-and-notices.md) is resolved.
 
 Story navigation/notices, interface internationalization and vocabulary completion passed source-checkout acceptance; installed-package verification belongs to the next release.
 

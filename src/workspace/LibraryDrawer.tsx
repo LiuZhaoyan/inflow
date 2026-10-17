@@ -98,7 +98,7 @@ export default function LibraryDrawer({
       </li>)}
     </ul>
     {!visibleItems.length && !visibleArtifacts.length && <p className="workspace-library-empty">{items.length || artifacts.length ? t("No content matches that name.") : t("No saved content yet. Import an audio or video file to begin.")}</p>}
-    <div className="workspace-library-footer"><button type="button" className="workspace-primary-button" onClick={onImport}>
+    <div className="workspace-library-footer"><button type="button" className="workspace-button workspace-button--primary" onClick={onImport}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>{t("Import media")}
     </button></div>
   </dialog>;

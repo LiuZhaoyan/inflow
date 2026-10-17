@@ -79,9 +79,9 @@ function VocabularyEditor({ draft, busy, active, onSave, onCancel, onDirty }: {
     <h2>{draft.id ? t("Edit vocabulary") : t("Add vocabulary")}</h2>
     <fieldset disabled={busy}>
       {draft.id ? <p className="vocab-editor-language"><span className="vocab-language-badge">{language === 'en' ? t("English") : t("Korean")}</span></p> : <label>{t("Confirm source language")}<Dropdown label={t("Source language")} value={language} options={[{ value: "ko", label: t("Korean") }, { value: "en", label: t("English") }]} onChange={value => { if (value !== language) onDirty(); setLanguage(value); }}/></label>}
-      <label>{t("Dictionary form")}<input autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => { if (event.target.value !== lemma) onDirty(); setLemma(event.target.value); }}/></label>
-      <label>{t("Chinese meaning")}<input name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => { if (event.target.value !== meaning) onDirty(); setMeaning(event.target.value); }}/></label>
-      <div className="vocab-editor-actions"><button className="vocab-primary" type="submit">{busy ? t("Saving…") : t("Save vocabulary")}</button><button type="button" onClick={onCancel}>{t("Cancel")}</button></div>
+      <label>{t("Dictionary form")}<input className="workspace-field" autoFocus={active} name="lemma" lang={language} value={lemma} maxLength={100} required onChange={event => { if (event.target.value !== lemma) onDirty(); setLemma(event.target.value); }}/></label>
+      <label>{t("Chinese meaning")}<input className="workspace-field" name="meaningZh" lang="zh" value={meaning} maxLength={300} required onChange={event => { if (event.target.value !== meaning) onDirty(); setMeaning(event.target.value); }}/></label>
+      <div className="vocab-editor-actions"><button className="workspace-button workspace-button--primary" type="submit">{busy ? t("Saving…") : t("Save vocabulary")}</button><button className="workspace-button workspace-button--secondary" type="button" onClick={onCancel}>{t("Cancel")}</button></div>
     </fieldset>
     {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
   </form>;
@@ -248,8 +248,8 @@ export default function VocabularyNotebook({
       <header className="vocab-list-heading">
         <div className="vocab-title"><h1>{t("Vocabulary")}</h1><span>{t(entries.length === 1 ? '{count} word' : '{count} words', { count: entries.length })}</span></div>
         <div className="vocab-heading-actions">
-          <button className="vocab-add-word" type="button" disabled={hasPendingEdit || loading} onClick={addEntry}>{t("Add manually")}</button>
-          <button className="vocab-generate" type="button" disabled={hasPendingEdit || loading || !entries.length} onClick={onGenerateStory}>
+          <button className="workspace-button workspace-button--ghost" type="button" disabled={hasPendingEdit || loading} onClick={addEntry}>{t("Add manually")}</button>
+          <button className="workspace-button workspace-button--primary" type="button" disabled={hasPendingEdit || loading || !entries.length} onClick={onGenerateStory}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2Z"/><path d="m19 14 .9 3.1L23 18l-3.1.9L19 22l-.9-3.1L15 18l3.1-.9L19 14Z"/></svg>
 
             {t("Generate story")}
@@ -270,7 +270,7 @@ export default function VocabularyNotebook({
         ]} onChange={value => { if (beforeChange()) setLanguageFilter(value); }}/>
       </div>
       {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
-      {loadError && <><Notice message={localize(loadError, 'The operation failed. Please retry.')}/><button type="button" disabled={hasPendingEdit || loading} onClick={vocabulary.refresh}>{t("Retry loading vocabulary")}</button></>}
+      {loadError && <><Notice message={localize(loadError, 'The operation failed. Please retry.')}/><button className="workspace-button workspace-button--secondary" type="button" disabled={hasPendingEdit || loading} onClick={vocabulary.refresh}>{t("Retry loading vocabulary")}</button></>}
       <div className="vocab-rows" aria-live="polite">
         {visibleEntries.map(entry => {
           const context = entry.contexts[0];
@@ -337,8 +337,8 @@ export default function VocabularyNotebook({
         <details className="vocab-detail-section vocab-notes-section" key={selectedEntry.id}>
           <summary>{t("Notes")} <small>{selectedEntry.note ? t("Saved") : t("Optional")}</small></summary>
           <fieldset disabled={busy}>
-            <textarea rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => { if (event.target.value !== (selectedEntry.note ?? '')) onDirty(); setNoteDraft({ id: selectedEntry.id, note: event.target.value }); }} placeholder={t("Add a personal note…")} aria-label={t("Personal note")}/>
-            <div className="vocab-editor-actions"><button type="button" disabled={!noteDirty} onClick={() => void save({ id: selectedEntry.id, language: selectedEntry.language, lemma: selectedEntry.lemma, meaningZh: selectedEntry.meaningZh, note: noteDraft!.note }).catch(failure => setError(failure instanceof Error ? failure.message : 'Note save failed. Please retry.'))}>{busy ? t("Saving…") : t("Save note")}</button><button type="button" onClick={() => { setNoteDraft(null); setError(''); }}>{t("Cancel")}</button></div>
+            <textarea className="workspace-field" rows={2} maxLength={2000} value={noteDraft?.id === selectedEntry.id ? noteDraft.note : selectedEntry.note ?? ''} onChange={event => { if (event.target.value !== (selectedEntry.note ?? '')) onDirty(); setNoteDraft({ id: selectedEntry.id, note: event.target.value }); }} placeholder={t("Add a personal note…")} aria-label={t("Personal note")}/>
+            <div className="vocab-editor-actions"><button className="workspace-button workspace-button--primary" type="button" disabled={!noteDirty} onClick={() => void save({ id: selectedEntry.id, language: selectedEntry.language, lemma: selectedEntry.lemma, meaningZh: selectedEntry.meaningZh, note: noteDraft!.note }).catch(failure => setError(failure instanceof Error ? failure.message : 'Note save failed. Please retry.'))}>{busy ? t("Saving…") : t("Save note")}</button><button className="workspace-button workspace-button--secondary" type="button" onClick={() => { setNoteDraft(null); setError(''); }}>{t("Cancel")}</button></div>
           </fieldset>
         </details>
       </> : <p className="vocab-detail-empty">{loaded ? t("Select a word to see its details.") : t("Loading vocabulary…")}</p>}

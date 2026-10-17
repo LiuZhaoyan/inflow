@@ -102,8 +102,8 @@ export default function SentenceArea({
       {translationBusy && <p role="status">{t("Preparing translation…")} <button type="button" onClick={onCancelTranslation}>{t("Cancel")}</button></p>}
       {translationError && <Notice message={localize(translationError, 'The operation failed. Please retry.')}/>}
       {!translationBusy && <div className="workspace-translation-actions">
-        <button type="button" onClick={() => onTranslate({ refresh: true })}>{translation ? t("Translate again") : t("Retry translation")}</button>
-        {translationError && <button type="button" onClick={() => onTranslate({ local: true })}>{t("Use local reference translation")}</button>}
+        <button className="workspace-button workspace-button--ghost" type="button" onClick={() => onTranslate({ refresh: true })}>{translation ? t("Translate again") : t("Retry translation")}</button>
+        {translationError && <button className="workspace-button workspace-button--ghost" type="button" onClick={() => onTranslate({ local: true })}>{t("Use local reference translation")}</button>}
       </div>}
     </section>}
     </div>

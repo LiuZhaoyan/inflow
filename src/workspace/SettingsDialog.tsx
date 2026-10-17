@@ -153,7 +153,7 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           <div className="workspace-settings-section-heading"><h3 id="settings-key-heading">{t('settings.llm')}</h3><span>{t(credential.configured ? 'settings.configured' : 'settings.notConfigured')}</span></div>
           <p className="workspace-settings-description">{t('settings.keyDescription')}</p>
           <label htmlFor="settings-api-key">{t(credential.configured ? 'settings.replaceKey' : 'settings.apiKey')}</label>
-          <input id="settings-api-key" type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} disabled={!host}
+          <input id="settings-api-key" className="workspace-field" type="password" name="apiKey" value={key} autoComplete="off" maxLength={512} disabled={!host}
             aria-describedby={`settings-key-help${keyError ? ' settings-key-error' : ''}`} aria-invalid={!!keyError} onChange={event => { setKey(event.currentTarget.value); setKeyResult(''); setKeyError(''); }}/>
           <p id="settings-key-help" className="workspace-settings-help">{t('settings.keyHelp')}</p>
           {credential.error && <Notice message={error(credential.error, 'settings.keyFailed')}/>}
@@ -200,15 +200,15 @@ export default function SettingsDialog({ settings, credential, onSettingsChange,
           </ul>
           {models && ![models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <div className="workspace-settings-models-actions">
             {modelsBusy
-              ? <><button type="button" className="workspace-settings-cancel" onClick={cancelModelDownload}>{t('settings.cancelDownload')}</button><span role="status">{t('settings.downloading')}</span></>
-              : <button type="button" className="workspace-primary-button" onClick={() => void downloadModels()}>{t('settings.download')}</button>}
+              ? <><button type="button" className="workspace-button workspace-button--secondary" onClick={cancelModelDownload}>{t('settings.cancelDownload')}</button><span role="status">{t('settings.downloading')}</span></>
+              : <button type="button" className="workspace-button workspace-button--primary" onClick={() => void downloadModels()}>{t('settings.download')}</button>}
           </div>}
           {models && [models.whisper, ...Object.values(models.translate), models.englishParser].every(Boolean) && <p className="workspace-settings-result" role="status">{t('settings.allModels')}</p>}
           {modelsError && <Notice message={error(modelsError, 'settings.modelsDownloadFailed')} onDismiss={() => setModelsError('')}/>}
         </section>}
         </fieldset>
       </div>
-      <footer><button type="button" className="workspace-settings-cancel" disabled={busy} onClick={onClose}>{t('settings.cancel')}</button><button type="submit" className="workspace-primary-button" disabled={busy}>{t(busy ? 'settings.saving' : 'settings.save')}</button></footer>
+      <footer><button type="button" className="workspace-button workspace-button--secondary" disabled={busy} onClick={onClose}>{t('settings.cancel')}</button><button type="submit" className="workspace-button workspace-button--primary" disabled={busy}>{t(busy ? 'settings.saving' : 'settings.save')}</button></footer>
     </form>
   </dialog>;
 }

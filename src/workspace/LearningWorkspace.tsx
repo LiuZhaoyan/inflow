@@ -20,6 +20,7 @@ import SourceLanguageDialog from '@/workspace/SourceLanguageDialog';
 import { useLearningArtifacts } from '@/workspace/useLearningArtifacts';
 import { useVocabulary } from '@/workspace/useVocabulary';
 import Notice from '@/workspace/Notice';
+import '@/workspace/tokens.css';
 import '@/workspace/workspace.css';
 
 const measureStage = (column: HTMLDivElement | null) => ({
@@ -490,7 +491,7 @@ export default function LearningWorkspace() {
     <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column" ref={mainColumn} style={{ '--workspace-stage-height': stageHeight === undefined ? undefined : `${stageHeight}px`, '--workspace-video-ratio': videoRatio } as CSSProperties}>
         <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
-        {!file && <button className="workspace-primary-button workspace-start" onClick={() => void importMedia()}>{t("导入媒体")}</button>}
+        {!file && <button className="workspace-button workspace-button--primary workspace-start" onClick={() => void importMedia()}>{t("导入媒体")}</button>}
         <div className="workspace-stage-divider" role="separator" tabIndex={0} aria-label={t("Resize video and sentence areas")} aria-orientation="horizontal" aria-valuemin={140} aria-valuemax={stageSize.max} aria-valuenow={stageSize.height}
           onPointerDown={event => {
             if (event.button !== 0) return;

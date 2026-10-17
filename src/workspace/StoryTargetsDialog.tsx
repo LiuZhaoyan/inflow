@@ -37,7 +37,7 @@ export default function StoryTargetsDialog({ entries, onClose, onConfirm }: {
         </label>)}</div>
         {mixedLanguageSelection && <Notice tone="status" message={t("Choose vocabulary in one source language before generating. Your current selection is preserved.")}/>}
         {!entries.length && <p className="workspace-empty">{t("Collect or add vocabulary before generating a story.")}</p>}
-        <footer><span>{t('{count} / 20 selected', { count: ids.length })}</span><button type="submit" className="workspace-generate-button" disabled={!ids.length || mixedLanguageSelection}>{t("Continue")}</button></footer>
+        <footer><span>{t('{count} / 20 selected', { count: ids.length })}</span><button type="submit" className="workspace-button workspace-button--primary" disabled={!ids.length || mixedLanguageSelection}>{t("Continue")}</button></footer>
       </fieldset>
       {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => setError('')}/>}
     </form>

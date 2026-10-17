@@ -221,7 +221,7 @@ export default function VocabularySelection({ ref, active, getContext, onOpen, o
         {draft.suggestion && <p>{t("LLM suggestion:")} <span lang="zh">{draft.suggestion}</span> <button type="button" onClick={() => change({ meaningZh: draft.suggestion })}>{t("Apply suggestion")}</button></p>}
         {draft.loading && <p role="status">{t("Finding dictionary form…")}</p>}
         {draft.lookupError && <><Notice message={localize(draft.lookupError, 'The operation failed. Please retry.')}/><p>{t("You can enter it manually.")}</p></>}
-        <footer><button className="workspace-primary-button" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? t("Saving…") : t("+ Save vocabulary")}</button><button type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>{t("Discard")}</button></footer>
+        <footer><button className="workspace-button workspace-button--primary" type="submit" disabled={draft.loading && !draft.lemmaEdited}>{draft.saving ? t("Saving…") : t("+ Save vocabulary")}</button><button className="workspace-button workspace-button--secondary" type="button" onClick={() => { close(); window.getSelection()?.removeAllRanges(); }}>{t("Discard")}</button></footer>
       </fieldset>
       {draft.error && <Notice message={localize(draft.error, 'The operation failed. Please retry.')} onDismiss={() => update({ ...current.current!, error: '' })}/>}
     </form> : <Notice message={t(notice)} tone="status" transient onDismiss={close}/>}
