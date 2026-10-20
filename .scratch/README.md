@@ -1,12 +1,12 @@
 # Task Index
 
-Updated: 2026-10-17
+Updated: 2026-10-19
 
 Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities: [Roadmap](../docs/ROADMAP.md).
 
 ## Current development
 
-[Frontend visual system and component consistency](frontend-design-system/spec.md) has an initial shared-token and control-style implementation across Listen, the vocabulary notebook and Settings, with related shared consumers updated. Owner visual approval and acceptance at the exact agreed window sizes remain pending before wider migration. Temporary screenshots, fixture bridge and capture script were removed at the owner's request; the specification records the size mismatch found during review. No child implementation tickets have been created.
+[Frontend visual system and component consistency](frontend-design-system/spec.md) now includes the owner-requested October 19 refinement: Story control consistency, clearer import/processing states, responsive reading space and vocabulary hierarchy. The [verification record](frontend-design-system/refinement-verification.md) records isolated Electron checks and screenshots at the agreed window sizes. Owner visual approval and installed-package checks remain pending. Earlier temporary captures were removed; the new reproducible harness uses sample data and a separate profile.
 
 [Story navigation consistency and unified notices](story-navigation-notices/acceptance.md) passed source-checkout acceptance; its [implementation task](story-navigation-notices/issues/01-implement-navigation-and-notices.md) is resolved.
 

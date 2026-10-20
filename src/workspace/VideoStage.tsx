@@ -17,6 +17,7 @@ export default function VideoStage({
   onSeek,
   onVideoDimensions,
   status,
+  onImport,
   videoMask,
   videoMaskColor = defaultVideoMaskColor,
   maskEditing,
@@ -34,6 +35,7 @@ export default function VideoStage({
   onSeek: (time: number) => void;
   onVideoDimensions?: (width: number, height: number) => void;
   status?: ReactNode;
+  onImport: () => void;
   videoMask?: VideoMask;
   videoMaskColor?: string;
   maskEditing: boolean;
@@ -96,6 +98,7 @@ export default function VideoStage({
       </> : <div className="workspace-stage-empty">
         <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="5" y="9" width="54" height="46" rx="8"/><path d="m27 22 15 10-15 10z"/></svg>
         <strong>{t("Your next listening session")}</strong><span>{t("Import audio or video, then take it one sentence at a time.")}</span>
+        <button type="button" className="workspace-button workspace-button--primary" onClick={onImport}>{t("导入媒体")}</button>
       </div>}
       {src && video && videoMask?.enabled && bounds && <div className="workspace-video-picture" style={{ left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height }}>
         <div ref={maskElement} className={`workspace-video-mask${maskEditing ? ' is-adjusting' : ''}`}
@@ -110,12 +113,12 @@ export default function VideoStage({
         </div>
       </div>}
     </div>
-    <div className="workspace-progress">
+    {src && <div className="workspace-progress">
       <input type="range" min="0" max={duration || 1} step="0.01" value={Math.min(value, duration || 1)} disabled={!src || !duration} aria-label={t("Playback position")}
         style={{ background: `linear-gradient(90deg, var(--workspace-accent) ${progress}%, var(--workspace-line) ${progress}%)` }}
         onChange={event => onSeek(Number(event.target.value))}/>
       <span className="workspace-timecode">{formatTime(value)} <span aria-hidden="true">/</span> {formatTime(duration)}</span>
-    </div>
+    </div>}
     {status && <div className="workspace-stage-status">
       {src && video && <div className="workspace-video-mask-controls">
         <button type="button" aria-label={t("Hide video subtitles")} aria-pressed={videoMask?.enabled ?? false} onClick={onToggleMask}>{t("遮挡字幕")}</button>

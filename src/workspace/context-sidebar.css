@@ -2,7 +2,7 @@
 .workspace-context-sidebar-body { min-width:0; min-height:0; }
 .workspace-context-sidebar.is-collapsed { width:9px; grid-template-columns:9px; }
 .workspace-context-sidebar.is-resizing .workspace-context-divider:focus-visible { outline:none; }
-@media(max-width:900px) {
+@media(max-width:899px) {
   .workspace-context-sidebar { width:100%; }
   .workspace-context-sidebar.is-collapsed { min-height:44px; justify-self:end; }
 }

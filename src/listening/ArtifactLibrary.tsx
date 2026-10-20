@@ -135,7 +135,7 @@ export default function ArtifactLibrary({
           </div>
           <div className="story-hero-copy">
             <h1 lang={artifact.language}>{artifact.title}</h1>
-            <p><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 12h6M9 16h6"/></svg>{t(artifact.targets.length === 1 ? 'Generated from {count} vocabulary word' : 'Generated from {count} vocabulary words', { count: artifact.targets.length })} <span className="story-language-badge">{languageName(artifact.language)}</span><span>•</span> {t('~{minutes} min read', { minutes: readMinutes })} <span>•</span> <time dateTime={artifact.createdAt}>{dateLabel}</time></p>
+            <p><svg className="story-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 12h6M9 16h6"/></svg>{t(artifact.targets.length === 1 ? 'Generated from {count} vocabulary word' : 'Generated from {count} vocabulary words', { count: artifact.targets.length })} <span className="workspace-language-badge">{languageName(artifact.language)}</span><span>•</span> {t('~{minutes} min read', { minutes: readMinutes })} <span>•</span> <time dateTime={artifact.createdAt}>{dateLabel}</time></p>
           </div>
         </header>
 
@@ -151,10 +151,10 @@ export default function ArtifactLibrary({
         </div>
         {collectionError && <Notice message={localize(collectionError, 'The operation failed. Please retry.')} onDismiss={() => setCollectionError('')}/>}
         <footer className="story-reader-footer">
-          <button type="button" aria-label={t("Previous sentence")} disabled={activeSentence <= 0} onClick={() => jump(activeSentence - 1)}>← &nbsp;{t('Previous')}</button>
-          <button type="button" aria-label={translations.has(activeSentence) ? t("Hide Chinese translation") : t("Show Chinese translation")} aria-pressed={translations.has(activeSentence)} onClick={() => setTranslations(current => { const next = new Set(current); if (next.has(activeSentence)) next.delete(activeSentence); else next.add(activeSentence); return next; })}>{t("中文")}</button>
+          <button className="workspace-button workspace-button--secondary" type="button" aria-label={t("Previous sentence")} disabled={activeSentence <= 0} onClick={() => jump(activeSentence - 1)}>← &nbsp;{t('Previous')}</button>
+          <button className="workspace-button workspace-button--secondary" type="button" aria-label={translations.has(activeSentence) ? t("Hide Chinese translation") : t("Show Chinese translation")} aria-pressed={translations.has(activeSentence)} onClick={() => setTranslations(current => { const next = new Set(current); if (next.has(activeSentence)) next.delete(activeSentence); else next.add(activeSentence); return next; })}>{t("中文")}</button>
           <span>{t(artifact.sentences.length === 1 ? '{current} / {total} sentence' : '{current} / {total} sentences', { current: artifact.sentences.length ? activeSentence + 1 : 0, total: artifact.sentences.length })}</span>
-          <button type="button" aria-label={t("Next sentence")} disabled={activeSentence >= artifact.sentences.length - 1} onClick={() => jump(activeSentence + 1)}>{t('Next')} &nbsp;→</button>
+          <button className="workspace-button workspace-button--secondary" type="button" aria-label={t("Next sentence")} disabled={activeSentence >= artifact.sentences.length - 1} onClick={() => jump(activeSentence + 1)}>{t('Next')} &nbsp;→</button>
         </footer>
       </section>
 
@@ -191,26 +191,26 @@ export default function ArtifactLibrary({
         <Dropdown label={t("Open saved story")} value="" placeholder={t("Choose a saved story")} options={visibleArtifacts.map(item => ({ value: item.id, label: languageName(item.language) + " · " + item.title }))} onChange={id => { if (id) { void open(id); document.querySelector<HTMLDetailsElement>(".story-options[open]")?.removeAttribute("open"); } }}/>
         </label>
       </>}
-      {onRequestGenerate && <button type="button" onClick={onRequestGenerate}>{t("Generate a story")}</button>}
+      {onRequestGenerate && <button className="workspace-button workspace-button--primary" type="button" onClick={onRequestGenerate}>{t("Generate a story")}</button>}
     </div>}
 
     <dialog className="story-generation-dialog" ref={dialog} tabIndex={-1} aria-labelledby="story-generation-title" onClose={event => { if (!event.currentTarget.open) onGenerationClose?.(); }} onCancel={event => { if (busy) { event.preventDefault(); cancelGeneration(); } }}>
       <div className="story-dialog-content">
-        <div className="story-dialog-heading"><h2 id="story-generation-title">{t("Generate a story")}</h2><button type="button" aria-label={t("Close generation dialog")} onClick={closeDialog}>×</button></div>
+        <div className="story-dialog-heading"><h2 id="story-generation-title">{t("Generate a story")}</h2><button className="workspace-icon-button" type="button" aria-label={t("Close generation dialog")} onClick={closeDialog}>×</button></div>
         <p>{t("The story uses selected saved vocabulary and remains available for offline reading.")}</p>
         <section className="story-selected-targets" aria-label={t("Selected vocabulary")}>
           <header><h3>{t("Selected vocabulary")}</h3><span>{selected.length} / 20</span></header>
-          {selected.length ? <ul>{selected.map(entry => <li key={entry.id}><strong lang={entry.language}>{entry.lemma}<small className="story-language-badge" lang={locale}>{languageName(entry.language)}</small></strong><span lang="zh">{entry.meaningZh}</span></li>)}</ul> : <p>{t("No vocabulary selected.")}</p>}
+          {selected.length ? <ul>{selected.map(entry => <li key={entry.id}><strong lang={entry.language}>{entry.lemma}<small className="workspace-language-badge" lang={locale}>{languageName(entry.language)}</small></strong><span lang="zh">{entry.meaningZh}</span></li>)}</ul> : <p>{t("No vocabulary selected.")}</p>}
           {(selected.length < 1 || selected.length > 20) && <p className="story-hint">{t("Select 1–20 existing vocabulary items to continue.")}</p>}
           {mixedLanguageSelection && <Notice message={t("Choose vocabulary in one source language. Return to vocabulary selection to adjust your choices; all selected words are preserved.")}/>}
         </section>
-        <label className="story-topic">{t("Topic")} <span>{t("Optional")}</span><input name="topic" value={topic} maxLength={200} disabled={busy} onChange={event => setTopic(event.currentTarget.value)} /></label>
+        <label className="story-topic">{t("Topic")} <span>{t("Optional")}</span><input className="workspace-field" name="topic" value={topic} maxLength={200} disabled={busy} onChange={event => setTopic(event.currentTarget.value)} /></label>
         <section className="story-credential" aria-label={t("Cloud configuration")}>
-          <button type="button" disabled={busy} onClick={onOpenSettings}>{credential.configured ? t("API key configured · Open settings") : t("Configure API key in Settings")}</button>
+          <button className="workspace-button workspace-button--ghost" type="button" disabled={busy} onClick={onOpenSettings}>{credential.configured ? t("API key configured · Open settings") : t("Configure API key in Settings")}</button>
           {credential.error && <Notice message={localize(credential.error, 'The operation failed. Please retry.')}/>}
         </section>
         {error && <Notice message={localize(error, 'The operation failed. Please retry.')} onDismiss={() => learning.setError('')}/>}
-        <footer>{busy && <button type="button" onClick={cancelGeneration}>{t("Cancel generation")}</button>}{!busy && <button type="button" onClick={closeDialog}>{t("Cancel")}</button>}<button type="button" disabled={busy || !credential.configured || mixedLanguageSelection || selected.length < 1 || selected.length > 20} onClick={() => void generate()}>{busy ? t("Generating…") : error ? t("Retry generation") : t("Generate story")}</button></footer>
+        <footer>{busy && <button className="workspace-button workspace-button--secondary" type="button" onClick={cancelGeneration}>{t("Cancel generation")}</button>}{!busy && <button className="workspace-button workspace-button--secondary" type="button" onClick={closeDialog}>{t("Cancel")}</button>}<button className="workspace-button workspace-button--primary" type="button" disabled={busy || !credential.configured || mixedLanguageSelection || selected.length < 1 || selected.length > 20} onClick={() => void generate()}>{busy ? t("Generating…") : error ? t("Retry generation") : t("Generate story")}</button></footer>
       </div>
     </dialog>
   </section>;

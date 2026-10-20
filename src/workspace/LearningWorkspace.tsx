@@ -25,7 +25,7 @@ import '@/workspace/workspace.css';
 
 const measureStage = (column: HTMLDivElement | null) => ({
   height: column?.querySelector<HTMLElement>('.workspace-video-stage')?.clientHeight ?? 180,
-  max: Math.min(720, Math.max(140, (column?.clientHeight ?? 600) - 260)),
+  max: Math.min(720, Math.max(140, (column?.clientHeight ?? 600) - 360)),
 });
 const defaultVideoRatio = 16 / 9;
 
@@ -80,6 +80,7 @@ export default function LearningWorkspace() {
   const [videoMask, setVideoMask] = useState<VideoMask>();
   const [videoMaskEditing, setVideoMaskEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [processingFailed, setProcessingFailed] = useState(false);
   const [error, setError] = useState('');
   const vocabularySelection = useRef<VocabularySelectionHandle>(null);
   const vocabularyNotebook = useRef<VocabularyNotebookHandle>(null);
@@ -118,7 +119,7 @@ export default function LearningWorkspace() {
     setReady(false); setDuration(next.learning.duration); setPosition(next.learning.position); setIndex(next.learning.index);
     setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments); setMasks(next.learning.masks ?? {});
     setVideoMask(next.learning.videoMask); setVideoMaskEditing(false);
-    setPlaying(false); setBusy(false); setShowContext(false); resetSentence();
+    setPlaying(false); setBusy(false); setProcessingFailed(false); setShowContext(false); resetSentence();
     setError(next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '');
     return true;
   }, [resetSentence]);
@@ -290,7 +291,7 @@ export default function LearningWorkspace() {
       setSavedMedia(null); setFile(next); setSrc(url); setReady(false); setDuration(length); setPosition(0); setPlaying(false);
       setStageHeight(undefined); setVideoRatio(defaultVideoRatio);
       setSegments([]); setIndex(0); setMode('full'); setRate(1); setLoop(false); setMasks({}); setVideoMask(undefined); setVideoMaskEditing(false); setBusy(false); setError(''); setShowContext(false); resetSentence();
-      autoProcess.current = url; setContentKind('media'); setView('video'); setLibraryOpen(false);
+      setProcessingFailed(false); autoProcess.current = url; setContentKind('media'); setView('video'); setLibraryOpen(false);
     } catch (failure) {
       URL.revokeObjectURL(url);
       if (choice === fileChoice.current) setError(failure instanceof Error ? failure.message : '导入失败，请重试。');
@@ -376,7 +377,7 @@ export default function LearningWorkspace() {
   async function processMedia(length = duration) {
     if (!file || !length || length > 600 || busy || !allowChange()) return;
     const controller = new AbortController(); processing.current?.abort(); processing.current = controller;
-    setBusy(true); setError('');
+    setBusy(true); setProcessingFailed(false); setError('');
     try {
       let data: { segments: unknown };
       let processedMedia: SavedMedia | null = null;
@@ -403,7 +404,10 @@ export default function LearningWorkspace() {
         if (!controller.signal.aborted) setLibrary(items);
       }
     } catch (failure) {
-      if (!controller.signal.aborted) setError(failure instanceof TypeError || failure instanceof SyntaxError ? '处理服务连接中断，请重试。' : failure instanceof Error ? failure.message : '处理失败，请重试。');
+      if (!controller.signal.aborted) {
+        setProcessingFailed(true);
+        setError(failure instanceof TypeError || failure instanceof SyntaxError ? '处理服务连接中断，请重试。' : failure instanceof Error ? failure.message : '处理失败，请重试。');
+      }
     } finally { if (!controller.signal.aborted) setBusy(false); }
   }
 
@@ -475,7 +479,10 @@ export default function LearningWorkspace() {
   }, [view, busy, editing, contentKind, savedMedia, index, maskEditing, activeArtifact]);
 
   const status = <div className="workspace-status">
-    {file && (busy ? <><span role="status">{t("正在转写与切句…")}</span><button onClick={() => { processing.current?.abort(); setBusy(false); }}>{t("取消处理")}</button></> : <button disabled={!canPlay || editing} onClick={() => void processMedia()}>{segments.length ? t("重新处理") : t("开始处理 / 重试")}</button>)}
+    {file && (busy ? <><span role="status">{t("正在转写与切句…")}</span><button className="workspace-button workspace-button--secondary" onClick={() => { processing.current?.abort(); setBusy(false); }}>{t("取消处理")}</button></> : <>
+      {!segments.length && <span>{t(processingFailed ? "Processing failed. Your media is preserved." : "Process this media to start sentence practice.")}</span>}
+      <button className={`workspace-button workspace-button--${segments.length && !processingFailed ? 'ghost' : 'primary'}`} disabled={!canPlay || editing} onClick={() => void processMedia()}>{t(processingFailed ? "Retry processing" : segments.length ? "重新处理" : "Start processing")}</button>
+    </>)}
     {savedMedia?.missing && <button onClick={() => void openSaved(savedMedia.id, true)}>{t("重新关联媒体")}</button>}
   </div>;
 
@@ -488,10 +495,9 @@ export default function LearningWorkspace() {
     {learningArtifacts.error && !generationOpen && <Notice message={localize(learningArtifacts.error, 'The operation failed. Please retry.')} placement="floating" onDismiss={() => learningArtifacts.setError('')}/>}
     {learningArtifacts.notice && <Notice key={learningArtifacts.notice.id} message={t(learningArtifacts.notice.message)} placement="floating" tone="status" transient onDismiss={() => learningArtifacts.setNotice(null)}/>}
     </div>
-    <main className="workspace-content-grid" hidden={view !== 'video' || contentKind !== 'media'}>
+    <main className={`workspace-content-grid${!file ? ' is-empty' : ''}`} hidden={view !== 'video' || contentKind !== 'media'}>
       <div className="workspace-main-column" ref={mainColumn} style={{ '--workspace-stage-height': stageHeight === undefined ? undefined : `${stageHeight}px`, '--workspace-video-ratio': videoRatio } as CSSProperties}>
-        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={status} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
-        {!file && <button className="workspace-button workspace-button--primary workspace-start" onClick={() => void importMedia()}>{t("导入媒体")}</button>}
+        <VideoStage src={src} video={video} name={file?.name ?? ''} mediaRef={el => { media.current = el; }} mediaProps={mediaProps} duration={duration} position={position} onSeek={seek} onVideoDimensions={(width, height) => { if (width > 0 && height > 0) setVideoRatio(width / height); }} status={file ? status : undefined} onImport={() => void importMedia()} videoMask={videoMask} videoMaskColor={settings.videoMaskColor} maskEditing={videoMaskEditing} onToggleMask={toggleVideoMask} onToggleMaskEditing={toggleVideoMaskEditing} onMaskChange={setVideoMask}/>
         <div className="workspace-stage-divider" role="separator" tabIndex={0} aria-label={t("Resize video and sentence areas")} aria-orientation="horizontal" aria-valuemin={140} aria-valuemax={stageSize.max} aria-valuenow={stageSize.height}
           onPointerDown={event => {
             if (event.button !== 0) return;
