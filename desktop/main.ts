@@ -7,7 +7,7 @@ import { DesktopOperations } from './operations';
 import { serveMedia } from './media';
 import { GenerationCredential } from './credentials';
 import { GenerationError } from '../src/generation';
-import { runProcessor } from '../src/listening/media-server';
+import { runProcessor, stopLookupProcessor } from '../src/listening/media-server';
 import { localizedError, translate } from '../src/i18n';
 import type { ApplicationSettings, LearningStateInput, SaveVocabularyInput, LookupVocabularyInput, ModelStatus, SentenceTranslationInput, TranslationOptions } from '../src/listening/desktop';
 
@@ -173,5 +173,5 @@ else {
   });
   app.whenReady().then(start).catch(error => { console.error(error); app.quit(); });
 }
-app.on('before-quit', () => { for (const job of modelJobs.values()) job.abort(); operations?.close(); });
+app.on('before-quit', () => { for (const job of modelJobs.values()) job.abort(); operations?.close(); stopLookupProcessor(); });
 app.on('window-all-closed', () => app.quit());

@@ -1,9 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { watch } from 'node:fs';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { once } from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
-import { readBody, foreignOrigin, runProcessor, processorCommand, processorPaths } from './media-server';
+import { readBody, foreignOrigin, runProcessor, processorCommand, processorPaths, stopLookupProcessor } from './media-server';
 
 test('packaged worker binary bypasses the Python interpreter and keeps stdio conventions', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow packaged worker '));
@@ -75,6 +77,104 @@ test('processor uses configured paths and encoding, and permits retry after canc
     if (originalEncoding === undefined) delete process.env.PYTHONIOENCODING;
     else process.env.PYTHONIOENCODING = originalEncoding;
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('lookup worker reuses models and restarts safely after cancellation, crash, idle, and shutdown', { timeout: 30_000 }, async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow lookup worker '));
+  const originalPython = process.env.INFLOW_PYTHON;
+  const originalWorker = process.env.INFLOW_WORKER;
+  try {
+    await mkdir(path.join(root, 'scripts'));
+    await writeFile(path.join(root, 'scripts', 'media_processor.py'), `
+      const readline = require('node:readline');
+      readline.createInterface({ input: process.stdin }).on('line', line => {
+        const { id, input: { surface, language } } = JSON.parse(line);
+        if (surface === 'wait') return require('node:fs').writeFileSync(${JSON.stringify(path.join(root, 'ready'))}, 'ready');
+        if (surface === 'crash') return process.exit(1);
+        console.log(JSON.stringify({ id: surface === 'stale' ? id - 1 : id, result: { surface, lemma: surface, language, pid: process.pid } }));
+      });
+    `);
+    process.env.INFLOW_PYTHON = process.execPath;
+    delete process.env.INFLOW_WORKER;
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const lookup = (surface: string, language: 'ko' | 'en', signal = new AbortController().signal) => runProcessor('lookup', signal, undefined,
+      { surface, sentence: surface, start: 0, language }, root) as Promise<{ surface: string; language: string; pid: number }>;
+    const first = await lookup('학교', 'ko');
+    const second = await lookup('books', 'en');
+    assert.equal(first.surface, '학교');
+    assert.equal(second.surface, 'books');
+    assert.equal(first.pid, second.pid);
+
+    t.mock.timers.tick(59_000);
+    assert.equal((await lookup('again', 'en')).pid, first.pid);
+    t.mock.timers.tick(59_000);
+    assert.equal((await lookup('다시', 'ko')).pid, first.pid);
+    t.mock.timers.tick(60_000);
+    const afterIdle = await lookup('idle', 'en');
+    assert.notEqual(afterIdle.pid, first.pid);
+
+    const watcher = watch(root);
+    const ready = once(watcher, 'change');
+    const controller = new AbortController();
+    const pending = lookup('wait', 'en', controller.signal);
+    await ready;
+    watcher.close();
+    await assert.rejects(lookup('busy', 'en'), /正在处理另一项请求/);
+    controller.abort();
+    await assert.rejects(pending, /处理已取消/);
+    const afterCancel = await lookup('retry', 'en');
+    assert.notEqual(afterCancel.pid, afterIdle.pid);
+    const alreadyCanceled = new AbortController();
+    alreadyCanceled.abort();
+    await assert.rejects(lookup('canceled-before-start', 'en', alreadyCanceled.signal), /处理已取消/);
+    assert.equal((await lookup('still-running', 'en')).pid, afterCancel.pid);
+
+    await assert.rejects(lookup('crash', 'en'), /本地处理失败/);
+    const afterCrash = await lookup('after-crash', 'en');
+    assert.notEqual(afterCrash.pid, afterCancel.pid);
+    await assert.rejects(lookup('stale', 'en'), /处理结果无法读取/);
+    const afterStale = await lookup('fresh', 'en');
+    assert.notEqual(afterStale.pid, afterCrash.pid);
+    stopLookupProcessor();
+    assert.notEqual((await lookup('after-shutdown', 'en')).pid, afterStale.pid);
+  } finally {
+    stopLookupProcessor();
+    if (originalPython === undefined) delete process.env.INFLOW_PYTHON;
+    else process.env.INFLOW_PYTHON = originalPython;
+    if (originalWorker === undefined) delete process.env.INFLOW_WORKER;
+    else process.env.INFLOW_WORKER = originalWorker;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('packaged lookup uses the executable and configured model path', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow packaged lookup '));
+  const cwd = process.cwd();
+  const worker = process.env.INFLOW_WORKER;
+  const python = process.env.INFLOW_PYTHON;
+  const models = process.env.INFLOW_MODELS_DIR;
+  try {
+    await writeFile(path.join(root, 'lookup'), `
+      require('node:readline').createInterface({ input: process.stdin }).on('line', line => {
+        const { id } = JSON.parse(line);
+        console.log(JSON.stringify({ id, result: { args: process.argv.slice(2), models: process.env.INFLOW_MODELS_DIR, encoding: process.env.PYTHONIOENCODING } }));
+      });
+    `);
+    process.chdir(root);
+    process.env.INFLOW_WORKER = process.execPath;
+    process.env.INFLOW_PYTHON = 'missing-python';
+    process.env.INFLOW_MODELS_DIR = 'models with spaces';
+    assert.deepEqual(await runProcessor('lookup', new AbortController().signal, undefined,
+      { surface: 'book', sentence: 'book', start: 0, language: 'en' }, root),
+    { args: ['--persistent'], models: path.join(root, 'models with spaces'), encoding: 'utf-8' });
+  } finally {
+    stopLookupProcessor();
+    process.chdir(cwd);
+    if (worker === undefined) delete process.env.INFLOW_WORKER; else process.env.INFLOW_WORKER = worker;
+    if (python === undefined) delete process.env.INFLOW_PYTHON; else process.env.INFLOW_PYTHON = python;
+    if (models === undefined) delete process.env.INFLOW_MODELS_DIR; else process.env.INFLOW_MODELS_DIR = models;
+    await rm(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 

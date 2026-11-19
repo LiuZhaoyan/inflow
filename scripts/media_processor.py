@@ -323,7 +323,22 @@ def setup_models_data(components=None):
 
 if __name__ == '__main__':
     try:
-        if sys.argv[1] == 'probe': output = probe(sys.argv[2])
+        if sys.argv[1] == 'lookup' and len(sys.argv) > 2 and sys.argv[2] == '--persistent':
+            for line in sys.stdin:
+                identifier = None
+                try:
+                    request = json.loads(line)
+                    identifier = request['id']
+                    with contextlib.redirect_stdout(sys.stderr):
+                        result = analyze_vocabulary(request['input'])
+                except ProcessingError as error:
+                    result = {'error': str(error)}
+                except Exception as error:
+                    print(type(error).__name__+': '+str(error), file=sys.stderr)
+                    result = {'error': '本地模型无法处理此媒体或文本，请确认模型安装完整，或换一段清晰的媒体重试。'}
+                print(json.dumps({'id': identifier, 'result': result}, ensure_ascii=False), flush=True)
+            sys.exit(0)
+        elif sys.argv[1] == 'probe': output = probe(sys.argv[2])
         elif sys.argv[1] == 'transcribe': output = transcribe(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'ko')
         elif sys.argv[1] == 'models': output = models_status()
         elif sys.argv[1] == 'setup':

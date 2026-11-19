@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 import zipfile
@@ -9,6 +11,28 @@ from media_processor import ProcessingError, analyze_vocabulary
 
 
 class VocabularyLookupTests(unittest.TestCase):
+    def test_lookup_worker_accepts_multiple_requests_and_keeps_legacy_one_shot(self):
+        worker = Path(__file__).with_name('media_processor.py')
+        korean = {'surface': '갔어요', 'sentence': '학교에 갔어요.', 'start': 4, 'language': 'ko'}
+        english = {'surface': 'children', 'sentence': 'The children play.', 'start': 4, 'language': 'en'}
+        requests = [korean, {'language': 'ja'}, korean, english, english]
+        lines = ''.join(json.dumps({'id': index, 'input': item}, ensure_ascii=False) + '\n' for index, item in enumerate(requests))
+        process = subprocess.run([sys.executable, str(worker), 'lookup', '--persistent'], input=lines,
+            capture_output=True, text=True, encoding='utf-8', timeout=90)
+        self.assertEqual(process.returncode, 0, process.stderr)
+        replies = [json.loads(line) for line in process.stdout.splitlines()]
+        self.assertEqual([reply['id'] for reply in replies], list(range(len(requests))))
+        self.assertEqual(replies[0]['result']['lemma'], '가다')
+        self.assertIn('error', replies[1]['result'])
+        self.assertEqual(replies[2]['result'], replies[0]['result'])
+        self.assertEqual(replies[3]['result']['lemma'], 'child')
+        self.assertEqual(replies[4]['result'], replies[3]['result'])
+
+        legacy = subprocess.run([sys.executable, str(worker), 'lookup'], input=json.dumps(korean, ensure_ascii=False),
+            capture_output=True, text=True, encoding='utf-8', timeout=90)
+        self.assertEqual(legacy.returncode, 0, legacy.stderr)
+        self.assertEqual(json.loads(legacy.stdout)['lemma'], '가다')
+
     def test_contextual_dictionary_forms(self):
         for surface, sentence, lemma in [
             ('갔어요', '어제 친구하고 학교에 갔어요.', '가다'),
