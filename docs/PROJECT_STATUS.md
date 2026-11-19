@@ -89,6 +89,10 @@ Story target words in the dropdown and sidebar open the corresponding Vocab entr
 
 ## 4. Processing and service boundaries
 
+The [learning reliability record](../.scratch/learning-reliability/spec.md) covers transcript replacement, media selection and local processing. Replacing a transcript requires confirmation, and a failed library refresh can be retried independently. Opening media validates the source before saving the selection. Editing a vocabulary draft cancels a pending switch.
+
+Settings detects interrupted model preparation and offers repair. Sequential word lookups reuse one local parser process until it is idle. Notebook reads scan historical stories once, and target selection writes return only the accepted IDs.
+
 Transcription and sentence segmentation run locally. Listen translation uses the cloud on explicit request, with an explicitly selected local reference fallback. The current processing path is:
 
 ```text

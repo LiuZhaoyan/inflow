@@ -55,6 +55,12 @@ English meaning groups use local grammatical analysis to preserve phrases or cla
 
 Processing failures should preserve the original media and provide a retry path. Reopening already processed material should reuse saved results rather than requiring duplicate processing.
 
+Before replacing an existing transcript, confirm that its vocabulary source links and positions, cached sentence translations and meaning-group masks will be removed. Vocabulary entries and notes are retained. If the replacement succeeds and a subsequent library refresh fails, offer to refresh the library.
+
+Opening media from the library or a vocabulary source keeps the current selection until the requested media can be accepted. A newer navigation or an intervening vocabulary edit cancels the pending switch. Restart restores the most recently accepted media.
+
+Processing model settings identify incomplete components and offer repair. Successfully prepared resources remain usable after restart without another download.
+
 The first release does not require a professional subtitle editor or a separate subtitle-import workflow. Lightweight transcript/timing correction may be added later.
 
 ## 5. Intensive listening

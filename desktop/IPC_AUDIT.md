@@ -1,14 +1,15 @@
 # Electron IPC boundary audit
 
-Scope: `main.ts`, `preload.cjs`, `src/listening/desktop.ts`, host operations and renderer consumers. The original boundary audit changed no UI, schema, dependencies or product features; the guarded Story acceptance addition is recorded below.
+Scope: `main.ts`, `preload.cjs`, `src/listening/desktop.ts`, host operations and renderer consumers. The tables include subsequent changes for guarded media and Story selection.
 
 ## Interface and existing protections
 
-The preload exposes named Promise-returning methods and one synchronous `acceptArtifact` method on `window.inflow`. Each uses only its fixed `inflow:<method>` channel; it exposes no Electron objects, arbitrary channel access, callbacks or subscriptions. `DesktopBridge` describes the same surface. Main checks the exact window, its main frame and the frame URL before invoking any operation, including synchronous acceptance.
+The preload exposes named Promise-returning methods and synchronous media and Story selection on `window.inflow`. Each uses only its fixed `inflow:<method>` channel; it exposes no Electron objects, arbitrary channel access, callbacks or subscriptions. `DesktopBridge` describes the same surface. Main checks the exact window, its main frame and the frame URL before invoking any operation, including synchronous acceptance.
 
 | Methods | Renderer input and host action | Validation / ownership |
 | --- | --- | --- |
-| `list`, `restore`, `open` | Optional media ID; read library and select active media | IDs resolve through host-owned SQLite records |
+| `list`, `restore`, `readMedia`, `open` | List or restore media, read a candidate by ID, or open and select it | IDs resolve through host-owned SQLite records |
+| `acceptMedia` | Commit the active media after checking the navigation and any source sentence | The trusted renderer supplies the media ID and optional segment ID. The host validates the source before updating the durable selection. |
 | `importMedia`, `relink` | No renderer path; relink takes a media ID | Native file picker; host checks extension, size, hash, duration and existing identity |
 | `transcribe`, `translate` | Media/sentence identity, job ID, translation options | Host-owned sentence text; typed option checks, job tracking, result validation and atomic persistence |
 | `modelStatus`, `setupModels`, `cancel` | Setup job ID and optional components; cancel job ID | Fixed processor modes; setup list and job checks; cancellation signals |
@@ -23,7 +24,7 @@ The preload exposes named Promise-returning methods and one synchronous `acceptA
 
 Consumers are `LearningWorkspace`, `SettingsDialog`, `useLearningArtifacts`, `VocabularyNotebook`, and `VocabularySelection`. They use the named bridge methods; cancellation uses generated job IDs. Omitted or empty setup component lists intentionally retain the worker's existing install-all behavior.
 
-The window uses context isolation, sandboxing and disabled Node integration. New windows and permission requests are denied; navigation is restricted. The custom protocol checks host/method, confines renderer paths, resolves media by saved ID and sets a CSP on renderer responses. IPC arguments are still untrusted despite TypeScript types; domain operations supply most validation. Worker execution uses `execFile`, not a shell.
+The window uses context isolation, sandboxing and disabled Node integration. New windows and permission requests are denied; navigation is restricted. The custom protocol checks host/method, confines renderer paths, resolves media by saved ID and sets a CSP on renderer responses. IPC arguments are still untrusted despite TypeScript types; domain operations supply most validation. One-shot processor commands use `execFile` and the persistent lookup process uses `spawn`. Both receive a fixed command and an argument array.
 
 ## Fixed findings
 

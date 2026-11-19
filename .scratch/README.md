@@ -6,6 +6,8 @@ Current behavior: [Project Status](../docs/PROJECT_STATUS.md). Future priorities
 
 ## Current development
 
+[Learning reliability and vocabulary latency](learning-reliability/spec.md) records the five changes and their acceptance checks.
+
 [Frontend visual system and component consistency](frontend-design-system/spec.md) now includes the owner-requested October 19 refinement: Story control consistency, clearer import/processing states, responsive reading space and vocabulary hierarchy. The [verification record](frontend-design-system/refinement-verification.md) records isolated Electron checks and screenshots at the agreed window sizes. Owner visual approval and installed-package checks remain pending. Earlier temporary captures were removed; the new reproducible harness uses sample data and a separate profile.
 
 [Story navigation consistency and unified notices](story-navigation-notices/acceptance.md) passed source-checkout acceptance; its [implementation task](story-navigation-notices/issues/01-implement-navigation-and-notices.md) is resolved.
