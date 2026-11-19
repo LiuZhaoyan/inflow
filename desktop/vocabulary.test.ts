@@ -67,13 +67,21 @@ test('reprocessing clears source contexts while collection, distinct senses, cor
     assert.notEqual(illness.id, first.id);
     const manual = app.saveVocabulary({ lemma: '배', meaningZh: '船' });
     assert.deepEqual(manual.contexts, []);
-    app.selectVocabulary([first.id, manual.id]);
+    assert.deepEqual(app.selectVocabulary([first.id, manual.id]), [first.id, manual.id]);
     const corrected = app.saveVocabulary({ id: first.id, lemma: '걸리다', meaningZh: '需要（时间）' });
     assert.equal(corrected.selected, true); assert.deepEqual(corrected.contexts, again.contexts);
     const before = app.listVocabulary();
     assert.throws(() => app.saveVocabulary({ id: illness.id, lemma: corrected.lemma, meaningZh: corrected.meaningZh }), /已有同词同义/);
     assert.throws(() => app.selectVocabulary([manual.id, 'unknown']), /不存在/);
+    assert.throws(() => app.selectVocabulary([manual.id, 1 as unknown as string]), /编号/);
     assert.deepEqual(app.listVocabulary(), before);
+    const selectionDb = new DatabaseSync(path.join(library, 'learning.sqlite'));
+    try {
+      selectionDb.exec("CREATE TRIGGER reject_target BEFORE UPDATE ON vocabulary WHEN NEW.selected = 1 BEGIN SELECT RAISE(ABORT, 'selection failed'); END");
+      assert.throws(() => app.selectVocabulary([illness.id]), /selection failed/);
+      assert.deepEqual(app.listVocabulary(), before);
+      selectionDb.exec('DROP TRIGGER reject_target');
+    } finally { selectionDb.close(); }
 
     result = [{ start: 0.1, end: 2.5, text: '새로운 원문입니다.', groups: ['새로운 원문입니다.'] }];
     await app.transcribe(media.id, 'reprocess');

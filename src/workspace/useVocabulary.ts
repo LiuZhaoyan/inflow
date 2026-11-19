@@ -67,10 +67,16 @@ export function useVocabulary(enabled: boolean) {
     }
   }, [publish]);
 
-  const save = useCallback((input: SaveVocabularyInput) => mutate(window.inflow!.saveVocabulary(input), (previous, saved) =>
-    previous.some(entry => entry.id === saved.id) ? previous.map(entry => entry.id === saved.id ? saved : entry) : [saved, ...previous]), [mutate]);
+  const save = useCallback((input: SaveVocabularyInput) => mutate(window.inflow!.saveVocabulary(input), (previous, saved) => {
+    const existing = previous.find(entry => entry.id === saved.id);
+    const next = existing ? { ...saved, selected: existing.selected } : saved;
+    return existing ? previous.map(entry => entry.id === saved.id ? next : entry) : [next, ...previous];
+  }), [mutate]);
   const remove = useCallback((id: string) => mutate(window.inflow!.deleteVocabulary(id), previous => previous.filter(entry => entry.id !== id)), [mutate]);
-  const select = useCallback((ids: string[]) => mutate(window.inflow!.selectVocabulary(ids), (_previous, next) => next), [mutate]);
+  const select = useCallback((ids: string[]) => mutate(window.inflow!.selectVocabulary(ids), (previous, accepted) => {
+    const selected = new Set(accepted);
+    return previous.map(entry => entry.selected === selected.has(entry.id) ? entry : { ...entry, selected: selected.has(entry.id) });
+  }), [mutate]);
   const refresh = useCallback(() => { void reload().catch(() => {}); }, [reload]);
 
   return { entries, loaded, loading, loadError, reload, refresh, save, remove, select };

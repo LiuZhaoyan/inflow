@@ -94,6 +94,35 @@ test('historical target stories provide one context per story without rewriting 
   } finally { app.close(); await rm(root, { recursive: true, force: true }); }
 });
 
+test('notebook and single-entry reads retain multiple historical targets and occurrence offsets', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'inflow multiple story targets '));
+  const app = new DesktopOperations(root, async () => { throw new Error('Reading stories must not process media'); });
+  const db = new DatabaseSync(path.join(root, 'learning.sqlite'));
+  try {
+    const run = app.saveVocabulary({ language: 'en', lemma: 'run', meaningZh: '跑' });
+    const walk = app.saveVocabulary({ language: 'en', lemma: 'walk', meaningZh: '走' });
+    const absent = app.saveVocabulary({ language: 'en', lemma: 'jump', meaningZh: '跳' });
+    const story = { title: 'Older story', targets: [{ id: run.id, lemma: 'old run' }, { id: walk.id, lemma: 'old walk' }],
+      sentences: [{ parts: [{ text: '😀 ', targetId: null }, { text: 'run', targetId: run.id }, { text: ' and ', targetId: null },
+        { text: 'walk', targetId: walk.id }, { text: ' ', targetId: null }, { text: 'running', targetId: run.id },
+        { text: ' ', targetId: null }, { text: 'walk', targetId: walk.id }, { text: ' jump', targetId: absent.id }] },
+      { parts: [{ text: 'walk', targetId: walk.id }] }] };
+    db.prepare('INSERT INTO artifacts VALUES (?, ?)').run('first', JSON.stringify(story));
+    db.prepare('INSERT INTO artifacts VALUES (?, ?)').run('legacy', JSON.stringify({ title: 'Legacy', sentences: [] }));
+    db.prepare('INSERT INTO artifacts VALUES (?, ?)').run('second', JSON.stringify({ ...story, title: 'Second', targets: [story.targets[1]] }));
+
+    const entries = app.listVocabulary();
+    assert.deepEqual(entries.map(entry => entry.id), [absent.id, walk.id, run.id]);
+    assert.deepEqual(entries[0].contexts, []);
+    assert.deepEqual(entries[1].contexts.map(context => [context.source.type === 'artifact' && context.source.artifactId, context.surfaceStarts]),
+      [['first', [11, 24]], ['second', [11, 24]]]);
+    assert.deepEqual(entries[2].contexts.map(context => [context.source.type === 'artifact' && context.source.artifactId, context.surface, context.surfaceStarts]),
+      [['first', 'run', [3]]]);
+    assert.deepEqual(app.saveVocabulary({ id: walk.id, language: 'en', lemma: 'walk', meaningZh: '走' }), entries[1]);
+    assert.deepEqual(app.openArtifact('first').targets, story.targets);
+  } finally { db.close(); app.close(); await rm(root, { recursive: true, force: true }); }
+});
+
 test('two artifact cycles preserve snapshots and source relationships across failure, retry and restart', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'inflow artifacts 韩语 '));
   let mode = 'valid';

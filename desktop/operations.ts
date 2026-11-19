@@ -13,6 +13,7 @@ import type { ApplicationSettings, LearningArtifact, LearningState, LearningStat
 
 type Processor = (mode: 'probe' | 'transcribe' | 'translate' | 'lookup', signal: AbortSignal, file?: string, text?: string | LookupVocabularyInput, language?: SourceLanguage) => Promise<unknown>;
 type MediaRow = { id: string; name: string; filename: string; hash: string; learning: string; language: SourceLanguage };
+type VocabularyRow = Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number };
 const initialLearning: LearningState = { position: 0, index: 0, rate: 1, loop: false, duration: 0, mode: 'full' };
 
 export class DesktopOperations {
@@ -304,10 +305,14 @@ export class DesktopOperations {
 
   private vocabulary(id: string): VocabularyEntry {
     if (typeof id !== 'string') throw new Error('词汇编号无效。');
-    const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, note, selected FROM vocabulary WHERE id = ?').get(id) as Omit<VocabularyEntry, 'contexts' | 'selected'> & { selected: number } | undefined;
+    const entry = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, note, selected FROM vocabulary WHERE id = ?').get(id) as VocabularyRow | undefined;
     if (!entry) throw new Error('词汇不存在。');
+    return this.vocabularyEntry(entry, this.vocabularyContexts(id));
+  }
+
+  private vocabularyEntry(entry: VocabularyRow, allContexts: VocabularyContext[]): VocabularyEntry {
     const stories = new Set<string>();
-    const contexts = this.vocabularyContexts(id).filter(context => {
+    const contexts = allContexts.filter(context => {
       if (context.source.type !== 'artifact') return true;
       if (stories.has(context.source.artifactId)) return false;
       stories.add(context.source.artifactId);
@@ -317,48 +322,88 @@ export class DesktopOperations {
     return { ...details, ...(note ? { note } : {}), selected: entry.selected === 1, contexts };
   }
 
-  private vocabularyContexts(id: string): VocabularyContext[] {
-    const sources = this.db.prepare(`SELECT o.id, o.segment_id AS segmentId, o.surface, o.sentence,
+  private collectedVocabularyContexts(id?: string): Map<string, VocabularyContext[]> {
+    const where = id === undefined ? '' : 'WHERE o.entry_id = ?';
+    const mediaQuery = this.db.prepare(`SELECT o.entry_id AS entryId, o.id, o.segment_id AS segmentId, o.surface, o.sentence,
       s.media_id AS mediaId, m.name AS name, json_extract(s.content, '$.start') AS start
       FROM vocabulary_sources o JOIN segments s ON s.id = o.segment_id JOIN media m ON m.id = s.media_id
-      WHERE o.entry_id = ? ORDER BY o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<MediaVocabularySource, 'type'>)[];
-    const artifactSources = this.db.prepare(`SELECT o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS name,
+      ${where} ORDER BY o.rowid`);
+    const artifactQuery = this.db.prepare(`SELECT o.entry_id AS entryId, o.id, o.artifact_id AS artifactId, json_extract(a.content, '$.title') AS name,
       o.sentence_index AS sentenceIndex, o.surface, o.sentence
-      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id WHERE o.entry_id = ? ORDER BY o.sentence_index, o.rowid`).all(id) as (Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<ArtifactVocabularySource, 'type'>)[];
-    const contexts: VocabularyContext[] = [
-      ...sources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'media' as const, ...source } })),
-      ...artifactSources.map(({ id, surface, sentence, ...source }) => ({ id, surface, sentence, source: { type: 'artifact' as const, ...source } })),
-    ];
-    for (const context of contexts) {
-      const positions = this.db.prepare('SELECT start FROM vocabulary_positions WHERE context_id = ? ORDER BY start').all(context.id) as { start: number }[];
-      if (positions.length) context.surfaceStarts = positions.map(position => position.start);
+      FROM artifact_vocabulary_sources o JOIN artifacts a ON a.id = o.artifact_id ${where} ORDER BY o.sentence_index, o.rowid`);
+    const sources = (id === undefined ? mediaQuery.all() : mediaQuery.all(id)) as ({ entryId: string } & Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<MediaVocabularySource, 'type'>)[];
+    const artifactSources = (id === undefined ? artifactQuery.all() : artifactQuery.all(id)) as ({ entryId: string } & Pick<VocabularyContext, 'id' | 'surface' | 'sentence'> & Omit<ArtifactVocabularySource, 'type'>)[];
+    const positionQuery = this.db.prepare(`SELECT context_id AS contextId, start FROM vocabulary_positions ${id === undefined ? '' : `WHERE context_id IN (
+      SELECT id FROM vocabulary_sources WHERE entry_id = ? UNION SELECT id FROM artifact_vocabulary_sources WHERE entry_id = ?
+    )`} ORDER BY start`);
+    const positions = (id === undefined ? positionQuery.all() : positionQuery.all(id, id)) as { contextId: string; start: number }[];
+    const offsets = new Map<string, number[]>();
+    for (const position of positions) {
+      if (!offsets.has(position.contextId)) offsets.set(position.contextId, []);
+      offsets.get(position.contextId)!.push(position.start);
     }
-    const generated: VocabularyContext[] = [];
-    const artifacts = this.db.prepare(`SELECT id, content FROM artifacts WHERE EXISTS (
-      SELECT 1 FROM json_each(artifacts.content, '$.targets') WHERE json_extract(value, '$.id') = ?
-    ) ORDER BY rowid`).all(id) as { id: string; content: string }[];
-    for (const row of artifacts) {
-      const artifact = JSON.parse(row.content) as LearningArtifact;
-      const sentenceIndex = artifact.sentences.findIndex(sentence => sentence.parts.some(part => part.targetId === id));
-      if (sentenceIndex < 0) continue;
-      const parts = artifact.sentences[sentenceIndex].parts;
-      const surface = parts.find(part => part.targetId === id)!.text;
-      const surfaceStarts: number[] = [];
-      let start = 0;
-      for (const part of parts) {
-        if (part.targetId === id && part.text === surface) surfaceStarts.push(start);
-        start += part.text.length;
-      }
-      generated.push({ id: `target:${row.id}:${id}`, surface, surfaceStarts, sentence: parts.map(part => part.text).join(''),
-        source: { type: 'artifact', artifactId: row.id, sentenceIndex, name: artifact.title } });
+    const collected = new Map<string, VocabularyContext[]>();
+    const add = (entryId: string, context: VocabularyContext) => {
+      const starts = offsets.get(context.id);
+      if (starts?.length) context.surfaceStarts = starts;
+      if (!collected.has(entryId)) collected.set(entryId, []);
+      collected.get(entryId)!.push(context);
+    };
+    for (const { entryId, id, surface, sentence, ...source } of sources) add(entryId, { id, surface, sentence, source: { type: 'media', ...source } });
+    for (const { entryId, id, surface, sentence, ...source } of artifactSources) add(entryId, { id, surface, sentence, source: { type: 'artifact', ...source } });
+    return collected;
+  }
+
+  private vocabularyContexts(id: string, generated?: VocabularyContext[], collected?: VocabularyContext[]): VocabularyContext[] {
+    const contexts = collected ?? this.collectedVocabularyContexts(id).get(id) ?? [];
+    if (!generated) {
+      const artifacts = this.db.prepare(`SELECT id, content FROM artifacts WHERE EXISTS (
+        SELECT 1 FROM json_each(artifacts.content, '$.targets') WHERE json_extract(value, '$.id') = ?
+      ) ORDER BY rowid`).all(id) as { id: string; content: string }[];
+      generated = this.generatedVocabularyContexts(artifacts, new Set([id])).get(id) ?? [];
     }
     // Keep every collected occurrence available to lookup; notebook cards collapse each story.
     return [...contexts.filter(context => context.source.type === 'media'), ...generated,
       ...contexts.filter(context => context.source.type === 'artifact')];
   }
 
+  private generatedVocabularyContexts(artifacts: { id: string; content: string }[], ids: Set<string>): Map<string, VocabularyContext[]> {
+    const generated = new Map<string, VocabularyContext[]>();
+    for (const row of artifacts) {
+      const artifact = JSON.parse(row.content) as LearningArtifact;
+      const targets = new Set((artifact.targets ?? []).filter(target => target && ids.has(target.id)).map(target => target.id));
+      if (!targets.size) continue;
+      for (let sentenceIndex = 0; sentenceIndex < artifact.sentences.length && targets.size; sentenceIndex++) {
+        const parts = artifact.sentences[sentenceIndex].parts;
+        const matches = new Map<string, { surface: string; surfaceStarts: number[] }>();
+        let start = 0;
+        for (const part of parts) {
+          if (part.targetId && targets.has(part.targetId)) {
+            if (!matches.has(part.targetId)) matches.set(part.targetId, { surface: part.text, surfaceStarts: [] });
+            const match = matches.get(part.targetId)!;
+            if (part.text === match.surface) match.surfaceStarts.push(start);
+          }
+          start += part.text.length;
+        }
+        const sentence = matches.size ? parts.map(part => part.text).join('') : '';
+        for (const [id, match] of matches) {
+          if (!generated.has(id)) generated.set(id, []);
+          generated.get(id)!.push({ id: `target:${row.id}:${id}`, ...match, sentence,
+            source: { type: 'artifact', artifactId: row.id, sentenceIndex, name: artifact.title } });
+          targets.delete(id);
+        }
+      }
+    }
+    return generated;
+  }
+
   listVocabulary(): VocabularyEntry[] {
-    return (this.db.prepare('SELECT id FROM vocabulary ORDER BY rowid DESC').all() as { id: string }[]).map(entry => this.vocabulary(entry.id));
+    const entries = this.db.prepare('SELECT id, language, lemma, meaning AS meaningZh, note, selected FROM vocabulary ORDER BY rowid DESC').all() as VocabularyRow[];
+    if (!entries.length) return [];
+    const artifacts = this.db.prepare('SELECT id, content FROM artifacts ORDER BY rowid').all() as { id: string; content: string }[];
+    const generated = this.generatedVocabularyContexts(artifacts, new Set(entries.map(entry => entry.id)));
+    const collected = this.collectedVocabularyContexts();
+    return entries.map(entry => this.vocabularyEntry(entry, this.vocabularyContexts(entry.id, generated.get(entry.id) ?? [], collected.get(entry.id) ?? [])));
   }
 
   listArtifactVocabulary(id: string): VocabularyEntry[] {
@@ -436,17 +481,21 @@ export class DesktopOperations {
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
-  selectVocabulary(ids: string[]): VocabularyEntry[] {
+  selectVocabulary(ids: string[]): string[] {
     if (!Array.isArray(ids) || ids.length > 20 || new Set(ids).size !== ids.length) throw new Error('最多选择 20 个不同词条。');
-    ids.forEach(id => this.vocabulary(id));
     this.db.exec('BEGIN');
     try {
-      this.db.prepare('UPDATE vocabulary SET selected = 0').run();
+      const existing = this.db.prepare('SELECT 1 FROM vocabulary WHERE id = ?');
+      for (const id of ids) {
+        if (typeof id !== 'string') throw new Error('词汇编号无效。');
+        if (!existing.get(id)) throw new Error('词汇不存在。');
+      }
+      this.db.prepare('UPDATE vocabulary SET selected = 0 WHERE selected <> 0').run();
       const select = this.db.prepare('UPDATE vocabulary SET selected = 1 WHERE id = ?');
       ids.forEach(id => select.run(id));
       this.db.exec('COMMIT');
     } catch (error) { this.db.exec('ROLLBACK'); throw error; }
-    return this.listVocabulary();
+    return ids;
   }
 
   private artifact(id: string): LearningArtifact {

@@ -28,7 +28,7 @@ function createHost() {
     getSettings: vi.fn().mockResolvedValue({ videoMaskColor: '#000000', interfaceLocale: 'en' }),
     credentialStatus: vi.fn().mockResolvedValue({ configured: false }),
     listVocabulary: vi.fn().mockResolvedValue(words),
-    selectVocabulary: vi.fn().mockResolvedValue(words),
+    selectVocabulary: vi.fn().mockImplementation(async ids => ids),
     saveVocabulary: vi.fn().mockResolvedValue({ ...words[0], note: 'Personal reminder' }),
     listArtifacts: vi.fn().mockResolvedValue([currentStory, pendingStory]),
     restoreArtifact: vi.fn().mockResolvedValue(currentStory),

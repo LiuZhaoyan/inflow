@@ -47,7 +47,7 @@ export type DesktopBridge = {
   glossVocabulary(input: LookupVocabularyInput & { lemma: string }, job: string): Promise<string>;
   saveVocabulary(input: SaveVocabularyInput): Promise<VocabularyEntry>;
   deleteVocabulary(id: string): Promise<void>;
-  selectVocabulary(ids: string[]): Promise<VocabularyEntry[]>;
+  selectVocabulary(ids: string[]): Promise<string[]>;
   credentialStatus(): Promise<CredentialStatus>;
   configureCredential(key: string): Promise<CredentialStatus>;
   modelStatus(): Promise<ModelStatus>;

@@ -110,7 +110,7 @@
     },
     async selectVocabulary(ids) {
       for (const entry of vocabulary) entry.selected = ids.includes(entry.id);
-      return vocabulary.map(clone);
+      return ids;
     },
     async credentialStatus() { return { configured: false }; },
     async configureCredential() { return { configured: false }; },

@@ -69,3 +69,31 @@ test('a read interrupted by a successful write retries without losing the note o
   expect(result.current.loading).toBe(false);
   expect(result.current.loadError).toBe('');
 });
+
+test.each(['selection first', 'save first'])('selection and save retain each other when %s', async order => {
+  const selection = deferred<string[]>();
+  const save = deferred<VocabularyEntry>();
+  const unchanged = { ...word, id: 'other', selected: false, note: 'Keep this note' };
+  window.inflow = {
+    listVocabulary: vi.fn().mockResolvedValue([word, unchanged]),
+    selectVocabulary: vi.fn().mockReturnValue(selection.promise),
+    saveVocabulary: vi.fn().mockReturnValue(save.promise),
+  } as unknown as DesktopBridge;
+  const { result } = renderHook(() => useVocabulary(true));
+  await act(async () => {});
+  const saved: VocabularyEntry = { ...word, note: 'New note', contexts: [{
+    id: 'source', surface: 'home', sentence: 'I walk home.',
+    source: { type: 'artifact', artifactId: 'story', sentenceIndex: 0, name: 'Walk' },
+  }] };
+  let selecting!: Promise<unknown>, saving!: Promise<unknown>;
+  act(() => { selecting = result.current.select([]); saving = result.current.save(saved); });
+  if (order === 'selection first') {
+    await act(async () => { selection.resolve([]); await selecting; });
+    await act(async () => { save.resolve(saved); await saving; });
+  } else {
+    await act(async () => { save.resolve(saved); await saving; });
+    await act(async () => { selection.resolve([]); await selecting; });
+  }
+  expect(result.current.entries).toEqual([{ ...saved, selected: false }, unchanged]);
+  expect(result.current.entries[1]).toBe(unchanged);
+});
