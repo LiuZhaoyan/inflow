@@ -289,22 +289,20 @@ def translate(text, language='ko'):
 
 
 def find_translation_model(source, target):
-    for metadata in _models_root().glob('*/metadata.json'):
-        try: data = json.loads(metadata.read_text())
-        except (OSError, ValueError): continue
-        if data.get('from_code') == source and data.get('to_code') == target: return metadata.parent
-    return None
+    import setup_models
+    return setup_models.find_translation_model(_models_root(), source, target)
 
 
 def models_status():
+    import setup_models
     root = _models_root()
     return {
-        'whisper': (root/'whisper-turbo'/'model.bin').is_file(),
+        'whisper': setup_models.whisper_ready(root),
         'translate': {
             'ko-en': find_translation_model('ko', 'en') is not None,
             'en-zh': find_translation_model('en', 'zh') is not None,
         },
-        'englishParser': (root/'english-parser'/'en_core_web_sm'/'en_core_web_sm-3.8.0'/'config.cfg').is_file(),
+        'englishParser': setup_models.english_ready(root),
     }
 
 

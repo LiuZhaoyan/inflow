@@ -16,23 +16,139 @@ PACKAGES = [
 ]
 ENGLISH_PIPELINE_URL = 'https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl'
 ENGLISH_PIPELINE_SHA256 = '1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85'
+INCOMPLETE = '.inflow-incomplete'
+# shortcut: size checks miss same-size corruption; add digests if stronger checks are needed.
+WHISPER_MODEL_BYTES = 1617884929
+# Pinned translation package file sizes in unpacked bytes.
+TRANSLATION_PACKAGE_BYTES = {
+    ('ko_en', 'ko', 'en', '1.1'): {
+        'model/model.bin': 132573333, 'sentencepiece.model': 775609, 'model/shared_vocabulary.txt': 395408,
+    },
+    ('translate-en_zh-1_9', 'en', 'zh', '1.9'): {
+        'model/model.bin': 82713318, 'sentencepiece.model': 806370, 'model/shared_vocabulary.json': 1367577,
+    },
+}
+WHISPER_FILES = ['config.json', 'model.bin', 'tokenizer.json', 'preprocessor_config.json']
+ENGLISH_FILES = [
+    'config.cfg', 'meta.json', 'tokenizer', 'attribute_ruler/patterns',
+    'lemmatizer/lookups/lookups.bin', 'ner/cfg', 'ner/model', 'ner/moves',
+    'parser/cfg', 'parser/model', 'parser/moves', 'tagger/cfg', 'tagger/model',
+    'tok2vec/cfg', 'tok2vec/model', 'vocab/strings.json', 'vocab/lookups.bin',
+    'vocab/vectors', 'vocab/vectors.cfg', 'vocab/key2row',
+]
+ENGLISH_MODEL_BYTES = {
+    'tokenizer': 77066, 'lemmatizer/lookups/lookups.bin': 972893,
+    'ner/model': 6154601, 'parser/model': 319909, 'tagger/model': 19829, 'tok2vec/model': 6269370,
+}
+
+
+def _nonempty(path):
+    try: return path.is_file() and path.stat().st_size > 0
+    except OSError: return False
+
+
+def _size(path, expected):
+    try: return path.is_file() and path.stat().st_size == expected
+    except OSError: return False
+
+
+def _json(path):
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, UnicodeError):
+        return {}
+
+
+def _ready(folder, files, ignore_marker=False):
+    return (ignore_marker or not (folder/INCOMPLETE).exists()) and all(_nonempty(folder/name) for name in files)
+
+
+def whisper_ready(root, ignore_marker=False):
+    folder = Path(root)/'whisper-turbo'
+    return (_ready(folder, WHISPER_FILES, ignore_marker)
+            and _size(folder/'model.bin', WHISPER_MODEL_BYTES)
+            and all(_json(folder/name) for name in ['config.json', 'tokenizer.json', 'preprocessor_config.json'])
+            and any(_nonempty(folder/name) for name in ['vocabulary.json', 'vocabulary.txt']))
+
+
+def english_ready(root, ignore_marker=False):
+    folder = Path(root)/'english-parser'/'en_core_web_sm'/'en_core_web_sm-3.8.0'
+    return (_ready(folder, ENGLISH_FILES, ignore_marker)
+            and all(_size(folder/name, size) for name, size in ENGLISH_MODEL_BYTES.items())
+            and _json(folder/'meta.json').get('version') == '3.8.0')
+
+
+def translation_ready(folder, source, target, ignore_marker=False):
+    metadata = _json(folder/'metadata.json')
+    vocabulary = folder/'model'
+    expected = TRANSLATION_PACKAGE_BYTES.get((folder.name, source, target, metadata.get('package_version')), {})
+    return (_ready(folder, ['metadata.json', 'sentencepiece.model', 'model/model.bin'], ignore_marker)
+            and metadata.get('from_code') == source and metadata.get('to_code') == target
+            and all(_size(folder/name, size) for name, size in expected.items())
+            and (any(_nonempty(vocabulary/('shared_vocabulary.'+ext)) for ext in ['json', 'txt'])
+                 or all(any(_nonempty(vocabulary/(name+'_vocabulary.'+ext)) for ext in ['json', 'txt'])
+                        for name in ['source', 'target'])))
+
+
+def find_translation_model(root, source, target):
+    for metadata in Path(root).glob('*/metadata.json'):
+        if translation_ready(metadata.parent, source, target): return metadata.parent
+    return None
+
+
+def _mark(folder):
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder/INCOMPLETE).touch()
+
+
+def _reuse(folder, complete, validate):
+    _mark(folder)
+    if complete:
+        try: validate()
+        except Exception: return False
+        (folder/INCOMPLETE).unlink()
+        return True
+    return False
+
+
+def _finish(folder, complete, validate, message):
+    if not complete: raise ValueError(message)
+    validate()
+    (folder/INCOMPLETE).unlink()
+
+
+def _validate_whisper(folder):
+    from faster_whisper import WhisperModel
+    WhisperModel(str(folder), device='cpu', compute_type='int8', cpu_threads=4, local_files_only=True)
+
+
+def _validate_translation(folder, source):
+    import ctranslate2
+    import sentencepiece
+    tokenizer = sentencepiece.SentencePieceProcessor(model_file=str(folder/'sentencepiece.model'))
+    translator = ctranslate2.Translator(str(folder/'model'), device='cpu', compute_type='int8', inter_threads=1, intra_threads=4)
+    tokens = tokenizer.encode('안녕하세요.' if source == 'ko' else 'Hello.', out_type=str)
+    result = translator.translate_batch([tokens], beam_size=4, max_decoding_length=32)[0].hypotheses[0]
+    if not tokenizer.decode(result).strip(): raise ValueError('Translation model validation failed')
+
+
+def _validate_english(folder):
+    import spacy
+    document = spacy.load(str(folder))('The children ran.')
+    if not any(token.text == 'children' and token.lemma_ == 'child' for token in document):
+        raise ValueError('English parser validation failed')
 
 
 def install_english_parser(models_dir):
-    import spacy
     root = Path(models_dir)
     wheel = root/'downloads'/'en_core_web_sm-3.8.0-py3-none-any.whl'
     destination = root/'english-parser'
     model = destination/'en_core_web_sm'/'en_core_web_sm-3.8.0'
-    metadata = model/'meta.json'
-    if (model/'config.cfg').is_file() and metadata.is_file():
-        try:
-            if json.loads(metadata.read_text(encoding='utf-8')).get('version') == '3.8.0':
-                spacy.load(str(model))
-                print('English parser already installed', flush=True)
-                return
-        except (OSError, ValueError):
-            pass  # An interrupted extraction must be repairable by rerunning preparation.
+    complete = english_ready(root, ignore_marker=True)
+    if _reuse(model, complete, lambda: _validate_english(model)):
+        print('English parser already installed', flush=True)
+        return
     wheel.parent.mkdir(parents=True, exist_ok=True)
     if not wheel.is_file() or hashlib.sha256(wheel.read_bytes()).hexdigest() != ENGLISH_PIPELINE_SHA256:
         print('Downloading pinned spaCy English parser en_core_web_sm 3.8.0', flush=True)
@@ -45,36 +161,52 @@ def install_english_parser(models_dir):
             if not (destination/item.filename).resolve().is_relative_to(destination.resolve()):
                 raise ValueError('Unsafe English parser archive path')
         archive.extractall(destination)
-    if not (model/'config.cfg').is_file() or json.loads(metadata.read_text(encoding='utf-8')).get('version') != '3.8.0':
-        raise ValueError('English parser archive is incomplete or has an unexpected version')
-    spacy.load(str(model))
+    _finish(model, english_ready(root, ignore_marker=True), lambda: _validate_english(model),
+            'English parser archive is incomplete or has an unexpected version')
     print('English parser ready for offline processing.', flush=True)
 
 
 def install_whisper(models_dir=None):
     root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
     root.mkdir(parents=True, exist_ok=True)
-    if (root/'whisper-turbo'/'model.bin').is_file():
+    model = root/'whisper-turbo'
+    complete = whisper_ready(root, ignore_marker=True)
+    if _reuse(model, complete, lambda: _validate_whisper(model)):
         print('Whisper large-v3-turbo already installed', flush=True)
         return
+    missing = [name for name in WHISPER_FILES if not _nonempty(model/name)]
+    if not _size(model/'model.bin', WHISPER_MODEL_BYTES) and 'model.bin' not in missing: missing.append('model.bin')
+    missing += [name for name in ['config.json', 'tokenizer.json', 'preprocessor_config.json']
+                if name not in missing and not _json(model/name)]
+    if not any(_nonempty(model/name) for name in ['vocabulary.json', 'vocabulary.txt']): missing.append('vocabulary.json')
     print('Downloading Whisper large-v3-turbo from huggingface.co (~1.6 GB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
-    snapshot_download('dropbox-dash/faster-whisper-large-v3-turbo', revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf', local_dir=str(root/'whisper-turbo'), allow_patterns=['config.json','model.bin','tokenizer.json','vocabulary.*','preprocessor_config.json','README.md'])
+    snapshot_download('dropbox-dash/faster-whisper-large-v3-turbo', revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf', local_dir=str(model), allow_patterns=missing or WHISPER_FILES + ['vocabulary.*'], force_download=True)
+    _finish(model, whisper_ready(root, ignore_marker=True), lambda: _validate_whisper(model), 'Whisper model files are incomplete')
 
 
 def install_translate(models_dir=None):
     root = Path(models_dir or os.environ.get('INFLOW_MODELS_DIR', DEFAULT_ROOT))
     root.mkdir(parents=True, exist_ok=True)
     for name, folder, revision, digest in PACKAGES:
-        if (root/folder/'model/model.bin').exists() and (root/folder/'sentencepiece.model').exists():
+        source, target = name.split('-')[0].split('_')
+        model = find_translation_model(root, source, target) or root/folder
+        complete = translation_ready(model, source, target, ignore_marker=True)
+        if _reuse(model, complete, lambda: _validate_translation(model, source)):
             print(name+' already installed', flush=True)
             continue
+        model = root/folder
+        _mark(model)
         print('Downloading '+name+' from the fixed Hugging Face Argostranslate mirror', flush=True)
         package = Path(hf_hub_download('TiberiuCristianLeon/Argostranslate', 'translate-'+name+'.argosmodel', revision=revision, local_dir=str(root/'downloads')))
+        if hashlib.sha256(package.read_bytes()).hexdigest() != digest:
+            package = Path(hf_hub_download('TiberiuCristianLeon/Argostranslate', 'translate-'+name+'.argosmodel', revision=revision, local_dir=str(root/'downloads'), force_download=True))
         if hashlib.sha256(package.read_bytes()).hexdigest() != digest: raise ValueError('Model checksum mismatch: '+name)
         with zipfile.ZipFile(package) as archive:
             for item in archive.infolist():
                 if not (root/item.filename).resolve().is_relative_to(root.resolve()): raise ValueError('Unsafe archive path')
             archive.extractall(root)
+        _finish(model, translation_ready(model, source, target, ignore_marker=True),
+                lambda: _validate_translation(model, source), 'Translation model files are incomplete: '+name)
 
 
 def install(models_dir=None):

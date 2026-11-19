@@ -55,6 +55,8 @@ async function run() {
   const seedStory = await ops.generateArtifact([boat.id], '', 'seed-story', 'fixture-key');
   ops.acceptArtifact(seedStory.id);
   let failRead = true, failSave = false, failDelete = false, blockRead = false, releaseRead, reads = 0, releaseGeneration;
+  let modelStatus = { whisper: false, translate: { 'ko-en': false, 'en-zh': true }, englishParser: false };
+  const modelRequests = [];
   const register = ipcMain.handle.bind(ipcMain);
   ipcMain.handle = (channel, handler) => register(channel, (event, ...args) => {
     if (channel === 'inflow:listVocabulary') {
@@ -72,6 +74,13 @@ async function run() {
       lookupVocabulary: (input, job) => ops.lookupVocabulary(input, job), transcribe: (id, job) => ops.transcribe(id, job),
       generateArtifact: (ids, topic, job) => ops.generateArtifact(ids, topic, job, 'fixture-key'),
       credentialStatus: () => ({ configured: true }),
+      modelStatus: () => modelStatus,
+      setupModels: (_job, components) => {
+        modelRequests.push(components);
+        if (modelRequests.length === 1) throw new Error('Interrupted preparation');
+        modelStatus = { whisper: true, translate: { 'ko-en': true, 'en-zh': true }, englishParser: true };
+        return modelStatus;
+      },
     };
     const fixture = fixtures[channel.replace('inflow:', '')];
     return fixture ? fixture(...args) : handler(event, ...args);
@@ -114,7 +123,20 @@ async function run() {
   }
   const checks = [];
   try {
-    await wait('!!document.querySelector("#notebook .app-notice[role=alert]")'); await nav('Vocab');
+    await wait('!!document.querySelector("#notebook .app-notice[role=alert]")');
+    await nav('Settings'); await click('.workspace-settings-sidebar button', 'Processing models');
+    await wait('document.querySelectorAll("#settings-models-panel [data-state=missing]").length === 3');
+    await click('#settings-models-panel button', 'Prepare or repair models');
+    await wait('!!document.querySelector("#settings-models-panel [role=alert]")');
+    await click('button[aria-label="Close settings"]');
+    await nav('Settings'); await click('.workspace-settings-sidebar button', 'Processing models');
+    await wait('document.querySelectorAll("#settings-models-panel [data-state=missing]").length === 3');
+    await click('#settings-models-panel button', 'Prepare or repair models');
+    await wait('document.querySelectorAll("#settings-models-panel [data-state=ready]").length === 4');
+    assert.deepEqual(modelRequests, [['whisper', 'translate', 'english-parser'], ['whisper', 'translate', 'english-parser']]);
+    await click('button[aria-label="Close settings"]');
+    checks.push('incomplete model preparation can be retried after reopening Settings');
+    await nav('Vocab');
     assert.ok(await evaluate('document.querySelector(".vocab-empty").textContent.includes("could not be loaded")'));
     failRead = false; await click('#notebook button', 'Retry loading vocabulary');
     await wait('document.querySelectorAll(".vocab-row").length === 2');

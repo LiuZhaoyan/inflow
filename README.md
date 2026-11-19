@@ -39,7 +39,7 @@ Keep `install-desktop.ps1` beside the complete `Inflow-win32-x64` folder, then r
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install-desktop.ps1
 ```
 
-This personal-use installer copies the app to `%LOCALAPPDATA%\Programs\Inflow` and creates a Start menu shortcut, without administrator access. Open Inflow, go to Settings → Processing models, and choose Download missing models. Initial preparation requires internet access and about 1.8 GB of model downloads. Ordinary transcription, grouping and dictionary lookup then run offline. Online translations, contextual meanings and new stories require the configured DeepSeek key and a connection.
+This personal-use installer copies the app to `%LOCALAPPDATA%\Programs\Inflow` and creates a Start menu shortcut, without administrator access. Open Inflow, go to Settings → Processing models, and choose Prepare or repair models. Initial preparation requires internet access and about 1.8 GB of model downloads. Ordinary transcription, grouping and dictionary lookup then run offline. Online translations, contextual meanings and new stories require the configured DeepSeek key and a connection.
 
 Learning data, managed media, models and the encrypted key live under `%APPDATA%\Inflow`, separately from the application folder. To reinstall, close Inflow and remove the old application folder first; leave this data directory intact. The installer intentionally refuses to overwrite an existing directory. Uninstall by removing the application folder and its Start menu shortcut; delete the data directory only if you also intend to erase learning records.
 

@@ -284,8 +284,8 @@ const phases = {
     await runArg(clickByText, 'Settings');
     await wait(window, `() => !!document.querySelector('dialog.workspace-settings-dialog')`, 'settings');
     await runArg(clickByText, 'Processing models');
-    await wait(window, `() => [...document.querySelectorAll('button')].some(b => b.textContent === 'Download missing models')`, 'download action');
-    await runArg(clickByText, 'Download missing models');
+    await wait(window, `() => [...document.querySelectorAll('button')].some(b => b.textContent === 'Prepare or repair models')`, 'download action');
+    await runArg(clickByText, 'Prepare or repair models');
     await wait(window, `() => document.querySelector('#settings-models-panel [role="alert"]')?.textContent || document.querySelectorAll('#settings-models-panel [data-state="ready"]').length === 4`, 'model downloads through Settings', 300000);
     const error = await evaluate(window, `() => document.querySelector('#settings-models-panel [role="alert"]')?.textContent || ''`);
     if (error) throw new Error('Model download failed: ' + error);
