@@ -33,10 +33,12 @@ export type DesktopBridge = {
   list(): Promise<SavedMedia[]>;
   restore(): Promise<SavedMedia | null>;
   open(id: string): Promise<SavedMedia>;
+  readMedia(id: string): Promise<SavedMedia>;
+  acceptMedia(id: string, segmentId?: string): SavedMedia;
   chooseImportMedia(): Promise<string | null>;
-  importMedia(ticket: string, language: SourceLanguage): Promise<SavedMedia>;
+  importMedia(ticket: string, language: SourceLanguage, activate?: boolean): Promise<SavedMedia>;
   cancelImportMedia(ticket: string): Promise<void>;
-  relink(id: string): Promise<SavedMedia | null>;
+  relink(id: string, activate?: boolean): Promise<SavedMedia | null>;
   transcribe(id: string, job: string): Promise<SavedMedia>;
   translate(input: SentenceTranslationInput, job: string, options?: TranslationOptions): Promise<string>;
   cancel(job: string): Promise<void>;

@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol } from 'electron';
+import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
@@ -74,7 +75,7 @@ async function start() {
   let pendingImport: { ticket: string; file: string } | null = null;
   let choosingImport = false;
   const handlers: Record<string, (...args: never[]) => unknown> = {
-    list: () => operations.list(), restore: () => operations.restore(), open: (id: string) => operations.open(id),
+    list: () => operations.list(), restore: () => operations.restore(), open: (id: string) => operations.open(id), readMedia: (id: string) => operations.get(id),
     chooseImportMedia: async () => {
       if (choosingImport) return null;
       choosingImport = true;
@@ -87,15 +88,16 @@ async function start() {
         return ticket;
       } finally { choosingImport = false; }
     },
-    importMedia: (ticket: string, language: 'ko' | 'en') => {
+    importMedia: (ticket: string, language: 'ko' | 'en', activate = true) => {
       if (language !== 'ko' && language !== 'en') throw new Error('Unsupported source language.');
+      if (typeof activate !== 'boolean') throw new Error('Invalid media selection.');
       if (!pendingImport || pendingImport.ticket !== ticket) throw new Error('Media import selection has expired.');
       const { file } = pendingImport;
       pendingImport = null;
-      return operations.importMedia(file, language);
+      return operations.importMedia(file, language, activate);
     },
     cancelImportMedia: (ticket: string) => { if (pendingImport?.ticket === ticket) pendingImport = null; },
-    relink: async (id: string) => { operations.get(id); const file = await choose('host.relinkTitle'); return file ? operations.relink(id, file) : null; },
+    relink: async (id: string, activate = true) => { if (typeof activate !== 'boolean') throw new Error('Invalid media selection.'); operations.get(id); const file = await choose('host.relinkTitle'); return file ? operations.relink(id, file, activate) : null; },
     transcribe: (id: string, job: string) => operations.transcribe(id, job),
     translate: (input: SentenceTranslationInput, job: string, options?: TranslationOptions) => operations.translate(input, job, credential.get(), options),
     modelStatus: () => runProcessor('models', new AbortController().signal) as Promise<ModelStatus>,
@@ -146,16 +148,25 @@ async function start() {
     restoreArtifact: () => operations.restoreArtifact(),
     openArtifact: (id: string) => operations.openArtifact(id),
   };
-  for (const [method, handler] of Object.entries(handlers)) ipcMain.handle(`inflow:${method}`, (event, ...args) => {
+  const authorize = (event: IpcMainEvent | IpcMainInvokeEvent) => {
     if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error(text('访问被拒绝。'));
+  };
+  for (const [method, handler] of Object.entries(handlers)) ipcMain.handle(`inflow:${method}`, (event, ...args) => {
+    authorize(event);
     try { return Promise.resolve(handler(...args as never[])).catch(error => { throw failure(error); }); }
     catch (error) { throw failure(error); }
   });
   // A synchronous selection commit keeps eligibility, durable acceptance and UI update in one renderer turn.
   ipcMain.on('inflow:acceptArtifact', (event, id: string) => {
     try {
-      if (window.isDestroyed() || event.sender !== window.webContents || event.senderFrame !== window.webContents.mainFrame || !trustedUrl(event.senderFrame?.url || 'about:blank')) throw new Error(text('访问被拒绝。'));
+      authorize(event);
       event.returnValue = { artifact: operations.acceptArtifact(id) };
+    } catch (error) { event.returnValue = { error: failure(error).message }; }
+  });
+  ipcMain.on('inflow:acceptMedia', (event, id: string, segmentId?: string) => {
+    try {
+      authorize(event);
+      event.returnValue = { media: operations.open(id, segmentId) };
     } catch (error) { event.returnValue = { error: failure(error).message }; }
   });
   window.on('closed', () => app.quit());

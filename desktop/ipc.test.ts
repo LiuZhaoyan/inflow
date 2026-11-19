@@ -46,6 +46,7 @@ async function host(processor: Processor = async () => status) {
     './operations': { DesktopOperations: class {
       getSettings() { return { interfaceLocale: 'zh-CN', videoMaskColor: '#000000' }; }
       list() { calls.push('list'); return []; }
+      open(id: string) { calls.push(`open:${id}`); if (id === 'failure') throw new Error('Fixture commit failure'); return { id }; }
       acceptArtifact(id: string) { calls.push(`accept:${id}`); if (id === 'failure') throw new Error('Fixture commit failure'); return { id }; }
       cancel(job: string) { calls.push(`cancel:${job}`); }
       importMedia(file: string, language: string) { calls.push(`import:${file}:${language}`); return { id: 'fixture', language }; }
@@ -80,7 +81,7 @@ test('preload exposes exactly the typed, registered methods and forwards only na
       return {
         contextBridge: { exposeInMainWorld: (name: string, value: typeof bridge) => { assert.equal(name, 'inflow'); bridge = value; } },
         ipcRenderer: { invoke: (...args: unknown[]) => { invocations.push(args); return Promise.resolve('reply'); },
-          sendSync: (...args: unknown[]) => { invocations.push(args); return { artifact: 'reply' }; } },
+          sendSync: (...args: unknown[]) => { invocations.push(args); return { artifact: 'reply', media: 'reply' }; } },
       };
     },
   });
@@ -119,6 +120,26 @@ test('synchronous Story acceptance rejects untrusted senders and returns commit 
   main.destroy();
   assert.match((accept(main.event) as { error: string }).error, /访问被拒绝/);
   assert.deepEqual(main.calls, ['accept:story', 'accept:failure']);
+});
+
+test('synchronous media acceptance rejects untrusted senders and preserves commit errors', async () => {
+  const main = await host();
+  function accept(event: object, id = 'media') {
+    const request = { ...event, returnValue: undefined };
+    main.syncHandlers.get('inflow:acceptMedia')!(request, id, 'sentence');
+    return request.returnValue as unknown as { media?: { id: string }; error?: string };
+  }
+  for (const event of [{ ...main.event, sender: {} }, { ...main.event, senderFrame: null }, { ...main.event, senderFrame: { url: 'inflow://app/' } }]) {
+    assert.match(accept(event).error!, /访问被拒绝/);
+  }
+  main.contents.mainFrame.url = 'https://app/';
+  assert.match(accept(main.event).error!, /访问被拒绝/);
+  main.contents.mainFrame.url = 'inflow://app/';
+  assert.equal(accept(main.event).media!.id, 'media');
+  assert.match(accept(main.event, 'failure').error!, /Fixture commit failure/);
+  main.destroy();
+  assert.match(accept(main.event).error!, /访问被拒绝/);
+  assert.deepEqual(main.calls, ['open:media', 'open:failure']);
 });
 
 test('language selection keeps file paths in the host, validates languages, and consumes one-time tickets', async () => {

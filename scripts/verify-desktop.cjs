@@ -260,7 +260,9 @@ async function run() {
     assert.equal((await snapshot()).sourceHidden, true);
     await evaluate('document.querySelectorAll(".segment-list button")[5].click()');
     assert.equal((await snapshot()).translationHidden, true);
+    await evaluate('window.inflowOriginalConfirm = window.confirm; window.confirm = () => true; void 0');
     await click('重新处理');
+    await evaluate('window.confirm = window.inflowOriginalConfirm; delete window.inflowOriginalConfirm');
     await wait('Array.from(document.querySelectorAll("button")).some(b => b.textContent === "取消处理")');
     await delay(1500);
     await click('取消处理');

@@ -519,7 +519,9 @@ const phases = {
     check('pre-existing material present before failure test', before.vocabulary.length === 2 && before.artifacts.length === 2, 'vocab ' + before.vocabulary.length + ', artifacts ' + before.artifacts.length);
     await openLibraryKind('VIDEO');
     const mediaBefore = JSON.parse(await run(`async () => JSON.stringify(await window.inflow.restore())`));
+    await run(`() => { window.inflowOriginalConfirm = window.confirm; window.confirm = () => true; }`);
     await runArg(clickByText, '重新处理');
+    await run(`() => { window.confirm = window.inflowOriginalConfirm; delete window.inflowOriginalConfirm; }`);
     await wait(window, busy, 'retranscription starts');
     await new Promise(resolve => setTimeout(resolve, 1000));
     await runArg(clickByText, '取消处理');

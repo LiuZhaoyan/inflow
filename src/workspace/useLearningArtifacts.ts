@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ArtifactVocabularySource, LearningArtifact, VocabularyEntry } from "@/listening/desktop";
 
-export function useLearningArtifacts(enabled: boolean, beforeChange: () => boolean, onGenerated: () => void, onAccepted: () => void) {
+export function useLearningArtifacts(enabled: boolean, beforeChange: () => boolean, onGenerated: () => void, onAccepted: () => void, onBegin: () => void) {
   const [artifacts, setArtifacts] = useState<LearningArtifact[]>([]);
   const [selection, setSelection] = useState<{ artifact: LearningArtifact | null; source: ArtifactVocabularySource | null }>({ artifact: null, source: null });
   const [loaded, setLoaded] = useState(false);
@@ -48,6 +48,7 @@ export function useLearningArtifacts(enabled: boolean, beforeChange: () => boole
   }
 
   function begin() {
+    onBegin();
     const token = ++intent.current;
     pending.current = token;
     setOpening(false);

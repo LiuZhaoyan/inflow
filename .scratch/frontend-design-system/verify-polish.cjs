@@ -29,19 +29,24 @@ async function run() {
     }) };
   let locale = 'zh-CN', scenario = 'empty', failProcessing = false;
   const settings = () => ({ interfaceLocale: locale, videoMaskColor: '#000000' });
+  const currentMedia = () => scenario === 'unprocessed' ? { ...media, segments: [] } : media;
   const methods = {
     getSettings: settings, saveSettings: (_event, value) => { locale = value.interfaceLocale || locale; return settings(); },
-    restore: () => scenario === 'empty' ? null : scenario === 'unprocessed' ? { ...media, segments: [] } : media,
-    list: () => [media], open: () => media, listVocabulary: () => vocabulary, listArtifactVocabulary: () => [],
-    selectVocabulary: (_event, ids) => vocabulary.map(entry => ({ ...entry, selected: ids.includes(entry.id) })),
+    restore: () => scenario === 'empty' ? null : currentMedia(),
+    list: () => [media], open: currentMedia, readMedia: currentMedia, listVocabulary: () => vocabulary, listArtifactVocabulary: () => [],
+    selectVocabulary: (_event, ids) => {
+      for (const entry of vocabulary) entry.selected = ids.includes(entry.id);
+      return ids;
+    },
     listArtifacts: () => [story], restoreArtifact: () => story, openArtifact: () => story,
     credentialStatus: () => ({ configured: true }), modelStatus: () => ({ whisper: true, englishParser: true, translate: { 'ko-en': true, 'en-zh': true } }),
-    saveLearning: () => null, cancel: () => null, chooseImportMedia: () => 'sample-ticket', importMedia: () => ({ ...media, segments: [] }),
-    transcribe: async () => { await new Promise(resolve => setTimeout(resolve, 400)); if (failProcessing) throw new Error('Processing fixture failed'); return media; },
+    saveLearning: () => null, cancel: () => null, chooseImportMedia: () => 'sample-ticket', importMedia: () => { scenario = 'unprocessed'; return currentMedia(); },
+    transcribe: async () => { await new Promise(resolve => setTimeout(resolve, 400)); if (failProcessing) throw new Error('Processing fixture failed'); scenario = 'ready'; return currentMedia(); },
     translate: () => '早上，我步行去了图书馆。',
   };
   for (const [method, handler] of Object.entries(methods)) ipcMain.handle(`inflow:${method}`, handler);
   ipcMain.on('inflow:acceptArtifact', event => { event.returnValue = { artifact: story }; });
+  ipcMain.on('inflow:acceptMedia', event => { event.returnValue = { media: currentMedia() }; });
   await app.whenReady();
   const wav = Buffer.alloc(44 + 8000 * 30 * 2);
   wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16);

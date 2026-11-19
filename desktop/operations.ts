@@ -106,8 +106,9 @@ export class DesktopOperations {
     return this.getSettings();
   }
 
-  open(id: string): SavedMedia {
+  open(id: string, segmentId?: string): SavedMedia {
     const media = this.get(id);
+    if (segmentId !== undefined && (typeof segmentId !== 'string' || !media.segments.some(segment => segment.id === segmentId))) throw new Error('原句已更新，请从当前原文重新收集。');
     this.db.prepare("INSERT INTO settings VALUES ('active', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(id);
     return media;
   }
@@ -120,8 +121,9 @@ export class DesktopOperations {
     return createHash('sha256').update(await readFile(filename)).digest('hex');
   }
 
-  async importMedia(filename: string, language: SourceLanguage = 'ko'): Promise<SavedMedia> {
+  async importMedia(filename: string, language: SourceLanguage = 'ko', activate = true): Promise<SavedMedia> {
     if (language !== 'ko' && language !== 'en') throw new Error('请选择韩语或英语素材。');
+    if (typeof activate !== 'boolean') throw new Error('素材选择无效。');
     this.db.prepare("INSERT INTO settings VALUES ('importLanguage', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(language);
     const hash = await this.inspect(filename);
     const probe = await this.processor('probe', new AbortController().signal, filename) as { duration?: unknown };
@@ -135,10 +137,11 @@ export class DesktopOperations {
       if (await this.inspect(destination) !== hash) throw new Error('媒体在导入时发生变化，请重试。');
       this.db.prepare('INSERT INTO media (id, name, filename, hash, learning, language) VALUES (?, ?, ?, ?, ?, ?)').run(id, path.basename(filename), managedName, hash, JSON.stringify({ ...initialLearning, duration: probe.duration }), language);
     } catch (error) { await rm(destination, { force: true }); throw error; }
-    return this.open(id);
+    return activate ? this.open(id) : this.get(id);
   }
 
-  async relink(id: string, filename: string): Promise<SavedMedia> {
+  async relink(id: string, filename: string, activate = true): Promise<SavedMedia> {
+    if (typeof activate !== 'boolean') throw new Error('素材选择无效。');
     const row = this.row(id);
     if (await this.inspect(filename) !== row.hash) throw new Error('请选择原来的同一媒体文件，以保留句子时间和学习记录。');
     const destination = this.mediaPath(id);
@@ -149,7 +152,7 @@ export class DesktopOperations {
       if (createHash('sha256').update(await readFile(temporary)).digest('hex') !== row.hash) throw new Error('媒体在关联时发生变化，请重试。');
       await rename(temporary, destination);
     } finally { await rm(temporary, { force: true }); }
-    return this.open(id);
+    return activate ? this.open(id) : this.get(id);
   }
 
   saveLearning(id: string, state: LearningStateInput): void {

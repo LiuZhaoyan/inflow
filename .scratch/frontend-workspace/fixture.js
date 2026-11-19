@@ -69,6 +69,8 @@
     async list() { return [...records.values()].map(clone); },
     async restore() { return null; },
     async open(id) { stats.openCalls.push(id); return clone(records.get(id)); },
+    async readMedia(id) { return clone(records.get(id)); },
+    acceptMedia(id) { stats.openCalls.push(id); return clone(records.get(id)); },
     async importMedia() {
       stats.importCalls++;
       const media = makeMedia('acceptance', 'acceptance.wav');

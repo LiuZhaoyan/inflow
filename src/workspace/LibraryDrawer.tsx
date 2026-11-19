@@ -21,6 +21,8 @@ export default function LibraryDrawer({
   onImport,
   onOpen,
   onRelink,
+  loadError,
+  onRetry,
 }: {
   open: boolean;
   items: SavedMedia[];
@@ -32,8 +34,10 @@ export default function LibraryDrawer({
   onImport: () => void;
   onOpen: (id: string) => void;
   onRelink: (id: string) => void;
+  loadError: string;
+  onRetry: () => void;
 }) {
-  const { t } = useLocale();
+  const { t, error: localize } = useLocale();
   const dialog = useRef<HTMLDialogElement>(null);
   const filterInput = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState('');
@@ -81,6 +85,7 @@ export default function LibraryDrawer({
       ]} onChange={setLanguageFilter}/>
     </div>
     <div className="workspace-library-count">{languageFilter === 'all' ? t("All languages") : languageName(languageFilter)}</div>
+    {loadError && <div><Notice message={localize(loadError, 'The library could not be refreshed.')}/><button type="button" onClick={onRetry}>{t('Retry loading library')}</button></div>}
     <ul className="workspace-library-list">
       {visibleItems.map(item => <li key={item.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={item.id === currentId ? 'true' : undefined} onClick={() => onOpen(item.id)}>
