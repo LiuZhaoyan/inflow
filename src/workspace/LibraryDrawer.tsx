@@ -85,7 +85,7 @@ export default function LibraryDrawer({
       ]} onChange={setLanguageFilter}/>
     </div>
     <div className="workspace-library-count">{languageFilter === 'all' ? t("All languages") : languageName(languageFilter)}</div>
-    {loadError && <div><Notice message={localize(loadError, 'The library could not be refreshed.')}/><button type="button" onClick={onRetry}>{t('Retry loading library')}</button></div>}
+    {loadError && <div><Notice message={localize(loadError, 'The library could not be refreshed.')}/><button className="workspace-button workspace-button--secondary" type="button" onClick={onRetry}>{t('Retry loading library')}</button></div>}
     <ul className="workspace-library-list">
       {visibleItems.map(item => <li key={item.id} className="workspace-library-entry">
         <button type="button" className="workspace-library-item" aria-current={item.id === currentId ? 'true' : undefined} onClick={() => onOpen(item.id)}>

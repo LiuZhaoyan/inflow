@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
 import type { DesktopBridge, SavedMedia, VocabularyEntry } from '@/listening/desktop';
-import LearningWorkspace from './LearningWorkspace';
+import LearningWorkspace from '@/workspace/LearningWorkspace';
 
 const first: SavedMedia = {
   id: 'first', name: 'First.wav', language: 'en', video: false, missing: false,
@@ -140,11 +140,64 @@ test.each(['pending', 'accepted'] as const)('startup restore cannot replace a %s
     await waitFor(() => expect(host.acceptMedia).toHaveBeenCalledOnce());
   }
   await act(async () => { restore(first); await restoring; });
-  expect(screen.queryByRole('img', { name: 'Audio: First.wav' })).toBeNull();
+  if (phase === 'pending') expect(screen.getByRole('img', { name: 'Audio: First.wav' })).toBeDefined();
+  else expect(screen.queryByRole('img', { name: 'Audio: First.wav' })).toBeNull();
   if (phase === 'pending') await act(async () => { finishImport(imported); await importing; });
   expect(await screen.findByRole('img', { name: 'Audio: New.wav' })).toBeDefined();
   fireEvent.click(screen.getByRole('button', { name: 'Library' }));
   expect(screen.getByRole('button', { name: /New.wav/ })).toBeDefined();
+});
+
+test.each([
+  ['picker', 'before'], ['picker', 'after'], ['language', 'before'], ['language', 'after'],
+] as const)('startup restore survives %s cancellation when it arrives %s the cancellation', async (stage, order) => {
+  const host = createHost();
+  let restore!: (media: SavedMedia) => void;
+  const restoring = new Promise<SavedMedia>(resolve => { restore = resolve; });
+  let cancelPicker!: (ticket: string | null) => void;
+  const choosing = new Promise<string | null>(resolve => { cancelPicker = resolve; });
+  host.restore.mockReturnValueOnce(restoring);
+  if (stage === 'picker') host.chooseImportMedia.mockReturnValueOnce(choosing);
+  window.inflow = host as unknown as DesktopBridge;
+  render(<LocaleProvider><LearningWorkspace/></LocaleProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Import media' }));
+  const dialog = stage === 'language' ? await screen.findByRole('dialog', { name: 'Choose source language' }) : null;
+  if (order === 'before') await act(async () => { restore(first); await restoring; });
+  if (dialog) fireEvent.click(within(dialog).getByRole('button', { name: 'Close language selection' }));
+  else await act(async () => { cancelPicker(null); await choosing; });
+  if (order === 'after') await act(async () => { restore(first); await restoring; });
+  expect(await screen.findByRole('img', { name: 'Audio: First.wav' })).toBeDefined();
+  expect(host.acceptMedia).not.toHaveBeenCalled();
+});
+
+test.each([
+  ['import', 'before'], ['import', 'after'], ['read', 'before'], ['read', 'after'], ['accept', 'before'], ['accept', 'after'],
+] as const)('startup restore survives a failed %s when it arrives %s the failure', async (stage, order) => {
+  const host = createHost();
+  let restore!: (media: SavedMedia) => void;
+  const restoring = new Promise<SavedMedia>(resolve => { restore = resolve; });
+  let finish!: (media: SavedMedia) => void;
+  let fail!: (error: Error) => void;
+  const pending = new Promise<SavedMedia>((resolve, reject) => { finish = resolve; fail = reject; });
+  host.restore.mockReturnValueOnce(restoring);
+  if (stage === 'import') host.importMedia.mockReturnValueOnce(pending);
+  else host.readMedia.mockReturnValueOnce(pending);
+  if (stage === 'accept') host.acceptMedia.mockImplementation(() => { throw new Error('Fixture accept failure'); });
+  window.inflow = host as unknown as DesktopBridge;
+  render(<LocaleProvider><LearningWorkspace/></LocaleProvider>);
+  if (stage === 'import') {
+    fireEvent.click(screen.getByRole('button', { name: 'Import media' }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Choose source language' })).getByRole('button', { name: 'English' }));
+  } else {
+    fireEvent.click(screen.getByRole('button', { name: 'Library' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Second.wav/ }));
+  }
+  if (order === 'before') await act(async () => { restore(first); await restoring; });
+  await act(async () => { if (stage === 'accept') finish(second); else fail(new Error(`Fixture ${stage} failure`)); await pending.catch(() => {}); });
+  expect((await screen.findByRole('alert')).textContent).toContain(`Fixture ${stage} failure`);
+  if (order === 'after') await act(async () => { restore(first); await restoring; });
+  expect(await screen.findByRole('img', { name: 'Audio: First.wav' })).toBeDefined();
+  expect(screen.getByRole('alert').textContent).toContain(`Fixture ${stage} failure`);
 });
 
 test('a stale initial library failure cannot replace a newer successful refresh', async () => {

@@ -46,6 +46,7 @@ export default function LearningWorkspace() {
   const translating = useRef<AbortController | null>(null);
   const autoProcess = useRef('');
   const mediaIntent = useRef(0);
+  const acceptedMedia = useRef(false);
   const pendingMedia = useRef<number | null>(null);
   const libraryRequest = useRef(0);
   const importTicket = useRef<string | null>(null);
@@ -114,7 +115,7 @@ export default function LearningWorkspace() {
     translating.current?.abort();
   }, []);
 
-  const applySaved = useCallback((next: SavedMedia) => {
+  const applySaved = useCallback((next: SavedMedia, preserveError = false) => {
     if (vocabularySelection.current?.beforeChange() === false) return false;
     processing.current?.abort(); translating.current?.abort(); media.current?.pause(); autoProcess.current = '';
     setSavedMedia(next); setFile({ name: next.name, type: next.video ? 'video/' : 'audio/' });
@@ -124,7 +125,8 @@ export default function LearningWorkspace() {
     setMode(next.learning.mode ?? 'full'); setRate(next.learning.rate); setLoop(next.learning.loop); setSegments(next.segments); setMasks(next.learning.masks ?? {});
     setVideoMask(next.learning.videoMask); setVideoMaskEditing(false);
     setPlaying(false); setBusy(false); setProcessingFailed(false); setShowContext(false); resetSentence();
-    setError(next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '');
+    const mediaError = next.missing ? '媒体文件丢失，原文和学习记录仍保留，请重新关联同一文件。' : next.learning.duration > 600 ? '此素材超过 10 分钟，已禁止播放；原文和学习记录仍保留。' : '';
+    setError(previous => preserveError && previous ? previous : mediaError);
     return true;
   }, [resetSentence]);
   const refreshLibrary = useCallback(async () => {
@@ -141,13 +143,12 @@ export default function LearningWorkspace() {
     const host = window.inflow;
     if (!host) return;
     let active = true;
-    const restoringIntent = mediaIntent.current;
     void refreshLibrary();
     Promise.all([host.restore(), host.getSettings(), host.credentialStatus()]).then(([restored, preferences, status]) => {
       if (!active) return;
       setDesktop(true);
       setSettings(preferences); setCredential(status);
-      if (restored && restoringIntent === mediaIntent.current) applySaved(restored);
+      if (restored && !acceptedMedia.current) applySaved(restored, true);
     }).catch(failure => { if (active) setError(failure instanceof Error ? failure.message : '素材恢复失败，请重试。'); });
     return () => { active = false; };
   }, [applySaved, refreshLibrary]);
@@ -206,6 +207,7 @@ export default function LearningWorkspace() {
     if (!allowChange()) { cancelMediaNavigation(true); return false; }
     if (source && !candidate.segments.some(item => item.id === source.segmentId)) throw new Error('原句已更新，请从当前原文重新收集。');
     const saved = window.inflow!.acceptMedia(candidate.id, source?.segmentId);
+    acceptedMedia.current = true;
     const index = source ? saved.segments.findIndex(item => item.id === source.segmentId) : -1;
     const next = index < 0 ? saved : { ...saved, learning: { ...saved.learning, index, position: saved.segments[index].start, mode: 'sentence' as const } };
     applySaved(next);

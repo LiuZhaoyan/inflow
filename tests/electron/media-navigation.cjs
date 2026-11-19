@@ -27,7 +27,7 @@ async function run() {
     return;
   }
 
-  const { app, BrowserWindow, ipcMain, protocol } = require('electron');
+  const { app, BrowserWindow, dialog, ipcMain, protocol } = require('electron');
   const { DatabaseSync } = require('node:sqlite');
   const output = process.argv[2], phase = process.argv[3], profile = path.join(output, 'profile');
   app.setPath('userData', profile);
@@ -63,11 +63,17 @@ async function run() {
   const { GenerationCredential } = require(path.join(root, 'build/desktop/desktop/credentials.js'));
   GenerationCredential.prototype.initialize = async function () {};
   GenerationCredential.prototype.status = () => ({ configured: false });
+  const startup = phase === 'initial' ? { started: false } : null;
+  if (startup) {
+    startup.promise = new Promise(resolve => { startup.release = resolve; });
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path.join(output, 'First.wav')] });
+  }
   let gated = null, failList = false;
   const register = ipcMain.handle.bind(ipcMain);
   ipcMain.handle = (channel, handler) => register(channel, async (event, ...args) => {
     if (channel === 'inflow:list' && failList) { failList = false; throw new Error('Fixture library refresh failure'); }
     const result = await handler(event, ...args);
+    if (channel === 'inflow:restore' && startup && !startup.started) { startup.started = true; await startup.promise; }
     if (channel === 'inflow:readMedia' && gated && args[0] === gated.id) {
       const gate = gated; gate.started = true; await gate.promise;
     }
@@ -90,8 +96,24 @@ async function run() {
   const click = (selector, text) => evaluate(`(() => { const button = [...document.querySelectorAll(${JSON.stringify(selector)})].find(el => el.checkVisibility() && el.textContent.trim() === ${JSON.stringify(text)}); if (!button) throw Error('Missing button: ' + ${JSON.stringify(text)}); button.click(); })()`);
   const field = (selector, value) => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
   async function waitGate(entry) { for (let i = 0; i < 200 && !entry.started; i++) await delay(25); assert.ok(entry.started); }
+  async function finishRead(entry) {
+    entry.release();
+    await new Promise(resolve => setImmediate(resolve));
+    // Await a second read on the same channel after the gated reply has been sent.
+    await evaluate(`window.inflow.readMedia(${JSON.stringify(first.id)}).then(() => new Promise(requestAnimationFrame))`);
+    gated = null;
+  }
   const database = new DatabaseSync(path.join(profile, 'learning.sqlite'));
   try {
+    if (startup) {
+      await waitGate(startup);
+      await wait('!!document.querySelector(".workspace-stage-empty button")');
+      await click('.workspace-stage-empty button', 'Import media');
+      await wait('document.querySelector(".workspace-source-language-dialog")?.open');
+      await evaluate('document.querySelector(".workspace-source-language-close").click()');
+      await wait('!document.querySelector(".workspace-source-language-dialog")');
+      startup.release();
+    }
     await wait('!!document.querySelector(".workspace-audio-card")');
     if (phase === 'restart') {
       assert.equal((await evaluate('window.inflow.restore()')).id, third.id);
@@ -105,7 +127,7 @@ async function run() {
       await evaluate('document.querySelector(".vocab-notes-section summary").click()');
       await field('.vocab-notes-section textarea', 'Draft note');
       await click('.vocab-notes-section button', 'Cancel');
-      pending.release(); await delay(200); gated = null;
+      await finishRead(pending);
       assert.equal((await evaluate('window.inflow.restore()')).id, first.id);
       assert.equal(await evaluate('document.querySelector(".workspace-vocab").hidden'), false);
       const superseded = gate(second.id);
@@ -117,9 +139,9 @@ async function run() {
       await evaluate(`[...document.querySelectorAll('.workspace-library-item')].find(el => el.textContent.includes('Third.wav')).click()`);
       await wait('document.querySelector(".app-notice-stack")?.textContent.includes("Fixture selection failure")');
       assert.equal((await evaluate('window.inflow.restore()')).id, first.id);
-      superseded.release(); await delay(200); gated = null;
-      assert.equal((await evaluate('window.inflow.restore()')).id, first.id);
       database.exec('DROP TRIGGER reject_media_selection');
+      await finishRead(superseded);
+      assert.equal((await evaluate('window.inflow.restore()')).id, first.id);
       await click('.workspace-topnav button', 'Library');
       await wait('document.querySelector(".workspace-library-dialog")?.open');
       await evaluate(`[...document.querySelectorAll('.workspace-library-item')].find(el => el.textContent.includes('Third.wav')).click()`);
