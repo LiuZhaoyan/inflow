@@ -1,56 +1,34 @@
 # Inflow
 
-[English](README.md) | **简体中文**
+[English](README.md) | **简体中文** | [GitHub Releases](https://github.com/LiuZhaoyan/inflow/releases)
 
-Inflow 是一款支持韩语和英语、围绕一个核心学习循环构建的桌面学习应用：
+Inflow 是一款 Windows x64 桌面应用，用于通过本地音视频学习韩语和英语，提供中文释义和翻译。
 
-```text
-媒体 → 听力 → 词汇 → 生成内容 → 词汇
-```
+## 本地开发
 
-导入韩语或英语音频、视频，逐句进行练习，遮罩完整意群，在原始语境中收集陌生词汇，并将选中的词汇用于生成同一语言的个性化阅读短文。词汇释义和翻译使用中文。
-
-项目目前面向 Windows 上的个人使用。桌面端已经可以直接从仓库运行；将其打包为可独立安装、自包含的应用仍属于后续工作。
-
-每次导入时确认素材的原文语言，并记住最后确认的选择，即使文件导入失败也会保留该选择。媒体、词汇和保存的短文可分别按全部、韩语或英语筛选；筛选不会清除已选词汇。一次短文生成要求所有目标词汇属于同一种语言。
-
-## 我能用它做什么？
-
-Inflow 帮助你把韩语和英语音频、视频变成一个主动学习流程：
-
-- 逐句听取媒体内容，遮罩原文意群，并在需要时请求中文翻译；
-- 收集和管理陌生词汇，并保留每个词汇对应的来源和学习语境，无论它来自媒体还是生成内容；
-- 使用正在学习的词汇生成个性化韩语或英语阅读短文；
-- 从生成的短文中发现新词汇，并继续整个学习循环。
-
-语音识别、翻译和生成内容都用于辅助学习，而不是权威答案。
-
-## 配置 LLM API Key
-
-Inflow 使用 DeepSeek 提供按需的上下文中文翻译、生词语境释义，以及根据选中词汇生成韩语或英语阅读短文。使用这些功能前，请在系统环境、`.env` 或 `.env.local` 中配置 `DEEPSEEK_API_KEY`。
-
-项目有意将 LLM 的使用范围控制得很小，以尽可能减少 token 消耗。翻译和生词查询只会在用户明确操作时发起，只发送完成当前任务所需的少量上下文，并复用已经成功获得的结果，避免重复请求。语音识别、句子分组、词形分析和词典查询仍在本地完成。韩语分析使用 Kiwi，英语分析使用预先准备的 spaCy 模型。内置韩中和英中词典优先提供释义候选，只有用户明确请求时才调用 LLM。词典各自的许可证与来源见[词典声明](resources/dictionaries/NOTICE.md)。
-
-## 运行桌面应用
-
-当前开发环境使用 Node.js、Electron、Python 3.12 和本地处理模型。在 Windows 上，首先准备本地 Python 和模型环境：
+将仓库克隆到 Windows 本地磁盘。安装 Node.js 24 和 npm，并确保在 PowerShell 中可用 Conda。
 
 ```powershell
+git clone https://github.com/LiuZhaoyan/inflow.git
+cd inflow
 .\scripts\setup_windows.ps1
 npm ci
-```
-
-然后构建并启动桌面应用：
-
-```powershell
 npm run desktop:build
 npm run desktop:start
 ```
 
-本地处理使用 `.models/` 下的资源，以及 `.venv-win/` 下的 Windows Python 环境。这些目录不会提交到 Git。
+初始化脚本在 `.venv-win/` 创建 Python 3.12 环境，并将约 1.8 GB 的模型下载至 `.models/`。
+开发基于 DeepSeek 的翻译、词义查询或故事生成功能时，在环境变量、`.env` 或 `.env.local` 中配置 `DEEPSEEK_API_KEY`。参阅[环境配置示例](.env.example)。
 
-已有环境升级以使用英语支持时，应重新运行 `scripts/setup_windows.ps1`，安装固定版本的 spaCy 依赖与英语分析模型。正常本地处理只使用准备好的资源，不会在运行时下载模型。英语词汇采集支持完整单词、缩写和连字符形式；包含空白的短语采集与频繁的多语言混用不在本次支持范围内。
+## 架构
 
-开发检查、仓库结构、架构以及文档维护方式见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+Electron 负责运行静态构建的 Next.js 和 React 界面、管理本地媒体和 SQLite 数据、调用 Python 处理程序。处理程序使用 faster-whisper 识别语音，使用 Kiwi 分析韩语，使用 spaCy 分析英语。
 
-项目许可证见 [LICENSE](LICENSE)。
+- [贡献指南](CONTRIBUTING.md)介绍仓库结构和开发检查。
+- [产品规格](docs/PRODUCT_SPEC.md)说明功能行为与范围。
+- [项目现状](docs/PROJECT_STATUS.md)记录已实现功能和已知问题。
+- [路线图](docs/ROADMAP.md)记录后续开发计划。
+
+## 许可证
+
+Inflow 的代码采用 [Apache 2.0 许可证](LICENSE)。内置词典使用[各自的许可证与署名声明](resources/dictionaries/NOTICE.md)。
