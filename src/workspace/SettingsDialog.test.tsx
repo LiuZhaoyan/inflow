@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { LocaleProvider } from '@/i18n/context';
 import type { DesktopBridge, ModelStatus } from '@/listening/desktop';
-import SettingsDialog from './SettingsDialog';
+import SettingsDialog from '@/workspace/SettingsDialog';
 
 const methods = {
   showModal: Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, 'showModal'),

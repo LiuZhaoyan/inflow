@@ -19,6 +19,8 @@ ENGLISH_PIPELINE_SHA256 = '1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf892
 INCOMPLETE = '.inflow-incomplete'
 # shortcut: size checks miss same-size corruption; add digests if stronger checks are needed.
 WHISPER_MODEL_BYTES = 1617884929
+WHISPER_VOCABULARY_BYTES = 1068114
+WHISPER_VOCABULARY_TOKENS = 51866
 # Pinned translation package file sizes in unpacked bytes.
 TRANSLATION_PACKAGE_BYTES = {
     ('ko_en', 'ko', 'en', '1.1'): {
@@ -29,16 +31,13 @@ TRANSLATION_PACKAGE_BYTES = {
     },
 }
 WHISPER_FILES = ['config.json', 'model.bin', 'tokenizer.json', 'preprocessor_config.json']
-ENGLISH_FILES = [
-    'config.cfg', 'meta.json', 'tokenizer', 'attribute_ruler/patterns',
-    'lemmatizer/lookups/lookups.bin', 'ner/cfg', 'ner/model', 'ner/moves',
-    'parser/cfg', 'parser/model', 'parser/moves', 'tagger/cfg', 'tagger/model',
-    'tok2vec/cfg', 'tok2vec/model', 'vocab/strings.json', 'vocab/lookups.bin',
-    'vocab/vectors', 'vocab/vectors.cfg', 'vocab/key2row',
-]
-ENGLISH_MODEL_BYTES = {
-    'tokenizer': 77066, 'lemmatizer/lookups/lookups.bin': 972893,
-    'ner/model': 6154601, 'parser/model': 319909, 'tagger/model': 19829, 'tok2vec/model': 6269370,
+ENGLISH_FILES = {
+    'config.cfg': 5527, 'meta.json': 10106, 'tokenizer': 77066, 'attribute_ruler/patterns': 14735,
+    'lemmatizer/lookups/lookups.bin': 972893, 'ner/cfg': 221, 'ner/model': 6154601, 'ner/moves': 1064,
+    'parser/cfg': 222, 'parser/model': 319909, 'parser/moves': 1571, 'senter/cfg': 23, 'senter/model': 197089,
+    'tagger/cfg': 615, 'tagger/model': 19829, 'tok2vec/cfg': 4, 'tok2vec/model': 6269370,
+    'vocab/strings.json': 1103983, 'vocab/lookups.bin': 70040, 'vocab/vectors': 128,
+    'vocab/vectors.cfg': 22, 'vocab/key2row': 1,
 }
 
 
@@ -64,25 +63,41 @@ def _ready(folder, files, ignore_marker=False):
     return (ignore_marker or not (folder/INCOMPLETE).exists()) and all(_nonempty(folder/name) for name in files)
 
 
+def _whisper_vocabulary_ready(folder):
+    vocabulary = folder/'vocabulary.json'
+    if not vocabulary.exists(): return _nonempty(folder/'vocabulary.txt')
+    if not _size(vocabulary, WHISPER_VOCABULARY_BYTES): return False
+    try:
+        data = json.loads(vocabulary.read_text(encoding='utf-8'))
+        return isinstance(data, list) and len(data) == WHISPER_VOCABULARY_TOKENS and all(isinstance(item, str) for item in data)
+    except (OSError, ValueError, UnicodeError):
+        return False
+
+
 def whisper_ready(root, ignore_marker=False):
     folder = Path(root)/'whisper-turbo'
     return (_ready(folder, WHISPER_FILES, ignore_marker)
             and _size(folder/'model.bin', WHISPER_MODEL_BYTES)
             and all(_json(folder/name) for name in ['config.json', 'tokenizer.json', 'preprocessor_config.json'])
-            and any(_nonempty(folder/name) for name in ['vocabulary.json', 'vocabulary.txt']))
+            and _whisper_vocabulary_ready(folder))
 
 
 def english_ready(root, ignore_marker=False):
     folder = Path(root)/'english-parser'/'en_core_web_sm'/'en_core_web_sm-3.8.0'
     return (_ready(folder, ENGLISH_FILES, ignore_marker)
-            and all(_size(folder/name, size) for name, size in ENGLISH_MODEL_BYTES.items())
+            and all(_size(folder/name, size) for name, size in ENGLISH_FILES.items())
             and _json(folder/'meta.json').get('version') == '3.8.0')
 
 
 def translation_ready(folder, source, target, ignore_marker=False):
     metadata = _json(folder/'metadata.json')
     vocabulary = folder/'model'
-    expected = TRANSLATION_PACKAGE_BYTES.get((folder.name, source, target, metadata.get('package_version')), {})
+    expected = {}
+    for (name, from_code, to_code, version), files in TRANSLATION_PACKAGE_BYTES.items():
+        if folder.name == name:
+            if (source, target, metadata.get('package_version')) != (from_code, to_code, version): return False
+            expected = files
+            break
     return (_ready(folder, ['metadata.json', 'sentencepiece.model', 'model/model.bin'], ignore_marker)
             and metadata.get('from_code') == source and metadata.get('to_code') == target
             and all(_size(folder/name, size) for name, size in expected.items())
@@ -103,12 +118,13 @@ def _mark(folder):
 
 
 def _reuse(folder, complete, validate):
-    _mark(folder)
     if complete:
         try: validate()
-        except Exception: return False
-        (folder/INCOMPLETE).unlink()
-        return True
+        except Exception: pass
+        else:
+            (folder/INCOMPLETE).unlink(missing_ok=True)
+            return True
+    _mark(folder)
     return False
 
 
@@ -178,7 +194,7 @@ def install_whisper(models_dir=None):
     if not _size(model/'model.bin', WHISPER_MODEL_BYTES) and 'model.bin' not in missing: missing.append('model.bin')
     missing += [name for name in ['config.json', 'tokenizer.json', 'preprocessor_config.json']
                 if name not in missing and not _json(model/name)]
-    if not any(_nonempty(model/name) for name in ['vocabulary.json', 'vocabulary.txt']): missing.append('vocabulary.json')
+    if not _whisper_vocabulary_ready(model): missing.append('vocabulary.json')
     print('Downloading Whisper large-v3-turbo from huggingface.co (~1.6 GB); Argos packages total ~190 MB. No media is uploaded.', flush=True)
     snapshot_download('dropbox-dash/faster-whisper-large-v3-turbo', revision='0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf', local_dir=str(model), allow_patterns=missing or WHISPER_FILES + ['vocabulary.*'], force_download=True)
     _finish(model, whisper_ready(root, ignore_marker=True), lambda: _validate_whisper(model), 'Whisper model files are incomplete')
